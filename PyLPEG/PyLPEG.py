@@ -152,73 +152,6 @@ class Pattern(object):
 
 #===============================================================================
 
-class PatternRepeat(Pattern):
-
-  #-----------------------------------------------------------------------------
-
-  def __init__(self, pattern, n):
-    if not isinstance(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
-    if not isinstance(n, int): raise ValueError("In ptn^n, n must be an integer value")
-    self.pattern = pattern
-
-    if n >= 0:
-      self.match = self.match_at_least_n
-      self.n = n
-    else:
-      self.match = self.match_at_most_n
-      self.n = -n
-
-  #-----------------------------------------------------------------------------
-
-  def match_at_least_n(self, string, index=0):
-    """
-
-    >>> p = S("abc")^3
-    >>> p("ab")
-    False
-    >>> p("abc")
-    3
-    >>> p("abcabcd")
-    6
-    """
-    cnt = 0
-    while True:
-      new_index = self.pattern.match(string, index)
-
-      # No progress, so it matches infinite times
-      if index == new_index: return index
-      if not self.isMatch(new_index, len(string), index):
-        return index if cnt >= self.n else False
-
-      cnt += 1
-      index = new_index
-
-  #-----------------------------------------------------------------------------
-
-  def match_at_most_n(self, string, index=0):
-    """
-
-    >>> p = S("abc")^-3
-    >>> p("")
-    0
-    >>> p("abca")
-    3
-    """
-
-    new_index = index
-    for i in range(self.n):
-      new_index = self.pattern.match(string, index)
-      if new_index == False: return index
-      index = new_index
-    return new_index
-
-  #-----------------------------------------------------------------------------
-
-  def __repr__(self):
-    return "%s^%s" % (repr(self.pattern), self.n)
-
-#===============================================================================
-
 class P(Pattern):
 
   #-----------------------------------------------------------------------------
@@ -704,6 +637,73 @@ class PatternNot(Pattern):
 
   def __repr__(self):
     return "-%s" % repr(self.pattern)
+
+#===============================================================================
+
+class PatternRepeat(Pattern):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, pattern, n):
+    if not isinstance(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
+    if not isinstance(n, int): raise ValueError("In ptn^n, n must be an integer value")
+    self.pattern = pattern
+
+    if n >= 0:
+      self.match = self.match_at_least_n
+      self.n = n
+    else:
+      self.match = self.match_at_most_n
+      self.n = -n
+
+  #-----------------------------------------------------------------------------
+
+  def match_at_least_n(self, string, index=0):
+    """
+
+    >>> p = S("abc")^3
+    >>> p("ab")
+    False
+    >>> p("abc")
+    3
+    >>> p("abcabcd")
+    6
+    """
+    cnt = 0
+    while True:
+      new_index = self.pattern.match(string, index)
+
+      # No progress, so it matches infinite times
+      if index == new_index: return index
+      if not self.isMatch(new_index, len(string), index):
+        return index if cnt >= self.n else False
+
+      cnt += 1
+      index = new_index
+
+  #-----------------------------------------------------------------------------
+
+  def match_at_most_n(self, string, index=0):
+    """
+
+    >>> p = S("abc")^-3
+    >>> p("")
+    0
+    >>> p("abca")
+    3
+    """
+
+    new_index = index
+    for i in range(self.n):
+      new_index = self.pattern.match(string, index)
+      if new_index == False: return index
+      index = new_index
+    return new_index
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "%s^%s" % (repr(self.pattern), self.n)
 
 #===============================================================================
 
