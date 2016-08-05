@@ -412,6 +412,35 @@ class R(Pattern):
     return "R(%s)" % (",".join(["'%s'" % range for range in ranges]))
 
 #===============================================================================
+
+class V(Pattern):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, var=None):
+    self.var = var
+
+  #-----------------------------------------------------------------------------
+
+  def setPattern(self, pattern):
+    if not isinstance(pattern, Pattern):
+      raise ValueError("The setPattern method of V class needs to be passed a Pattern object.")
+    self.pattern = pattern
+
+  #-----------------------------------------------------------------------------
+
+  def match(self, string, index=0):
+    """
+    """
+    return self.pattern.match(string, index)
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "V(%s)" % self.var if self.var else "V(%s)" % repr(self.pattern)
+
+
+#===============================================================================
 # Pattern Operators
 #===============================================================================
 
