@@ -1,6 +1,6 @@
 #===============================================================================
 
-class Pattern:
+class Pattern(object):
 
   def __init__(self):
     pass
@@ -12,7 +12,10 @@ class Pattern:
 
   #-----------------------------------------------------------------------------
 
-  def __ixor__(self, n):
+  def __xor__(self, n):
+    """
+    Support ptn^n to get at least n repeats of pattern.
+    """
     return PatternRepeat(self, n)
 
   #-----------------------------------------------------------------------------
@@ -24,8 +27,8 @@ class Pattern:
 
 class PatternRepeat(Pattern):
   def __init__(self, pattern, n):
-    if not issubclass(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
-    if not issubclass(n, int): raise ValueError("In ptn^n, n must be an integer value")
+    if not issubclass(pattern.__class__, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
+    if not isinstance(n, int): raise ValueError("In ptn^n, n must be an integer value")
     self.pattern = pattern
 
     if n >= 0:
@@ -39,6 +42,14 @@ class PatternRepeat(Pattern):
 
   def match_at_least_n(self, string, init=0):
     """
+
+    >>> p = S("abc")^3
+    >>> p("ab")
+    False
+    >>> p("abc")
+    3
+    >>> p("abcabcd")
+    6
     """
     cnt = 0
     while True:
@@ -57,12 +68,19 @@ class PatternRepeat(Pattern):
 
   def match_at_most_n(self, string, init=0):
     """
+
+    >>> p = S("abc")^-3
+    >>> p("")
+    0
+    >>> p("abca")
+    3
     """
 
     init1 = init
     for i in range(self.n):
       init1 = self.pattern.match(string, init)
       if init1 == False: return init
+      init = init1
     return init1
 
 #===============================================================================
