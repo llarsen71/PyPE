@@ -41,19 +41,6 @@ class Pattern(object):
   #-----------------------------------------------------------------------------
 
   @staticmethod
-  def isMatch(index, strlen, start_index):
-    """
-    Check whether the index indicates a valid match.
-    """
-    # For some reason 'index == False' evaluates to True if 'index == 0'.
-    # so we check for a boolean
-    if isinstance(index, bool) and index == False: return False
-    if index < start_index or strlen < index: return False
-    return True
-
-  #-----------------------------------------------------------------------------
-
-  @staticmethod
   def positiveIndex(string, index, msg="Invalid index"):
     """
     Get the string index as a positive value. A negative index is calculated
@@ -147,12 +134,24 @@ class Pattern(object):
 
   #-----------------------------------------------------------------------------
 
+  def __invert__(self):
+    """
+    Support ~ptn as a look ahead pattern that consumes no values
+    """
+    if isinstance(self, PaternLookAhead): return self
+    return PaternLookAhead(self)
+
+  #-----------------------------------------------------------------------------
+
   def __call__(self, string, index=0):
     return self.match(string, index)
 
 #===============================================================================
 
 class P(Pattern):
+  """
+  Match a string or a number of characters.
+  """
 
   #-----------------------------------------------------------------------------
 
@@ -160,35 +159,35 @@ class P(Pattern):
     self.isValidValue(value)
 
     if isinstance(value, Pattern):
-      self.match  = self.match_ptn
-      self.ptn    = value
-      self.repr   = "P(ptn)"
+      self.matcher = self.match_ptn
+      self.ptn     = value
+      self.repr    = "P(ptn)"
 
-    if isinstance(value, basestring):
-      self.match  = self.match_str
-      self.string = value
-      self.size   = len(value)
+    elif isinstance(value, basestring):
+      self.matcher = self.match_str
+      self.string  = value
+      self.size    = len(value)
       # TODO: Handle signle quotes in representation.
-      self.repr   = "P('%s')" % value
+      self.repr    = "P('%s')" % value
 
     elif isinstance(value, bool):
-      self.match  = self.match_TF
-      self.TF     = value
-      self.repr   = "P(%s)" % value
+      self.matcher = self.match_TF
+      self.TF      = value
+      self.repr    = "P(%s)" % value
 
     elif isinstance(value, int):
       if value >= 0:
-        self.match  = self.match_n
-        self.n      = value
+        self.matcher = self.match_n
+        self.n       = value
       else:
-        self.match  = self.match_neg
-        self.n      = -value
-      self.repr     = "P(%s)" % value
+        self.matcher = self.match_neg
+        self.n       = -value
+      self.repr      = "P(%s)" % value
 
     elif callable(value):
-      self.match  = self.match_fn
-      self.fn     = value
-      self.repr   = "P(fn)"
+      self.matcher = self.match_fn
+      self.fn      = value
+      self.repr    = "P(fn)"
 
   #-----------------------------------------------------------------------------
 
@@ -212,15 +211,23 @@ class P(Pattern):
 
   #-----------------------------------------------------------------------------
 
+  def match(self, string, index=0):
+    """
+    Match the given pattern
+    """
+    return self.matcher(string, index)
+
+  #-----------------------------------------------------------------------------
+
   def match_ptn(self, string, index=0):
     """
     Matches the pattern passed in.
 
     >>> p = P(P("ab"))
     >>> p("abba")
-    2
-    >>> p("abba",1)
-    False
+    ab
+    >>> p("abba",1) is None
+    True
     """
     return self.ptn(string, index)
 
@@ -232,15 +239,16 @@ class P(Pattern):
 
     >>> p = P("test")
     >>> p("testing")
-    4
+    test
     >>> p("A test",2)
-    6
-    >>> p("None")
-    False
+    test
+    >>> p("Failed") is None
+    True
     """
-    if len(string) - index < self.size: return False
-    if string[index:index+self.size] == self.string: return index + self.size
-    return False
+    if len(string) - index < self.size: return None
+    if string[index:index+self.size] == self.string:
+        return Match(string, index, index + self.size)
+    return None
 
   #-----------------------------------------------------------------------------
 
@@ -249,20 +257,20 @@ class P(Pattern):
     Matches exactly n characters.
 
     >>> p = P(1)
-    >>> p("")
-    False
+    >>> p("") is None
+    True
     >>> p("a")
-    1
+    a
     >>> p = P(3)
-    >>> p("ab")
-    False
+    >>> p("ab") is None
+    True
     >>> p("abc")
-    3
-    >>> p("abc",1)
-    False
+    abc
+    >>> p("abc",1) is None
+    True
     """
-    if len(string) - index < self.n: return False
-    return index + self.n
+    if len(string) - index < self.n: return None
+    return Match(string, index, index + self.n)
 
   #-----------------------------------------------------------------------------
 
@@ -271,17 +279,16 @@ class P(Pattern):
     Matches less than n characters only (end of string).
 
     >>> p = P(-3)
-    >>> p("")
-    0
+    >>> p("") == ""
+    True
     >>> p("ab")
-    2
-    >>> p("abc")
-    False
-
+    ab
+    >>> p("abc") is None
+    True
     """
     sz = len(string)
-    if sz - index >= self.n: return False
-    return sz
+    if sz - index >= self.n: return None
+    return Match(string, index, sz)
 
   #-----------------------------------------------------------------------------
 
@@ -291,18 +298,18 @@ class P(Pattern):
     string.
 
     >>> p = P(False)
-    >>> p("test")
-    False
+    >>> p("test") is None
+    True
     >>> p = P(True)
-    >>> p("test")
-    0
-    >>> p("test",3)
-    3
-    >>> p("test",5)
-    False
+    >>> p("test") == ""
+    True
+    >>> p("test",3) == ""
+    True
+    >>> p("test",5) is None
+    True
     """
-    if not self.TF or index > len(string): return False
-    return index
+    if not self.TF or index > len(string): return None
+    return Match(string, index, index)
 
   #-----------------------------------------------------------------------------
 
@@ -314,17 +321,22 @@ class P(Pattern):
 
     >>> p = P(lambda str, i: i+2)
     >>> p("test")
-    2
-    >>> p("test",3)
-    False
+    te
+    >>> p("test",3) is None
+    True
     >>> p = P(lambda str, i: True)
-    >>> p("test",4)
-    4
+    >>> p("test",4) == ""
+    True
     """
-    new_index = self.fn(string, index)
-    if self.isMatch(new_index, len(string), index): return new_index
-    if new_index == True: return index
-    return False
+    match = self.fn(string, index)
+    if match is True: return Match(string, index, index)
+    if match is False: return None
+    if isinstance(match, Match): return match
+
+    if isinstance(match, int):
+        if index <= match and match <= len(string):
+            return Match(string, index, match)
+    return None
 
   #-----------------------------------------------------------------------------
 
@@ -353,15 +365,15 @@ class S(Pattern):
 
     >>> p = S("ace")
     >>> p("a")
-    1
-    >>> p("b")
-    False
+    a
+    >>> p("b") is None
+    True
     >>> p("abc",2)
-    3
+    c
     """
-    if len(string) - index < 1: return False
-    if string[index] not in self.set: return False
-    return index + 1
+    if len(string) - index < 1: return None
+    if string[index] not in self.set: return None
+    return Match(string, index, index + 1)
 
   #-----------------------------------------------------------------------------
 
@@ -392,18 +404,19 @@ class R(Pattern):
 
     >>> p = R("AZ","az")
     >>> p("a")
-    1
+    a
     >>> p("Q")
-    1
-    >>> p("1")
-    False
+    Q
+    >>> p("1") is None
+    True
     """
     if len(string) - index < 1: return False
 
     chr = string[index]
     for range in self.ranges:
-      if range[0] <= chr and chr <= range[1]: return index+1
-    return False
+      if range[0] <= chr and chr <= range[1]:
+          return Match(string, index, index+1)
+    return None
 
   #-----------------------------------------------------------------------------
 
@@ -486,22 +499,25 @@ class PatternAnd(Pattern):
 
     >>> p = P("bob ") * P("bill ") * P("fred")
     >>> p("bob bill fred")
-    13
-    >>> p("bob bill fran")
-    False
+    bob bill fred
+    >>> p("bob bill fran") is None
+    True
     >>> p = P("tes") - P("test")
     >>> p("tesseract")
-    3
-    >>> p("testing")
-    False
+    tes
+    >>> p("testing") is None
+    True
     """
 
+    MATCH = Match(string, index)
     # Make sure all the patterns match
     for pattern in self.patterns:
-      next_index = pattern.match(string, index)
-      if not self.isMatch(next_index, len(string), index): return False
-      index = next_index
-    return index
+      match = pattern.match(string, index)
+      if not isinstance(match, Match): return None
+      MATCH.addSubmatch(match)
+      index = match.end
+    MATCH.end = index
+    return MATCH
 
   #-----------------------------------------------------------------------------
 
@@ -576,7 +592,6 @@ class PatternOr(Pattern):
     """
     self.patterns.append(P.asPattern(pattern))
 
-
   #-----------------------------------------------------------------------------
 
   def prependPattern(self, pattern):
@@ -593,21 +608,19 @@ class PatternOr(Pattern):
 
     >>> p = P("bob") + P("bill") + P("fred")
     >>> p("obob",1)
-    4
+    bob
     >>> p("duck bill",5)
-    9
+    bill
     >>> p("fred")
-    4
-    >>> p("none")
-    False
+    fred
+    >>> p("none") is None
+    True
     """
 
     for pattern in self.patterns:
-      next_index = pattern.match(string, index)
-
-      if self.isMatch(next_index, len(string), index):
-        return next_index
-    return False
+      match = pattern.match(string, index)
+      if isinstance(match, Match): return match
+    return None
 
   #-----------------------------------------------------------------------------
 
@@ -652,15 +665,15 @@ class PatternNot(Pattern):
     """
 
     >>> p = -P("bob")
-    >>> p("bob")
-    False
-    >>> p("fred")
-    0
+    >>> p("bob") is None
+    True
+    >>> p("fred") == ""
+    True
     """
 
-    new_index = self.pattern(string, index)
-    if not self.isMatch(new_index, len(string), index): return index
-    return False
+    match = self.pattern(string, index)
+    if not isinstance(match, Match): return Match(string, index, index)
+    return None
 
   #-----------------------------------------------------------------------------
 
@@ -691,24 +704,28 @@ class PatternRepeat(Pattern):
     """
 
     >>> p = S("abc")^3
-    >>> p("ab")
-    False
+    >>> p("ab") is None
+    True
     >>> p("abc")
-    3
+    abc
     >>> p("abcabcd")
-    6
+    abcabc
     """
+    MATCH = Match(string, index)
     cnt = 0
     while True:
-      new_index = self.pattern.match(string, index)
+      match = self.pattern.match(string, index)
+
+      if not isinstance(match, Match):
+        return MATCH.setEnd(index) if cnt >= self.n else None
+
+      MATCH.addSubmatch(match)
 
       # No progress, so it matches infinite times
-      if index == new_index: return index
-      if not self.isMatch(new_index, len(string), index):
-        return index if cnt >= self.n else False
+      if match.end == index: return MATCH.setEnd(index)
 
       cnt += 1
-      index = new_index
+      index = match.end
 
   #-----------------------------------------------------------------------------
 
@@ -716,18 +733,18 @@ class PatternRepeat(Pattern):
     """
 
     >>> p = S("abc")^-3
-    >>> p("")
-    0
+    >>> p("") == ""
+    True
     >>> p("abca")
-    3
+    abc
     """
-
-    new_index = index
+    MATCH = Match(string, index)
     for i in range(self.n):
-      new_index = self.pattern.match(string, index)
-      if new_index == False: return index
-      index = new_index
-    return new_index
+      match = self.pattern.match(string, index)
+      if not isinstance(match, Match): return MATCH.setEnd(index)
+      MATCH.addSubmatch(match)
+      index = match.end
+    return MATCH.setEnd(index)
 
   #-----------------------------------------------------------------------------
 
@@ -736,10 +753,165 @@ class PatternRepeat(Pattern):
 
 #===============================================================================
 
+class PaternLookAhead(Pattern):
+  """
+  Check whether the patern matches the string that follows without consuming the
+  string
+  """
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, pattern):
+    P.isValidValue(pattern)
+    self.pattern = P.asPattern(pattern)
+
+  #-----------------------------------------------------------------------------
+
+  def match(self, string, index=0):
+    """
+
+    >>> p = ~P("test")
+    >>> p("testing") == ""
+    True
+    >>> p("This is a test",10) == ""
+    True
+    >>> p("Failed") is None
+    True
+    """
+    match = self.pattern.match(string, index)
+    if isinstance(match, Match): return match.setEnd(index)
+    return None
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "~%s" % repr(self.pattern)
+
+#===============================================================================
+
+def asString(capture, default=None):
+  """
+  Get a capture and return the associated substring.
+  """
+  string, start, end = (capture.string, capture.start, capture.end) if isinstance(capture, Match) else capture
+  return string[start:end] if isinstance(end, int) and end >= start else default
+
+#===============================================================================
+
+class Match(object):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, string, start, end=None):
+    self.string   = string
+    self.start    = start
+    self.end      = end
+    self.captures = []      # Captures and Submatches (with captures maybe)
+    self.capturei = []      # Last capture index associated with the given loc
+
+  #-----------------------------------------------------------------------------
+
+  def setEnd(self, end):
+    """
+    Set the value of end and return the match
+    """
+    self.end = end
+    return self
+
+  #-----------------------------------------------------------------------------
+
+  def addCapture(self, start, end):
+    """
+    Add a capture or a submatch.
+    """
+    self.captures.append( (self.string, start, end) )
+    iold = -1 if len(self.capturei) == 0 else self.capturei[-1]
+    self.capturei.append(iold + 1)
+
+  #-----------------------------------------------------------------------------
+
+  def addSubmatch(self, match):
+    """
+    """
+    self.captures.append(match)
+    iold = -1 if len(self.capturei) == 0 else self.capturei[-1]
+    self.capturei.append(iold + len(match))
+
+  #-----------------------------------------------------------------------------
+
+  def getCapture(self, index, captureFmt=asString):
+    """
+    """
+    if index > len(self): raise IndexError("Invalid capture index for Match")
+
+    iold = 0
+    for i, item in enumerate(self.capturei):
+      if index > item:
+        iold = i
+        continue
+      capture = self.captures[i]
+      return capture.getCapture(index-iold, captureFmt) if isinstance(capture, Match) else captureFmt(capture)
+
+    raise IndexError("Unexpected capture index error for Match")
+
+  #-----------------------------------------------------------------------------
+
+  def __getitem__(self, key):
+    """
+    Get a capture from the Match object
+    """
+    if isinstance(key, int) and 0 <= key and key < len(self):
+      return self.getCapture(key)
+    raise IndexError("Invalid index for Match")
+
+  #-----------------------------------------------------------------------------
+
+  def __eq__(self, other):
+    """
+    Compare with strings or other Match objects. Check that the resulting value
+    matches.
+    """
+    if isinstance(other, basestring):
+      return str(self) == other
+
+    if isinstance(other, Match):
+      return str(self) == str(other)
+
+  #-----------------------------------------------------------------------------
+
+  def __len__(self):
+    return 0 if len(self.capturei) == 0 else self.capturei[-1]+1
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return str(self)
+
+  #-----------------------------------------------------------------------------
+
+  def __str__(self):
+    return asString(self, "")
+
+#===============================================================================
+
 def match(pattern, subject, index=0):
   """
   """
   pass
+
+#===============================================================================
+
+class Tokenizer(object):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self):
+    pass
+
+  #-----------------------------------------------------------------------------
+
+  def tokens(self, string, index=0):
+    pass
 
 #===============================================================================
 
