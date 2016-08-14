@@ -26,16 +26,77 @@
 #
 #===============================================================================
 
+def ConfigBackCaptureString4match(fn):
+  """
+  Wrap string as a BackCaptureString and clear backcaptures on failed matches.
+  """
+  def match(matchObj, string, index=0):
+    if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
+    sz = string.getStackSize()
+
+    debug = olddebug = string.debug()
+    if matchObj.debug() is not False:
+      debug = matchObj.debug()
+      string.debug(debug)
+    debug = debug and not (debug is Pattern.NAMED and matchObj.name is None)
+
+    if debug:
+      name = matchObj.name or repr(matchObj)
+      print "Enter: ({0}) {1}".format(index, name)
+
+    matchResult = fn(matchObj, string, index)
+
+    if debug:
+      if not isinstance(matchResult, Match):
+        print "Leave: ({0}) {1}".format(index, name)
+      else:
+        print "Result: ({0}) {1}".format(index, name)
+        print "        {0}".format(str(matchResult))
+
+    if not isinstance(matchResult, Match):
+      string.setStackSize(sz)
+
+    # restore the debug state
+    string.debug(olddebug)
+
+    return matchResult
+
+  match.__doc__ = fn.__doc__
+  return match
+
+#===============================================================================
+
 class Pattern(object):
+
+  NAMED = 1  # Debug only named
 
   #-----------------------------------------------------------------------------
 
   def __init__(self):
+    self.dbg  = False
+    self.name = None
     pass
 
   #-----------------------------------------------------------------------------
 
+  def debug(self, TF=None):
+    if TF is None: return self.dbg
+    if isinstance(TF, basestring) and TF.lower() == "named":
+      self.dbg = Pattern.NAMED
+    else:
+      self.dbg = TF
+
+  #-----------------------------------------------------------------------------
+
+  def setName(self, name):
+    self.name = name
+
+  #-----------------------------------------------------------------------------
+
   def match(self, string, index=0):
+    """
+    Implement this is child classes
+    """
     return False
 
   #-----------------------------------------------------------------------------
@@ -59,6 +120,25 @@ class Pattern(object):
 
   #-----------------------------------------------------------------------------
 
+  def __ror__(self, name):
+    """
+    """
+    return self.__or__(name)
+
+  #-----------------------------------------------------------------------------
+
+  def __or__(self, name):
+    """
+    Add a name to a pattern
+    """
+    if isinstance(name, bool) or name == Pattern.NAMED:
+      self.debug(name)
+    else:
+      self.setName(name)
+    return self
+
+  #-----------------------------------------------------------------------------
+
   def __mul__(self, other):
     """
     Suport 'ptn*a'
@@ -68,7 +148,6 @@ class Pattern(object):
     return PatternAnd(self, other)
 
   #-----------------------------------------------------------------------------
-
 
   def __rmul__(self, other):
     """
@@ -126,9 +205,9 @@ class Pattern(object):
 
   #-----------------------------------------------------------------------------
 
-  def __xor__(self, n):
+  def __pow__(self, n):
     """
-    Support ptn^n to get at least n repeats of pattern.
+    Support ptn**n to get at least n repeats of pattern.
     """
     return PatternRepeat(self, n)
 
@@ -148,6 +227,13 @@ class Pattern(object):
 
 #===============================================================================
 
+def escapeStr(string):
+  for c,v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t")]:
+    string = string.replace(c, v)
+  return string
+
+#===============================================================================
+
 class P(Pattern):
   """
   Match a string or a number of characters.
@@ -156,6 +242,7 @@ class P(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, value):
+    Pattern.__init__(self)
     self.isValidValue(value)
 
     if isinstance(value, Pattern):
@@ -168,7 +255,7 @@ class P(Pattern):
       self.string  = value
       self.size    = len(value)
       # TODO: Handle signle quotes in representation.
-      self.repr    = "P('%s')" % value
+      self.repr    = "P('%s')" % escapeStr(value)
 
     elif isinstance(value, bool):
       self.matcher = self.match_TF
@@ -211,6 +298,7 @@ class P(Pattern):
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
     Match the given pattern
@@ -235,7 +323,7 @@ class P(Pattern):
 
   def match_str(self, string, index=0):
     """
-    Matches an exact string
+    Matches an exact string.
 
     >>> p = P("test")
     >>> p("testing")
@@ -353,12 +441,14 @@ class S(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, set):
+    Pattern.__init__(self)
     if not isinstance(set, basestring):
       raise ValueError("The arg must be a string in S(arg)")
     self.set = set
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
     Match character in the given set.
@@ -379,7 +469,7 @@ class S(Pattern):
 
   def __repr__(self):
     # TODO: Handle single quote in set
-    return "S('%s')" % self.set
+    return "S('%s')" % escapeStr(self.set)
 
 #===============================================================================
 
@@ -391,6 +481,7 @@ class R(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, *ranges):
+    Pattern.__init__(self)
     self.ranges = ranges
     for range in ranges:
       if len(range) != 2: raise ValueError("Ranges must have two values: %s" % value)
@@ -398,6 +489,7 @@ class R(Pattern):
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
     Matches any character in the given set of ranges.
@@ -422,7 +514,7 @@ class R(Pattern):
 
   def __repr__(self):
     # TODO: Handle single quote in range values
-    return "R(%s)" % (",".join(["'%s'" % range for range in ranges]))
+    return "R(%s)" % (",".join(["'%s'" % range for range in self.ranges]))
 
 #===============================================================================
 
@@ -431,6 +523,7 @@ class V(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, var=None):
+    Pattern.__init__(self)
     self.var = var
 
   #-----------------------------------------------------------------------------
@@ -442,6 +535,7 @@ class V(Pattern):
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
     """
@@ -452,6 +546,184 @@ class V(Pattern):
   def __repr__(self):
     return "V(%s)" % self.var if self.var else "V(%s)" % repr(self.pattern)
 
+#===============================================================================
+# Captures
+#===============================================================================
+
+class C(Pattern):
+  """
+  Capture a pattern
+  """
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, pattern):
+    Pattern.__init__(self)
+    self.pattern = pattern
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    >>> p = C(C(P(2))*P(1))
+    >>> match = p("abcd")
+    >>> match.getCapture(0)
+    'abc'
+    >>> match.getCapture(1)
+    'ab'
+    """
+
+    match = self.pattern.match(string, index)
+    if isinstance(match, Match):
+      match.captures.insert(0, str(match))
+    return match
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "C(%s)" % repr(self.pattern)
+
+#===============================================================================
+
+class Cb(Pattern):
+  """
+  Backcapture
+  """
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, name, pattern=None):
+    Pattern.__init__(self)
+    self.capname = name
+    self.pattern = pattern
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    >>> p = Cb("test",P("cat")+P("dog")) * P(" ") * Cb("test")
+    >>> p.match("dog dog")
+    dog dog
+    >>> p.match("cat cat")
+    cat cat
+    >>> p.match("cat dog") == None
+    True
+    """
+    if self.pattern is None:
+      tomatch = string.getNamedCapture(self.capname)
+      return P(tomatch).match(string, index)
+    else:
+      match = self.pattern.match(string, index)
+      if isinstance(match, Match):
+        string.addNamedCapture(self.capname, match.getValue())
+    return match
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    # TODO: handle single quote in name
+    if self.pattern is None:
+      return "Cb('{0}')".format(self.capname)
+    return "Cb('{0}',{0})".format(self.capname, repr(self.pattern))
+
+#===============================================================================
+
+class Cc(Pattern):
+  """
+  Capture a constant value.
+  """
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, value):
+    Pattern.__init__(self)
+    self.value = value
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+
+    >>> p = Cc("test")
+    >>> match = p("")
+    >>> match[0]
+    'test'
+    """
+    return Match(string, index, index).addCapture(self.value)
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "Cc(%s)" % self.value
+
+#===============================================================================
+
+class Cg(Pattern):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, pattern, dropIfEmpty=True):
+    Pattern.__init__(self)
+    self.pattern     = pattern
+    self.dropIfEmpty = dropIfEmpty
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    >>> p = Cg(C(P(1)) * C(P(1)))
+    >>> p("Test").getCapture(0)
+    ['T', 'e']
+    >>> p("b") is None
+    True
+    """
+
+    match = self.pattern.match(string, index)
+    if not isinstance(match, Match): return match
+
+    captures = match.captures
+    if len(captures) == 0 and self.dropIfEmpty: return match
+
+    # Make the captures a single entry in the captures array
+    match.captures = [captures]
+    return match
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    if self.dropIfEmpty is False:
+      return "Cg({0},{1})".format(repr(self.pattern),"False")
+    return "Cg({0})".format(repr(self.pattern))
+
+#===============================================================================
+
+class Cp(Pattern):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self):
+    Pattern.__init__(self)
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    >>> p = Cp()
+    >>> p("test",3).getCapture(0)
+    3
+    """
+    if index < 0 or len(string) < index: return None
+    return Match(string, index, index).addCapture(index)
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "Cp()"
 
 #===============================================================================
 # Pattern Operators
@@ -465,6 +737,7 @@ class PatternAnd(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, pattern1, pattern2):
+    Pattern.__init__(self)
     if not isinstance(pattern1, Pattern) and not isinstance(pattern2, Pattern):
       raise ValueError("PatternAnd requires the first or second constructor item to be a Pattern")
 
@@ -493,6 +766,7 @@ class PatternAnd(Pattern):
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
     Find the first pattern that matches the string.
@@ -525,6 +799,10 @@ class PatternAnd(Pattern):
     """
     Support 'ptn*a'
     """
+    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
+      return PatternAnd(self, other)
+    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
+      return PatternAnd(self, other)
     self.appendPattern(other)
     return self
 
@@ -534,6 +812,10 @@ class PatternAnd(Pattern):
     """
     Support 'a*ptn'
     """
+    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
+      return PatternAnd(other, self)
+    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
+      return PatternAnd(other, self)
     self.prependPattern(other)
     return self
 
@@ -574,6 +856,7 @@ class PatternOr(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, pattern1, pattern2):
+    Pattern.__init__(self)
     if not isinstance(pattern1, Pattern) and not isinstance(pattern2, Pattern):
       raise ValueError("PatternOr requires the first or second constructor item to be a Pattern")
 
@@ -602,6 +885,7 @@ class PatternOr(Pattern):
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
     Find the first pattern that matches the string.
@@ -628,6 +912,10 @@ class PatternOr(Pattern):
     """
     Support 'ptn+a'
     """
+    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
+      return PatternOr(self, other)
+    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
+      return PatternOr(self, other)
     self.appendPattern(other)
     return self
 
@@ -637,6 +925,10 @@ class PatternOr(Pattern):
     """
     Support 'a+ptn'
     """
+    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
+      return PatternOr(oher, self)
+    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
+      return PatternOr(other, self)
     self.prependPattern(other)
     return self
 
@@ -656,11 +948,13 @@ class PatternNot(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, pattern):
+    Pattern.__init__(self)
     P.isValidValue(pattern, msg ="Invalid '-ptn' expression")
     self.pattern = P.asPattern(pattern)
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
 
@@ -687,23 +981,30 @@ class PatternRepeat(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, pattern, n):
+    Pattern.__init__(self)
     if not isinstance(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
     if not isinstance(n, int): raise ValueError("In ptn^n, n must be an integer value")
     self.pattern = pattern
 
     if n >= 0:
-      self.match = self.match_at_least_n
+      self.matcher = self.match_at_least_n
       self.n = n
     else:
-      self.match = self.match_at_most_n
+      self.matcher = self.match_at_most_n
       self.n = -n
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    return self.matcher(string, index)
 
   #-----------------------------------------------------------------------------
 
   def match_at_least_n(self, string, index=0):
     """
 
-    >>> p = S("abc")^3
+    >>> p = S("abc")**3
     >>> p("ab") is None
     True
     >>> p("abc")
@@ -732,7 +1033,7 @@ class PatternRepeat(Pattern):
   def match_at_most_n(self, string, index=0):
     """
 
-    >>> p = S("abc")^-3
+    >>> p = S("abc")**-3
     >>> p("") == ""
     True
     >>> p("abca")
@@ -749,7 +1050,7 @@ class PatternRepeat(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "%s^%s" % (repr(self.pattern), self.n)
+    return "%s**%s" % (repr(self.pattern), self.n)
 
 #===============================================================================
 
@@ -762,11 +1063,13 @@ class PaternLookAhead(Pattern):
   #-----------------------------------------------------------------------------
 
   def __init__(self, pattern):
+    Pattern.__init__(self)
     P.isValidValue(pattern)
     self.pattern = P.asPattern(pattern)
 
   #-----------------------------------------------------------------------------
 
+  @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
 
@@ -788,14 +1091,93 @@ class PaternLookAhead(Pattern):
     return "~%s" % repr(self.pattern)
 
 #===============================================================================
+# BackCaptureString
+#===============================================================================
 
-def asString(capture, default=None):
+class BackCaptureString(object):
   """
-  Get a capture and return the associated substring.
+  This class is used to track the string that is being matched against and any
+  back captures that are generated. Back captures are stored in a stack. Back
+  captures that are added as part of a pattern that fails are removed from the
+  stack.
   """
-  string, start, end = (capture.string, capture.start, capture.end) if isinstance(capture, Match) else capture
-  return string[start:end] if isinstance(end, int) and end >= start else default
 
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, string):
+    self.string = string
+    self.backcaptures = []
+    self.dbg = False
+
+  #-----------------------------------------------------------------------------
+
+  def debug(self, TF=None):
+    if TF is None: return self.dbg
+    self.dbg = TF
+
+  #-----------------------------------------------------------------------------
+
+  def addNamedCapture(self, name, capture):
+    """
+    Add a named capture to the list of back captures.
+    """
+    self.backcaptures.append((name, capture))
+
+  #-----------------------------------------------------------------------------
+
+  def getNamedCapture(self, name):
+    """
+    Get a named capture from the list. The most recent capture of the given
+    name is returned.
+    """
+
+    for i in xrange(self.getStackSize()-1,-1,-1):
+      bcname, capture = self.backcaptures[i]
+      if bcname == name: return capture
+
+    raise IndexError("No backcapture was found for '{0}'".format(name))
+
+  #-----------------------------------------------------------------------------
+
+  def getStackSize(self):
+    """
+    Get the number of back captures
+    """
+    return len(self.backcaptures)
+
+  #-----------------------------------------------------------------------------
+
+  def setStackSize(self, size):
+    """
+    Set the stack back to the given size. If the stack is too large raise an
+    Exception.
+    """
+    sz = len(self.backcaptures)
+    if size == sz: return
+    if sz < size: raise ValueError("The backcaptures stack is too short.")
+
+    self.backcaptures = self.backcaptures[0:size]
+
+  #-----------------------------------------------------------------------------
+
+  def __getitem__(self, index):
+    if isinstance(index, (int,slice)):
+      return self.string[index]
+
+    return self.backcaptures[index]
+
+  #-----------------------------------------------------------------------------
+
+  def __len__(self):
+    return len(self.string)
+
+  #-----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return self.string
+
+#===============================================================================
+# Match object
 #===============================================================================
 
 class Match(object):
@@ -806,8 +1188,7 @@ class Match(object):
     self.string   = string
     self.start    = start
     self.end      = end
-    self.captures = []      # Captures and Submatches (with captures maybe)
-    self.capturei = []      # Last capture index associated with the given loc
+    self.captures = []
 
   #-----------------------------------------------------------------------------
 
@@ -820,39 +1201,43 @@ class Match(object):
 
   #-----------------------------------------------------------------------------
 
-  def addCapture(self, start, end):
+  def getValue(self, default=None):
+    """
+    Get the value that was mached.
+    """
+    start, end = (self.start, self.end)
+    return default if self.end is None else self.string[start:end]
+
+  #-----------------------------------------------------------------------------
+
+  def addCapture(self, capture):
     """
     Add a capture or a submatch.
     """
-    self.captures.append( (self.string, start, end) )
-    iold = -1 if len(self.capturei) == 0 else self.capturei[-1]
-    self.capturei.append(iold + 1)
+    self.captures.append( capture )
+    return self
 
   #-----------------------------------------------------------------------------
 
   def addSubmatch(self, match):
     """
     """
-    self.captures.append(match)
-    iold = -1 if len(self.capturei) == 0 else self.capturei[-1]
-    self.capturei.append(iold + len(match))
+    self.captures.extend(match.captures)
+    return self
 
   #-----------------------------------------------------------------------------
 
-  def getCapture(self, index, captureFmt=asString):
+  def hasCaptures(self):
+    return len(self.captures) > 0
+
+  #-----------------------------------------------------------------------------
+
+  def getCapture(self, index):
     """
     """
-    if index > len(self): raise IndexError("Invalid capture index for Match")
-
-    iold = 0
-    for i, item in enumerate(self.capturei):
-      if index > item:
-        iold = i
-        continue
-      capture = self.captures[i]
-      return capture.getCapture(index-iold, captureFmt) if isinstance(capture, Match) else captureFmt(capture)
-
-    raise IndexError("Unexpected capture index error for Match")
+    if not self.hasCaptures() or index >= len(self.captures):
+      raise IndexError("Invalid capture index for Match")
+    return self.captures[index]
 
   #-----------------------------------------------------------------------------
 
@@ -880,7 +1265,7 @@ class Match(object):
   #-----------------------------------------------------------------------------
 
   def __len__(self):
-    return 0 if len(self.capturei) == 0 else self.capturei[-1]+1
+    return len(self.captures)
 
   #-----------------------------------------------------------------------------
 
@@ -890,7 +1275,7 @@ class Match(object):
   #-----------------------------------------------------------------------------
 
   def __str__(self):
-    return asString(self, "")
+    return self.getValue()
 
 #===============================================================================
 
@@ -901,20 +1286,54 @@ def match(pattern, subject, index=0):
 
 #===============================================================================
 
+def Token(object):
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self, name, match):
+    self.name = name
+    self.match = match
+
+#===============================================================================
+
 class Tokenizer(object):
 
   #-----------------------------------------------------------------------------
 
-  def __init__(self):
-    pass
+  def __init__(self, *tokens):
+    self.tokens = []
+    for token in tokens:
+      self.addToken(token)
 
   #-----------------------------------------------------------------------------
 
-  def tokens(self, string, index=0):
-    pass
+  def addToken(self, pattern):
+    if pattern.name is None:
+      raise ValueError("A token must be a named pattern")
+    self.tokens.append( pattern )
+
+  #-----------------------------------------------------------------------------
+
+  def getTokens(self, string, index=0):
+    """
+    """
+
+    while True:
+      for pattern in self.tokens:
+        name = pattern.name
+        match = pattern.match(string, index)
+        if isinstance(match, Match):
+          yield (name, match)
+          if index == match.end: raise StopIteration() # No Progress
+          index = match.end
+          break
+      else:
+        raise StopIteration()
+
 
 #===============================================================================
 
 if __name__ == "__main__":
   import doctest
   doctest.testmod()
+
