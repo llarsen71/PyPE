@@ -143,8 +143,6 @@ class Pattern(object):
     """
     Suport 'ptn*a'
     """
-    if isinstance(other, PatternAnd):
-      other.prependPattern(self)
     return PatternAnd(self, other)
 
   #-----------------------------------------------------------------------------
@@ -153,8 +151,6 @@ class Pattern(object):
     """
     Support 'a*ptn'
     """
-    if isinstance(other, PatternAnd):
-      other.appendPattern(self)
     return PatternAnd(other, self)
 
   #-----------------------------------------------------------------------------
@@ -163,9 +159,6 @@ class Pattern(object):
     """
     Support 'ptn+a'
     """
-    if isinstance(other, PatternOr):
-      other.prependPattern(self)
-      return
     return PatternOr(self, other)
 
   #-----------------------------------------------------------------------------
@@ -174,9 +167,6 @@ class Pattern(object):
     """
     Support 'a+ptn'
     """
-    if isinstance(other, PatternOr):
-      other.appendPattern(self)
-      return
     return PatternOr(other, self)
 
   #-----------------------------------------------------------------------------
@@ -750,22 +740,6 @@ class PatternAnd(Pattern):
 
   #-----------------------------------------------------------------------------
 
-  def appendPattern(self, pattern):
-    """
-    Add a pattern to the end of the or list
-    """
-    self.patterns.append(P.asPattern(pattern))
-
-  #-----------------------------------------------------------------------------
-
-  def prependPattern(self, pattern):
-    """
-    Add a pattern to the start of the or list
-    """
-    self.patterns.insert(0, P.asPattern(pattern))
-
-  #-----------------------------------------------------------------------------
-
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
@@ -792,32 +766,6 @@ class PatternAnd(Pattern):
       index = match.end
     MATCH.end = index
     return MATCH
-
-  #-----------------------------------------------------------------------------
-
-  def __mul__(self, other):
-    """
-    Support 'ptn*a'
-    """
-    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
-      return PatternAnd(self, other)
-    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
-      return PatternAnd(self, other)
-    self.appendPattern(other)
-    return self
-
-  #-----------------------------------------------------------------------------
-
-  def __rmul__(self, other):
-    """
-    Support 'a*ptn'
-    """
-    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
-      return PatternAnd(other, self)
-    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
-      return PatternAnd(other, self)
-    self.prependPattern(other)
-    return self
 
   #-----------------------------------------------------------------------------
 
@@ -869,22 +817,6 @@ class PatternOr(Pattern):
 
   #-----------------------------------------------------------------------------
 
-  def appendPattern(self, pattern):
-    """
-    Add a pattern to the end of the or list
-    """
-    self.patterns.append(P.asPattern(pattern))
-
-  #-----------------------------------------------------------------------------
-
-  def prependPattern(self, pattern):
-    """
-    Add a pattern to the start of the or list
-    """
-    self.patterns.insert(0, P.asPattern(pattern))
-
-  #-----------------------------------------------------------------------------
-
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
@@ -905,32 +837,6 @@ class PatternOr(Pattern):
       match = pattern.match(string, index)
       if isinstance(match, Match): return match
     return None
-
-  #-----------------------------------------------------------------------------
-
-  def __add__(self, other):
-    """
-    Support 'ptn+a'
-    """
-    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
-      return PatternOr(self, other)
-    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
-      return PatternOr(self, other)
-    self.appendPattern(other)
-    return self
-
-  #-----------------------------------------------------------------------------
-
-  def __radd__(self, other):
-    """
-    Support 'a+ptn'
-    """
-    if self.name is not None or (isinstance(other, Pattern) and other.name is not None):
-      return PatternOr(oher, self)
-    if self.debug is not False or (isinstance(other, Pattern) and other.debug is not False):
-      return PatternOr(other, self)
-    self.prependPattern(other)
-    return self
 
   #-----------------------------------------------------------------------------
 
