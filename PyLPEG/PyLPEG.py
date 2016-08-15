@@ -53,7 +53,17 @@ def ConfigBackCaptureString4match(fn):
         print "Result: ({0}) {1}".format(index, name)
         print "        {0}".format(str(matchResult))
 
-    if not isinstance(matchResult, Match):
+    # Clear any nested stored callback items except when:
+    #
+    # 1. We return from a Cb item that stores a callback.
+    # 2. We are in a sequence of 'PatternAnd' matches. These should be
+    #    considered to be at the same level in the PEG logic, so we keep any
+    #    previous captured callbacks in the sequence. Once the combined sequence
+    #    of PatternAnd(s) returns, the callbacks are removed. The 'is_sub_and'
+    #    flag indicates whether a PatternAnd object is contained within another
+    #    PatternAnd (i.e., is part of a sequence).
+
+    if not isinstance(matchObj, Cb) and not (isinstance(matchObj, PatternAnd) and matchObj.is_sub_and):
       string.setStackSize(sz)
 
     # restore the debug state
@@ -217,13 +227,6 @@ class Pattern(object):
 
 #===============================================================================
 
-def escapeStr(string):
-  for c,v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t")]:
-    string = string.replace(c, v)
-  return string
-
-#===============================================================================
-
 class P(Pattern):
   """
   Match a string or a number of characters.
@@ -238,13 +241,13 @@ class P(Pattern):
     if isinstance(value, Pattern):
       self.matcher = self.match_ptn
       self.ptn     = value
-      self.repr    = "P(ptn)"
+      self.repr    = _repr_(ptn)
 
     elif isinstance(value, basestring):
       self.matcher = self.match_str
       self.string  = value
       self.size    = len(value)
-      # TODO: Handle signle quotes in representation.
+      # TODO: Handle single quotes in representation.
       self.repr    = "P('%s')" % escapeStr(value)
 
     elif isinstance(value, bool):
@@ -264,7 +267,7 @@ class P(Pattern):
     elif callable(value):
       self.matcher = self.match_fn
       self.fn      = value
-      self.repr    = "P(fn)"
+      self.repr    = "P({0})".format(value.__name__) if hasattr(value, '__name__') else "P(fn)"
 
   #-----------------------------------------------------------------------------
 
@@ -504,7 +507,7 @@ class R(Pattern):
 
   def __repr__(self):
     # TODO: Handle single quote in range values
-    return "R(%s)" % (",".join(["'%s'" % range for range in self.ranges]))
+    return "R(%s)" % (",".join(["'{0}'".format(escapeStr(range)) for range in self.ranges]))
 
 #===============================================================================
 
@@ -534,7 +537,7 @@ class V(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "V(%s)" % self.var if self.var else "V(%s)" % repr(self.pattern)
+    return "V(%s)" % self.var if self.var else "V(%s)" % _repr_(self.pattern)
 
 #===============================================================================
 # Captures
@@ -572,7 +575,7 @@ class C(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "C(%s)" % repr(self.pattern)
+    return "C(%s)" % _repr_(self.pattern)
 
 #===============================================================================
 
@@ -616,7 +619,7 @@ class Cb(Pattern):
     # TODO: handle single quote in name
     if self.pattern is None:
       return "Cb('{0}')".format(self.capname)
-    return "Cb('{0}',{0})".format(self.capname, repr(self.pattern))
+    return "Cb('{0}',{0})".format(self.capname, _repr_(self.pattern))
 
 #===============================================================================
 
@@ -686,8 +689,8 @@ class Cg(Pattern):
 
   def __repr__(self):
     if self.dropIfEmpty is False:
-      return "Cg({0},{1})".format(repr(self.pattern),"False")
-    return "Cg({0})".format(repr(self.pattern))
+      return "Cg({0},{1})".format(_repr_(self.pattern),"False")
+    return "Cg({0})".format(_repr_(self.pattern))
 
 #===============================================================================
 
@@ -736,7 +739,12 @@ class PatternAnd(Pattern):
     isValidValue(pattern2, msg="For 'a*b', 'b' must be Pattern or int value")
 
     asPattern = P.asPattern
-    self.patterns = [asPattern(pattern1), asPattern(pattern2)]
+    self.patterns = (asPattern(pattern1), asPattern(pattern2))
+    self.is_sub_and = False # Is this contained in another and operation
+    self.is_not_ptn = isinstance(pattern1, PatternNot) # Indicate if this is (Ptn1 - Ptn)
+
+    if isinstance(pattern1, PatternAnd): pattern1.is_sub_and = True
+    if isinstance(pattern2, PatternAnd): pattern2.is_sub_and = True
 
   #-----------------------------------------------------------------------------
 
@@ -779,20 +787,13 @@ class PatternAnd(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    from itertools import takewhile
-
-    # Get the pattern from inside the PatternNot object since we will add '-' manually
-    nots = [item.pattern for item in takewhile(lambda item: isinstance(item, PatternNot), self.patterns)]
-
-    # If there are nots at the start, write as a*b - c - d ...
-    if len(nots) > 0:
-      n = len(nots)
-      ands = "*".join([repr(pattern) for pattern in self.patterns[n:]])
-      nots.reverse()
-      nots = " - ".join([repr(item) for item in nots])
-      return "%s - %s" % (ands, nots)
-
-    return "*".join([repr(pattern) for pattern in self.patterns])
+    if self.is_not_ptn:
+      # Get the pattern contained by PatternNot since we will add the '-' manually
+      notPtn = self.patterns[0].pattern
+      return "%s - %s" % (repr(self.patterns[1]), repr(notPtn))
+    else:
+      prns = lambda ptn: isinstance(ptn, PatternOr) or (isinstance(ptn, PatternAnd) and ptn.is_not_ptn)
+      return "{0}*{1}".format(_repr_(self.patterns[0], prns), _repr_(self.patterns[1], prns))
 
 #===============================================================================
 
@@ -812,8 +813,7 @@ class PatternOr(Pattern):
     isValidValue(pattern1, msg="For 'a+b', 'a' must be Pattern or int value")
     isValidValue(pattern2, msg="For 'a+b', 'b' must be Pattern or int value")
 
-    asPattern = P.asPattern
-    self.patterns = [asPattern(pattern1), asPattern(pattern2)]
+    self.patterns = (P.asPattern(pattern1), P.asPattern(pattern2))
 
   #-----------------------------------------------------------------------------
 
@@ -841,7 +841,7 @@ class PatternOr(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    return " + ".join([repr(pattern) for pattern in self.patterns])
+    return "{0} + {1}".format(_repr_(self.patterns[0]), _repr_(self.patterns[1]))
 
 #===============================================================================
 
@@ -878,7 +878,7 @@ class PatternNot(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "-%s" % repr(self.pattern)
+    return "-%s" % _repr_(self.pattern)
 
 #===============================================================================
 
@@ -956,7 +956,8 @@ class PatternRepeat(Pattern):
   #-----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "%s**%s" % (repr(self.pattern), self.n)
+    return "{0}**{1}".format(_repr_(self.pattern, (PatternOr, PatternAnd, PatternNot, PatternRepeat)), self.n)
+
 
 #===============================================================================
 
@@ -1074,6 +1075,11 @@ class BackCaptureString(object):
 
   #-----------------------------------------------------------------------------
 
+  def __getattr__(self, attr):
+    return getattr(self.string, attr)
+
+  #-----------------------------------------------------------------------------
+
   def __len__(self):
     return len(self.string)
 
@@ -1147,6 +1153,11 @@ class Match(object):
 
   #-----------------------------------------------------------------------------
 
+  def __getattr__(self, attr):
+    return getattr(str(self), attr)
+
+  #-----------------------------------------------------------------------------
+
   def __getitem__(self, key):
     """
     Get a capture from the Match object
@@ -1189,6 +1200,25 @@ def match(pattern, subject, index=0):
   """
   """
   pass
+
+#===============================================================================
+
+def escapeStr(string):
+  for c,v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
+    string = string.replace(c, v)
+  return string
+
+#===============================================================================
+
+def _repr_(ptn, prnsCls=None):
+  if ptn.name is not None:
+    return "<{0}>".format(ptn.name)
+  if callable(prnsCls):
+    if prnsCls(ptn):
+      return "({0})".format(repr(ptn))
+  elif prnsCls and isinstance(ptn, prnsCls):
+    return "({0})".format(repr(ptn))
+  return repr(ptn)
 
 #===============================================================================
 
