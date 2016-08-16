@@ -20,16 +20,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #===============================================================================
-#
-# PyLPEG is a pure python parsing expression grammars library designed to mimic
-# the Lua LPEG library. Syntax is made to be consistent were possible.
-#
+"""
+.. module::PyLPEG
+
+  This module is a pure python parsing expression grammar (PEG) library loosely
+  designed to mimic the Lua LPEG library. Features are added to ease debugging
+  of PEG patterns and to build lexers.
+"""
 #===============================================================================
 
 def ConfigBackCaptureString4match(fn):
   """
-  Wrap string as a BackCaptureString and clear backcaptures on failed matches.
+  ..function:: ConfigBackCaptureString4match(fn)
+
+  This decorates the :func:`match` functions in the Pattern subclasses. The
+  wrapper function does the following:
+
+  * It wraps the string that is passed to pattern's *match* function as a
+    :class:`BackCaptureString` so that back captures are stored correctly.
+  * The debug option for a pattern is forwarded to any contained patterns via
+    the wrapper function.
+  * The *match* function for the pattern is called.
+  * Debug messages are printed if when debugging is active for a pattern.
+  * The function cleans up back captures that are out of scope.
+  * Results from the *match*
+
+  :param fn: A :func:`match` function that takes a string and and optional index
+             and returns a :class:`Match` object if the string matches the
+             pattern, or None if the pattern fails.
+  :type fn: function(string[, index=0])
+
+  :returns: The wrapper function that performs the tasks outlined above.
   """
+
   def match(matchObj, string, index=0):
     if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
     sz = string.getStackSize()
@@ -71,13 +94,71 @@ def ConfigBackCaptureString4match(fn):
 
     return matchResult
 
+  # Preserve the doc string for the original match function
   match.__doc__ = fn.__doc__
   return match
 
 #===============================================================================
 
 class Pattern(object):
+  """
+  .. class:: Pattern()
 
+  This is the base class for all Pattern objects. The most important function
+  for patterns is *ptn.match(string[, index])*, which checks a string starting
+  at the given index to see if it matches the pattern. A :class:`Match` object
+  is returned if a match is found, or None if the pattern did not match the
+  string at the given index. Each subclass of Pattern implements different
+  patterns to search for and must implement a *match* function that is decorated
+  by :func:`ConfigBackCaptureString4match`. This *match* function can be called
+  indirectly by using *ptn(string[, index])*.
+
+  A :class:`Match` object contains the original string and stores the start and
+  end index of the match. The location after the end of the matched string is
+  typically used as the starting point for subsequent searches. Some patterns
+  may succeed without consuming any values of the string. Some care must be
+  taken to ensure that expressions consume input so that infinite loops do not
+  occur.
+
+  Any pattern can be 'named' by calling 'setName' for the pattern or by using
+  the 'set name' operator (shown later). This is primarily used for debugging
+  or when building a :class:`Tokenizer`, since all token patterns must have a
+  name specified.
+
+  Debug mode can be set for any pattern by calling the function *debug* with
+  *True* (to debug all subpatterns) or *"named"* (to debug only showing patterns
+  that are named).
+
+  The Pattern class defines the set of operators supported by all Pattern
+  objects. The patterns are exercised by calling *ptn.match(string,index)* which
+  tries to match the *ptn* in the given string starting at the specified index.
+  Some patterns contain other patterns. Below the contained patterns will be
+  referenced as *ptn1* or *ptn2*. The supported operators are:
+
+  * ``*`` - This is used to indicate a sequence of patterns that must come in
+            order. The can be referred to as the *and* or *followed by*
+            operator. If *ptn1* and *ptn2* are two Pattern objects, then
+            *ptn1 ``*`` ptn2* matches *ptn1* followed by *ptn2*. If either
+            pattern fails, then the combination fails.
+  * ``+`` - This is an ordered choice operator. The expression *ptn1 + ptn2*
+            matches *ptn1* starting at *index*. If this succeeds, the
+            :class:`Match` is returned. Otherwise, it tries to match *ptn2* and
+            returns the :class:`Match` if the pattern succeeds, or None if it
+            fails.
+  * ``-`` - This is a *not* operator. It matches anything that does not match
+            the given pattern. No string input is consumed for this operation.
+            This is commonly written in an expression like (P(1)-P("]")), which
+            is any character except for "]".
+  * ``~`` - This is a look ahead operator. It matches the pattern, but consumes
+            no input. For example, *~P("test")* checks a string for "test", but
+            does not consume this text.
+  * ``|`` - This operator is used to set the name of a pattern. For example,
+            *"whitespace" | S(" \t")* sets the name of this pattern to
+            "whitespace".
+  """
+
+  # This is a debug (dbg) option that indicates that only named items should be
+  # printed in the debug output.
   NAMED = 1  # Debug only named
 
   #-----------------------------------------------------------------------------
@@ -90,24 +171,61 @@ class Pattern(object):
   #-----------------------------------------------------------------------------
 
   def debug(self, TF=None):
+    """
+    .. func:ptn.debug([TF])
+
+    The debug function returns the debug value for this pattern if no parameter
+    is passed in. If a parameter is passed in, it sets the debug value for this
+    Pattern.
+
+    :param TF: The debug option to use. The value can be *True* to enable
+               debugging of all subpatterns, or "named" or Pattern.NAMED to
+               show only named subpatterns in the debugging output. This can be
+               set to *False* to disable debugging. Note that if a parent
+               Pattern has debugging set to *True* or *"named"*, then the
+               *False* value is ignored.
+
+    :return: When no *TF* parameter is passed in, this returns the debug value for
+             this Pattern. If *TF* is passed in, the Pattern is returned. This is
+             useful for chaining commands.
+    """
     if TF is None: return self.dbg
     if isinstance(TF, basestring) and TF.lower() == "named":
       self.dbg = Pattern.NAMED
     else:
       self.dbg = TF
+    return self
 
   #-----------------------------------------------------------------------------
 
   def setName(self, name):
+    """
+    .. func:ptn.setName(name)
+
+    Set the name for a pattern object. When debugging, the name is printed in
+    the debugging output in place of the Pattern specification. It is also used
+    by the :class:`Tokenizer` class.
+
+    :param name: The name for the Pattern.
+    :return: The Pattern object. Allows chaining of commands.
+    """
     self.name = name
+    return self
 
   #-----------------------------------------------------------------------------
 
   def match(self, string, index=0):
     """
-    Implement this is child classes
+    .. func:ptn.match(string[, index])
+
+    Match the *ptn* against the *string* starting at the given *index*.
+
+    :param string: A string to match.
+    :param index:  The location in the string to look for the given pattern.
+    :return: A :class:`Match` object if the pattern succeeds, or None if the
+             pattern fails.
     """
-    return False
+    return None
 
   #-----------------------------------------------------------------------------
 
@@ -132,6 +250,11 @@ class Pattern(object):
 
   def __ror__(self, name):
     """
+    ``ptn | "<name>"``
+
+    Used to set the name of a *Pattern*.
+
+    :returns: The original Pattern.
     """
     return self.__or__(name)
 
@@ -139,7 +262,11 @@ class Pattern(object):
 
   def __or__(self, name):
     """
-    Add a name to a pattern
+    ``"<name>" | ptn ``
+
+    Used to set the name of a *Pattern*.
+
+    :returns: The original Pattern.
     """
     if isinstance(name, bool) or name == Pattern.NAMED:
       self.debug(name)
@@ -151,7 +278,11 @@ class Pattern(object):
 
   def __mul__(self, other):
     """
-    Suport 'ptn*a'
+    ``ptn * ptn1``
+
+    Match *ptn* followed by *ptn1*.
+
+    :returns: A :class:`PattternAnd` object.
     """
     return PatternAnd(self, other)
 
@@ -159,7 +290,11 @@ class Pattern(object):
 
   def __rmul__(self, other):
     """
-    Support 'a*ptn'
+    ``ptn1 * ptn``
+
+    Match *ptn1* followed by *ptn*.
+
+    :returns: A :class:`PattternAnd` object.
     """
     return PatternAnd(other, self)
 
@@ -167,7 +302,11 @@ class Pattern(object):
 
   def __add__(self, other):
     """
-    Support 'ptn+a'
+    ``ptn + ptn1``
+
+    Matches *ptn* or (if this fails) *ptn1*.
+
+    :returns: A :class:`PatternOr` object.
     """
     return PatternOr(self, other)
 
@@ -175,7 +314,11 @@ class Pattern(object):
 
   def __radd__(self, other):
     """
-    Support 'a+ptn'
+    ``ptn1 + ptn``
+
+    Matches *ptn1* or (if this fails) *ptn*.
+
+    :returns: A :class:`PatternOr` object.
     """
     return PatternOr(other, self)
 
@@ -183,7 +326,12 @@ class Pattern(object):
 
   def __sub__(self, other):
     """
-    Support 'ptn-a'
+    ``ptn - ptn1``
+
+    Matches *ptn* as long as *ptn1* is not a match. This allows cases to be
+    excluded from the *ptn* match.
+
+    :returns: A pattern object.
     """
     return PatternAnd(PatternNot(other), self)
 
@@ -191,7 +339,12 @@ class Pattern(object):
 
   def __rsub__(self, other):
     """
-    Support 'a-ptn'
+    ``ptn - ptn1``
+
+    Matches *ptn* as long as *ptn1* is not a match. This allows cases to be
+    excluded from the *ptn* match.
+
+    :returns: A pattern object.
     """
     return PatternAnd(PatternNot(self), other)
 
@@ -199,7 +352,12 @@ class Pattern(object):
 
   def __neg__(self):
     """
-    Support '-ptn'
+    ``-ptn``
+
+    The match succeeds as long as *ptn* does not succeed. No string input is
+    consumed in the resulting :class:`Match`.
+
+    :returns: A PatternNot object.
     """
     return PatternNot(self)
 
@@ -207,7 +365,12 @@ class Pattern(object):
 
   def __pow__(self, n):
     """
-    Support ptn**n to get at least n repeats of pattern.
+    ``ptn**n``
+
+    If *n* is positive, match at least *n* copies of *ptn*. If *n* is negative,
+    match at most *n* copies of the *ptn*.
+
+    :returns: A PatternRepeat object.
     """
     return PatternRepeat(self, n)
 
@@ -215,7 +378,12 @@ class Pattern(object):
 
   def __invert__(self):
     """
-    Support ~ptn as a look ahead pattern that consumes no values
+    ``~ptn``
+
+    A look ahead operation to whether the string matches *ptn*. This consumes no
+    input.
+
+    :returns: A PatternLookAhead object.
     """
     if isinstance(self, PaternLookAhead): return self
     return PaternLookAhead(self)
@@ -223,25 +391,55 @@ class Pattern(object):
   #-----------------------------------------------------------------------------
 
   def __call__(self, string, index=0):
+    """
+    .. func:ptn(string[, index])
+
+    Shorthand for calling ``ptn.match(string[, index]).
+
+    :param string: A string to match.
+    :param index:  The location in the string to look for the given pattern.
+    :return: A :class:`Match` object if the pattern succeeds, or None if the
+             pattern fails.
+    """
     return self.match(string, index)
 
 #===============================================================================
 
 class P(Pattern):
   """
-  Match a string or a number of characters.
+  The Pattern class matches a literal string or a specific number characters or
+  checks against a user defined matcher function or matches against another
+  Pattern.
   """
 
   #-----------------------------------------------------------------------------
 
   def __init__(self, value):
+    """
+    The *P* class accepts he following types:
+
+    * *string* - Match against the literal string that is passed in.
+    * *int*    - Match a given number of characters.
+    * *fn*     - Match against a matcher function of form ``fn(string, index)``.
+                 The *fn* may return:
+
+      * A :class:`Match` object with the start and end index set correctly for
+        the match.
+      * True to indicate a match that consumes no input.
+      * An integer value that is greater than or equal to the start index and
+        less than or equal to the length of the string. This indicates the end
+        of the match.
+      * False or None to indicate a failed match.
+
+    :param value: The specification for this Pattern. See the options above.
+    """
     Pattern.__init__(self)
     self.isValidValue(value)
 
     if isinstance(value, Pattern):
       self.matcher = self.match_ptn
       self.ptn     = value
-      self.repr    = _repr_(ptn)
+      self.repr    = _repr_(value)
 
     elif isinstance(value, basestring):
       self.matcher = self.match_str
@@ -274,7 +472,7 @@ class P(Pattern):
   @staticmethod
   def isValidValue(value, msg = "Invalid arg for P(arg)"):
     """
-    Veify that P(arg) is a valid arg. Raise an exception if not.
+    Verify that P(arg) is a valid arg. Raise an exception if not.
     """
     if isinstance(value, (Pattern, basestring, bool, int)): return True
     if callable(value): return True
@@ -411,7 +609,7 @@ class P(Pattern):
     """
     match = self.fn(string, index)
     if match is True: return Match(string, index, index)
-    if match is False: return None
+    if match in (False, None): return None
     if isinstance(match, Match): return match
 
     if isinstance(match, int):
@@ -1222,16 +1420,6 @@ def _repr_(ptn, prnsCls=None):
 
 #===============================================================================
 
-def Token(object):
-
-  #-----------------------------------------------------------------------------
-
-  def __init__(self, name, match):
-    self.name = name
-    self.match = match
-
-#===============================================================================
-
 class Tokenizer(object):
 
   #-----------------------------------------------------------------------------
@@ -1265,7 +1453,6 @@ class Tokenizer(object):
           break
       else:
         raise StopIteration()
-
 
 #===============================================================================
 
