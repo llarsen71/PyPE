@@ -100,6 +100,13 @@ def ConfigBackCaptureString4match(fn):
 
 #===============================================================================
 
+def escapeStr(string):
+  for c, v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
+    string = string.replace(c, v)
+  return string
+
+#===============================================================================
+
 class Pattern(object):
   """
   .. class:: Pattern()
@@ -676,7 +683,8 @@ class R(Pattern):
     self.ranges = ranges
     for range in ranges:
       if len(range) != 2: raise ValueError("Ranges must have two values: %s" % value)
-      if range[0] > range[1]: raise ValueError("Lower range value must be less than upper range value: %s" % value)
+      if range[0] > range[1]:
+        raise ValueError("Lower range value must be less than upper range value: %s" % value)
 
   #-----------------------------------------------------------------------------
 
@@ -736,6 +744,83 @@ class V(Pattern):
 
   def __repr__(self):
     return "V(%s)" % self.var if self.var else "V(%s)" % _repr_(self.pattern)
+
+# ===============================================================================
+
+class SOL(Pattern):
+  """
+  Check if his is the Start of Line (SOL).
+  """
+
+  def __init__(self):
+    Pattern.__init__(self)
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    Match the start of a line.
+
+    :param string: The string to match
+    :param index: The index to start at
+    :return: A match object. No characters are consumed.
+
+    >>> p = SOL()
+    >>> p.match("test\\n123\\n") == ""
+    True
+    >>> p.match("test\\n123\\n",1) is None
+    True
+    >>> p.match("test\\n123\\n",5) == ""
+    True
+    >>> p.match("test\\n123\\n", 6) is None
+    True
+    >>> p.match("test\\n123\\n", 9) == ""
+    True
+    """
+    if index == 0 or string[index-1] in ('\n','\r'):
+      return Match(string, index, index)
+    return None
+
+#===============================================================================
+
+class EOL(Pattern):
+  """
+  Detect whether the current position is at the end of a line.
+  """
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self):
+    Pattern.__init__(self)
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    Detect whether the current position is at the end of a line.
+
+    :param string: The string to compare against
+    :param index: The location to check.
+    :return: A match object that consumes no input.
+
+    >>> p = EOL()
+    >>> p.match("") == ""
+    True
+    >>> p.match("   \\r\\n", 2) is None
+    True
+    >>> p.match("   \\r\\n", 3) == ""
+    True
+    """
+
+    if index == 0 and (len(string) == 0 or string[index]) == "\n":
+      return Match(string, index, index)
+    if index == len(string) or string[index] == '\r':
+      return Match(string, index, index)
+    if string[index] == '\n' and not string[index-1] == '\r':
+      return Match(string, index, index)
+    return None
 
 #===============================================================================
 # Captures
@@ -915,6 +1000,43 @@ class Cp(Pattern):
 
   def __repr__(self):
     return "Cp()"
+
+#===============================================================================
+
+class Col(Pattern):
+  """
+  Capture the column (distance since last newline).
+  """
+
+  #-----------------------------------------------------------------------------
+
+  def __init__(self):
+    Pattern.__init__(self)
+
+  #-----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    Capture the column for the current index (distance past last newline)
+
+    :param string: The string to match
+    :param index: The index to start at
+    :return: A match object that consumes no characters, but adds a column
+             capture.
+
+    >>> p = Col()
+    >>> #        0  123  456789
+    >>> #                012345
+    >>> p.match("\\n  \\n  Test",9).getCapture(0)
+    5
+    """
+    match = Match(string, index, index)
+    if index == 0: return match.addCapture(0)
+    for i in xrange(index-1, -1, -1):
+      if string[i] not in ('\r','\n'): continue
+      return match.addCapture(index-1-i)
+    return match.addCapture(index)
 
 #===============================================================================
 # Pattern Operators
@@ -1196,6 +1318,18 @@ class PaternLookAhead(Pattern):
     return "~%s" % repr(self.pattern)
 
 #===============================================================================
+# General patterns
+#===============================================================================
+
+alpha       = R("AZ", "az")
+digit       = R("09")
+quote       = S("\"'")
+whitespace  = S(" \t")
+whitespace0 = whitespace**0
+whitespace1 = whitespace**1
+newline     = P("\r\n") + P("\r") + P("\n")
+
+#===============================================================================
 # BackCaptureString
 #===============================================================================
 
@@ -1398,13 +1532,6 @@ def match(pattern, subject, index=0):
   """
   """
   pass
-
-#===============================================================================
-
-def escapeStr(string):
-  for c,v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
-    string = string.replace(c, v)
-  return string
 
 #===============================================================================
 
