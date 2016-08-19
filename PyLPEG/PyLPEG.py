@@ -1,4 +1,4 @@
-#===============================================================================
+# ==============================================================================
 # MIT license
 #
 # Copyright (c) 2016 Lance Larsen
@@ -19,7 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-#===============================================================================
+# ==============================================================================
 """
 .. module::PyLPEG
 
@@ -27,7 +27,8 @@
   designed to mimic the Lua LPEG library. Features are added to ease debugging
   of PEG patterns and to build lexers.
 """
-#===============================================================================
+
+# ==============================================================================
 
 def ConfigBackCaptureString4match(fn):
   """
@@ -98,14 +99,14 @@ def ConfigBackCaptureString4match(fn):
   match.__doc__ = fn.__doc__
   return match
 
-#===============================================================================
+# ==============================================================================
 
 def escapeStr(string):
   for c, v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
     string = string.replace(c, v)
   return string
 
-#===============================================================================
+# ==============================================================================
 
 class Pattern(object):
   """
@@ -168,14 +169,14 @@ class Pattern(object):
   # printed in the debug output.
   NAMED = 1  # Debug only named
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self):
     self.dbg  = False
     self.name = None
     pass
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def debug(self, TF=None):
     """
@@ -203,7 +204,7 @@ class Pattern(object):
       self.dbg = TF
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def setName(self, name):
     """
@@ -219,7 +220,7 @@ class Pattern(object):
     self.name = name
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match(self, string, index=0):
     """
@@ -234,7 +235,7 @@ class Pattern(object):
     """
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @staticmethod
   def positiveIndex(string, index, msg="Invalid index"):
@@ -253,7 +254,7 @@ class Pattern(object):
     if idx < 0 and msg: raise ValueError(msg)
     return 0 if idx < 0 else idx
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __ror__(self, name):
     """
@@ -265,7 +266,7 @@ class Pattern(object):
     """
     return self.__or__(name)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __or__(self, name):
     """
@@ -281,7 +282,24 @@ class Pattern(object):
       self.setName(name)
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
+
+  def __div__(self, other):
+    """
+
+    :param other:
+    :return:
+    """
+
+    if callable(other):
+      return PatternFnWrap(self, other)
+    elif isinstance(other, tuple) and len(other) == 2 and isinstance(other[0], int):
+      return PatternCaptureN(self, *other)
+    elif isinstance(other, int):
+      return PatternCaptureN(self, other)
+    raise ValueError("Invalid div expression for pattern.")
+
+  # ----------------------------------------------------------------------------
 
   def __mul__(self, other):
     """
@@ -293,7 +311,7 @@ class Pattern(object):
     """
     return PatternAnd(self, other)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __rmul__(self, other):
     """
@@ -305,7 +323,7 @@ class Pattern(object):
     """
     return PatternAnd(other, self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __add__(self, other):
     """
@@ -317,7 +335,7 @@ class Pattern(object):
     """
     return PatternOr(self, other)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __radd__(self, other):
     """
@@ -329,7 +347,7 @@ class Pattern(object):
     """
     return PatternOr(other, self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __sub__(self, other):
     """
@@ -342,7 +360,7 @@ class Pattern(object):
     """
     return PatternAnd(PatternNot(other), self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __rsub__(self, other):
     """
@@ -355,7 +373,7 @@ class Pattern(object):
     """
     return PatternAnd(PatternNot(self), other)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __neg__(self):
     """
@@ -368,7 +386,7 @@ class Pattern(object):
     """
     return PatternNot(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __pow__(self, n):
     """
@@ -381,7 +399,7 @@ class Pattern(object):
     """
     return PatternRepeat(self, n)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __invert__(self):
     """
@@ -395,7 +413,7 @@ class Pattern(object):
     if isinstance(self, PaternLookAhead): return self
     return PaternLookAhead(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __call__(self, string, index=0):
     """
@@ -410,7 +428,7 @@ class Pattern(object):
     """
     return self.match(string, index)
 
-#===============================================================================
+# ==============================================================================
 
 class P(Pattern):
   """
@@ -419,7 +437,7 @@ class P(Pattern):
   Pattern.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, value):
     """
@@ -474,7 +492,7 @@ class P(Pattern):
       self.fn      = value
       self.repr    = "P({0})".format(value.__name__) if hasattr(value, '__name__') else "P(fn)"
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @staticmethod
   def isValidValue(value, msg = "Invalid arg for P(arg)"):
@@ -485,7 +503,7 @@ class P(Pattern):
     if callable(value): return True
     raise ValueError(msg)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @staticmethod
   def asPattern(pattern):
@@ -494,7 +512,7 @@ class P(Pattern):
     """
     return pattern if isinstance(pattern, Pattern) else P(pattern)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -503,7 +521,7 @@ class P(Pattern):
     """
     return self.matcher(string, index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_ptn(self, string, index=0):
     """
@@ -517,7 +535,7 @@ class P(Pattern):
     """
     return self.ptn(string, index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_str(self, string, index=0):
     """
@@ -536,7 +554,7 @@ class P(Pattern):
         return Match(string, index, index + self.size)
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_n(self, string, index=0):
     """
@@ -558,7 +576,7 @@ class P(Pattern):
     if len(string) - index < self.n: return None
     return Match(string, index, index + self.n)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_neg(self, string, index=0):
     """
@@ -576,7 +594,7 @@ class P(Pattern):
     if sz - index >= self.n: return None
     return Match(string, index, sz)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_TF(self, string, index=0):
     """
@@ -597,7 +615,7 @@ class P(Pattern):
     if not self.TF or index > len(string): return None
     return Match(string, index, index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_fn(self, string, index=0):
     """
@@ -624,19 +642,19 @@ class P(Pattern):
             return Match(string, index, match)
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return self.repr
 
-#===============================================================================
+# ==============================================================================
 
 class S(Pattern):
   """
   Match any of a given set of characters.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, set):
     Pattern.__init__(self)
@@ -644,7 +662,7 @@ class S(Pattern):
       raise ValueError("The arg must be a string in S(arg)")
     self.set = set
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -663,20 +681,20 @@ class S(Pattern):
     if string[index] not in self.set: return None
     return Match(string, index, index + 1)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     # TODO: Handle single quote in set
     return "S('%s')" % escapeStr(self.set)
 
-#===============================================================================
+# ==============================================================================
 
 class R(Pattern):
   """
   Match characters in a given range.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, *ranges):
     Pattern.__init__(self)
@@ -686,7 +704,7 @@ class R(Pattern):
       if range[0] > range[1]:
         raise ValueError("Lower range value must be less than upper range value: %s" % value)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -709,30 +727,30 @@ class R(Pattern):
           return Match(string, index, index+1)
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     # TODO: Handle single quote in range values
     return "R(%s)" % (",".join(["'{0}'".format(escapeStr(range)) for range in self.ranges]))
 
-#===============================================================================
+# ==============================================================================
 
 class V(Pattern):
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, var=None):
     Pattern.__init__(self)
     self.var = var
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def setPattern(self, pattern):
     if not isinstance(pattern, Pattern):
       raise ValueError("The setPattern method of V class needs to be passed a Pattern object.")
     self.pattern = pattern
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -740,7 +758,7 @@ class V(Pattern):
     """
     return self.pattern.match(string, index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return "V(%s)" % self.var if self.var else "V(%s)" % _repr_(self.pattern)
@@ -755,7 +773,7 @@ class SOL(Pattern):
   def __init__(self):
     Pattern.__init__(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -782,19 +800,19 @@ class SOL(Pattern):
       return Match(string, index, index)
     return None
 
-#===============================================================================
+# ==============================================================================
 
 class EOL(Pattern):
   """
   Detect whether the current position is at the end of a line.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self):
     Pattern.__init__(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -822,22 +840,25 @@ class EOL(Pattern):
       return Match(string, index, index)
     return None
 
-#===============================================================================
+# ==============================================================================
 # Captures
-#===============================================================================
+# ==============================================================================
 
 class C(Pattern):
   """
   Capture a pattern
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, pattern):
+    """
+    :param pattern: The pattern to capture.
+    """
     Pattern.__init__(self)
-    self.pattern = pattern
+    self.pattern = P.asPattern(pattern)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -855,26 +876,26 @@ class C(Pattern):
       match.captures.insert(0, str(match))
     return match
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return "C(%s)" % _repr_(self.pattern)
 
-#===============================================================================
+# ==============================================================================
 
 class Cb(Pattern):
   """
   Backcapture
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, name, pattern=None):
     Pattern.__init__(self)
     self.capname = name
-    self.pattern = pattern
+    self.pattern = P.asPattern(pattern) if pattern is not None else None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -896,7 +917,7 @@ class Cb(Pattern):
         string.addNamedCapture(self.capname, match.getValue())
     return match
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     # TODO: handle single quote in name
@@ -904,20 +925,20 @@ class Cb(Pattern):
       return "Cb('{0}')".format(self.capname)
     return "Cb('{0}',{0})".format(self.capname, _repr_(self.pattern))
 
-#===============================================================================
+# ==============================================================================
 
 class Cc(Pattern):
   """
   Capture a constant value.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, value):
     Pattern.__init__(self)
     self.value = value
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -930,23 +951,30 @@ class Cc(Pattern):
     """
     return Match(string, index, index).addCapture(self.value)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "Cc(%s)" % self.value
+    return 'Cc("%s")' % escapeStr(self.value)
 
-#===============================================================================
+# ==============================================================================
 
 class Cg(Pattern):
+  """
+  Group Captures into a single capture. If there are no captures, the single
+  capture will be an empty array.
+  """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
-  def __init__(self, pattern, dropIfEmpty=True):
+  def __init__(self, pattern):
+    """
+    :param pattern: The pattern to match. Any captures will be grouped into a
+           single capture.
+    """
     Pattern.__init__(self)
-    self.pattern     = pattern
-    self.dropIfEmpty = dropIfEmpty
+    self.pattern = pattern
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -961,59 +989,98 @@ class Cg(Pattern):
     match = self.pattern.match(string, index)
     if not isinstance(match, Match): return match
 
-    captures = match.captures
-    if len(captures) == 0 and self.dropIfEmpty: return match
-
-    # Make the captures a single entry in the captures array
-    match.captures = [captures]
+    match.captures = [match.captures]
     return match
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    if self.dropIfEmpty is False:
-      return "Cg({0},{1})".format(_repr_(self.pattern),"False")
     return "Cg({0})".format(_repr_(self.pattern))
 
-#===============================================================================
+# ==============================================================================
 
-class Cp(Pattern):
+class Cl(Pattern):
+  """
+  Capture the current line number.
+  """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self):
     Pattern.__init__(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
     """
+    Capture the line number at the given index.
+
+    :param string: The string to match against
+    :param index: The index for which to get the line number
+    :return: A match object with the line number added to the captures
+
+    :Example:
+
+    >>> p = Cl()
+    >>> p.match("\\n\\n\\n\\n\\n\\n\\n\\n",3).getCapture(0)
+    4
+    """
+
+    line = string.getLineNumber(index)
+    return Match(string, index, index).addCapture(line)
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "Cl()"
+
+# ==============================================================================
+
+class Cp(Pattern):
+  """
+  Capture the current position.
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self):
+    Pattern.__init__(self)
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    Capture the current position in the string (index value).
+
+    :param string: The string being matched.
+    :param index:  The position in the string.
+
     >>> p = Cp()
     >>> p("test",3).getCapture(0)
     3
     """
-    if index < 0 or len(string) < index: return None
     return Match(string, index, index).addCapture(index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return "Cp()"
 
-#===============================================================================
+# ==============================================================================
 
 class Col(Pattern):
   """
   Capture the column (distance since last newline).
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self):
     Pattern.__init__(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -1028,28 +1095,147 @@ class Col(Pattern):
     >>> p = Col()
     >>> #        0  123  456789
     >>> #                012345
-    >>> p.match("\\n  \\n  Test",9).getCapture(0)
+    >>> p.match("\\n  \\n  Test", 9).getCapture(0)
     5
     """
     match = Match(string, index, index)
     if index == 0: return match.addCapture(0)
+
+    # Look backwards until the end of a line is found.
     for i in xrange(index-1, -1, -1):
       if string[i] not in ('\r','\n'): continue
       return match.addCapture(index-1-i)
     return match.addCapture(index)
 
-#===============================================================================
+# ==============================================================================
 # Pattern Operators
-#===============================================================================
+# ==============================================================================
+
+class PatternFnWrap(Pattern):
+  """
+  Pass the match to the given function and return the match returned by the
+  function
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, pattern, fn):
+    Pattern.__init__(self)
+    self.pattern = pattern
+    self.fn      = fn
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+
+    :param string: String to match
+    :param index: Index in string to start at
+    :return: None if pattern fails, or a match object returned by the function
+             after receiving the pattern match object.
+
+    :Example:
+
+    >>> def fn(match): return match.addCapture("test")
+    >>> p = P(3) / fn
+    >>> p("Cat").captures
+    ['test']
+    """
+    match = self.pattern.match(string, index)
+    if match is None: return None
+
+    return self.fn(match)
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    name = self.fn.__name__ if hasattr(self.fn,"__name__") else "<fn>"
+    return "({0})/{1}".format(repr(self.pattern), name)
+
+# ===============================================================================
+
+class PatternCaptureN(Pattern):
+  """
+  Keep the nth capture in the list of captures. If the capture does not exist,
+  a default is used if specified or no captures are added.
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, pattern, n, default=None):
+    """
+    :param pattern: Pattern to apply to string starting at the given index.
+    :param n: The capture to take from the pattern match.
+    :param default: The default to use if the given capture is not present
+    """
+    Pattern.__init__(self)
+    self.pattern = pattern
+    self.n       = n
+    self.default = default
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0):
+    """
+    Get the nth capture of a pattern. If capture does not exist, use the default
+    if specified, or include no captures in match that is returned.
+
+    :param string: String to match
+    :param index:  The location of in the current string for pattern searches.
+    :return:  A match with just the nth capture retained.
+
+    :Example:
+
+    >>> # Get second capture
+    >>> p = (Cc("0")*Cc("1")*Cc("2"))/1
+    >>> p("").getCapture(0)
+    '1'
+    >>> # Get last capture
+    >>> p = (Cc("0")*Cc("1")*Cc("2"))/-1
+    >>> p("").getCapture(0)
+    '2'
+    >>> # Sepcify capture index and default value - use a tuple (n, default)
+    >>> p = (Cc("0")*Cc("1")*Cc("2"))/(3, "invalid capture")
+    >>> p("").getCapture(0)
+    'invalid capture'
+    """
+
+    match = self.pattern.match(string, index)
+    if match is None: return None
+
+    newmatch = Match(string, index, match.end)
+    try:
+      newmatch.addCapture(match.captures[self.n])
+    except IndexError:
+      if self.default is not None:
+        newmatch.addCapture(self.default)
+
+    return newmatch
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    n = n if self.default is None else "({0},{1})".format(self.n, self.default)
+    return "({0})/{1}".format(repr(self.pattern),n)
+
+# ===============================================================================
 
 class PatternAnd(Pattern):
   """
-  Look for the first pattern in the list that matches the string.
+  Match pattern1 followed by pattern2.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, pattern1, pattern2):
+    """
+    Match pattern1 followed by pattern2.
+
+    :param pattern1: The first pattern to match
+    :param pattern2: The second pattern to match
+    """
     Pattern.__init__(self)
     if not isinstance(pattern1, Pattern) and not isinstance(pattern2, Pattern):
       raise ValueError("PatternAnd requires the first or second constructor item to be a Pattern")
@@ -1066,7 +1252,7 @@ class PatternAnd(Pattern):
     if isinstance(pattern1, PatternAnd): pattern1.is_sub_and = True
     if isinstance(pattern2, PatternAnd): pattern2.is_sub_and = True
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -1095,7 +1281,7 @@ class PatternAnd(Pattern):
     MATCH.end = index
     return MATCH
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __sub__(self, other):
     """
@@ -1104,7 +1290,7 @@ class PatternAnd(Pattern):
     self.prependPattern(PatternNot(other))
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     if self.is_not_ptn:
@@ -1115,14 +1301,14 @@ class PatternAnd(Pattern):
       prns = lambda ptn: isinstance(ptn, PatternOr) or (isinstance(ptn, PatternAnd) and ptn.is_not_ptn)
       return "{0}*{1}".format(_repr_(self.patterns[0], prns), _repr_(self.patterns[1], prns))
 
-#===============================================================================
+# ==============================================================================
 
 class PatternOr(Pattern):
   """
   Look for the first pattern in the list that matches the string.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, pattern1, pattern2):
     Pattern.__init__(self)
@@ -1135,7 +1321,7 @@ class PatternOr(Pattern):
 
     self.patterns = (P.asPattern(pattern1), P.asPattern(pattern2))
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -1158,12 +1344,12 @@ class PatternOr(Pattern):
       if isinstance(match, Match): return match
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return "{0} + {1}".format(_repr_(self.patterns[0]), _repr_(self.patterns[1]))
 
-#===============================================================================
+# ==============================================================================
 
 class PatternNot(Pattern):
   """
@@ -1171,14 +1357,14 @@ class PatternNot(Pattern):
   not advance.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, pattern):
     Pattern.__init__(self)
     P.isValidValue(pattern, msg ="Invalid '-ptn' expression")
     self.pattern = P.asPattern(pattern)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -1195,16 +1381,16 @@ class PatternNot(Pattern):
     if not isinstance(match, Match): return Match(string, index, index)
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return "-%s" % _repr_(self.pattern)
 
-#===============================================================================
+# ==============================================================================
 
 class PatternRepeat(Pattern):
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, pattern, n):
     Pattern.__init__(self)
@@ -1219,13 +1405,13 @@ class PatternRepeat(Pattern):
       self.matcher = self.match_at_most_n
       self.n = -n
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
     return self.matcher(string, index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_at_least_n(self, string, index=0):
     """
@@ -1254,7 +1440,7 @@ class PatternRepeat(Pattern):
       cnt += 1
       index = match.end
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def match_at_most_n(self, string, index=0):
     """
@@ -1273,13 +1459,14 @@ class PatternRepeat(Pattern):
       index = match.end
     return MATCH.setEnd(index)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "{0}**{1}".format(_repr_(self.pattern, (PatternOr, PatternAnd, PatternNot, PatternRepeat)), self.n)
+    n = -self.n if self.matcher == self.match_at_most_n else self.n
+    return "{0}**{1}".format(_repr_(self.pattern, (PatternOr, PatternAnd, PatternNot, PatternRepeat)), n)
 
 
-#===============================================================================
+# ==============================================================================
 
 class PaternLookAhead(Pattern):
   """
@@ -1287,14 +1474,14 @@ class PaternLookAhead(Pattern):
   string
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, pattern):
     Pattern.__init__(self)
     P.isValidValue(pattern)
     self.pattern = P.asPattern(pattern)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
@@ -1312,14 +1499,14 @@ class PaternLookAhead(Pattern):
     if isinstance(match, Match): return match.setEnd(index)
     return None
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return "~%s" % repr(self.pattern)
 
-#===============================================================================
+# ==============================================================================
 # General patterns
-#===============================================================================
+# ==============================================================================
 
 alpha       = R("AZ", "az")
 digit       = R("09")
@@ -1329,9 +1516,9 @@ whitespace0 = whitespace**0
 whitespace1 = whitespace**1
 newline     = P("\r\n") + P("\r") + P("\n")
 
-#===============================================================================
+# ==============================================================================
 # BackCaptureString
-#===============================================================================
+# ==============================================================================
 
 class BackCaptureString(object):
   """
@@ -1341,20 +1528,22 @@ class BackCaptureString(object):
   stack.
   """
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, string):
-    self.string = string
-    self.backcaptures = []
-    self.dbg = False
+    self.string           = string
+    self.backcaptures     = []
+    self.dbg              = False
+    self.startOfLineIndex = [0]
+    self.stringSz         = len(string)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def debug(self, TF=None):
     if TF is None: return self.dbg
     self.dbg = TF
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def addNamedCapture(self, name, capture):
     """
@@ -1362,7 +1551,7 @@ class BackCaptureString(object):
     """
     self.backcaptures.append((name, capture))
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def getNamedCapture(self, name):
     """
@@ -1376,7 +1565,7 @@ class BackCaptureString(object):
 
     raise IndexError("No backcapture was found for '{0}'".format(name))
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def getStackSize(self):
     """
@@ -1384,7 +1573,7 @@ class BackCaptureString(object):
     """
     return len(self.backcaptures)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def setStackSize(self, size):
     """
@@ -1397,7 +1586,47 @@ class BackCaptureString(object):
 
     self.backcaptures = self.backcaptures[0:size]
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
+
+  def getLineNumber(self, index):
+    """
+    Get the line number at the given position in the string. The line numbers
+    start with 1.
+    :param index: The position in the string.
+    :return: The line number associated with the position.
+    """
+
+    if index < 0 or self.stringSz < index :
+      if index < 0:
+        raise IndexError("Error getting line number for position. Index cannot "
+                         "be less than 0")
+      else:
+        raise IndexError("Error getting line number for position. Index is "
+                         "past the end of the string")
+
+    # If the line number is already calculated. Find the line number.
+    if index <= self.startOfLineIndex[-1]:
+      if index == self.startOfLineIndex[-1]: return len(self.startOfLineIndex)
+
+      # TODO: Make a more efficient lookup for line number.
+      for i, startOfLine in enumerate(self.startOfLineIndex):
+        if index < startOfLine: return i
+
+    # Find start of lines till we get to index
+    startOfLine = self.startOfLineIndex[-1]
+    line = (1-newline)**0 * (newline)**-1 * Cp()
+    while True:
+      match = line(self.string, startOfLine)
+      startOfLine = match.end
+      if startOfLine == self.startOfLineIndex[-1]: break
+      self.startOfLineIndex.append(startOfLine)
+      if index < startOfLine:
+        return len(self.startOfLineIndex)-1
+      if index == startOfLine:
+        return len(self.startOfLineIndex)
+    raise IndexError("Unexpected error calculating line number for string posititon")
+
+  # ----------------------------------------------------------------------------
 
   def __getitem__(self, index):
     if isinstance(index, (int,slice)):
@@ -1405,28 +1634,28 @@ class BackCaptureString(object):
 
     return self.backcaptures[index]
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __getattr__(self, attr):
     return getattr(self.string, attr)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __len__(self):
     return len(self.string)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return self.string
 
-#===============================================================================
+# ==============================================================================
 # Match object
-#===============================================================================
+# ==============================================================================
 
 class Match(object):
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, string, start, end=None):
     self.string   = string
@@ -1434,7 +1663,7 @@ class Match(object):
     self.end      = end
     self.captures = []
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def setEnd(self, end):
     """
@@ -1443,7 +1672,7 @@ class Match(object):
     self.end = end
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def getValue(self, default=None):
     """
@@ -1452,7 +1681,7 @@ class Match(object):
     start, end = (self.start, self.end)
     return default if self.end is None else self.string[start:end]
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def addCapture(self, capture):
     """
@@ -1461,7 +1690,7 @@ class Match(object):
     self.captures.append( capture )
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def addSubmatch(self, match):
     """
@@ -1469,12 +1698,12 @@ class Match(object):
     self.captures.extend(match.captures)
     return self
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def hasCaptures(self):
     return len(self.captures) > 0
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def getCapture(self, index):
     """
@@ -1483,12 +1712,12 @@ class Match(object):
       raise IndexError("Invalid capture index for Match")
     return self.captures[index]
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __getattr__(self, attr):
     return getattr(str(self), attr)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __getitem__(self, key):
     """
@@ -1498,7 +1727,7 @@ class Match(object):
       return self.getCapture(key)
     raise IndexError("Invalid index for Match")
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __eq__(self, other):
     """
@@ -1511,29 +1740,29 @@ class Match(object):
     if isinstance(other, Match):
       return str(self) == str(other)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __len__(self):
     return len(self.captures)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __repr__(self):
     return str(self)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __str__(self):
     return self.getValue()
 
-#===============================================================================
+# ==============================================================================
 
 def match(pattern, subject, index=0):
   """
   """
   pass
 
-#===============================================================================
+# ==============================================================================
 
 def _repr_(ptn, prnsCls=None):
   if ptn.name is not None:
@@ -1545,25 +1774,25 @@ def _repr_(ptn, prnsCls=None):
     return "({0})".format(repr(ptn))
   return repr(ptn)
 
-#===============================================================================
+# ==============================================================================
 
 class Tokenizer(object):
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def __init__(self, *tokens):
     self.tokens = []
     for token in tokens:
       self.addToken(token)
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def addToken(self, pattern):
     if pattern.name is None:
       raise ValueError("A token must be a named pattern")
     self.tokens.append( pattern )
 
-  #-----------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------
 
   def getTokens(self, string, index=0):
     """
@@ -1581,7 +1810,7 @@ class Tokenizer(object):
       else:
         raise StopIteration()
 
-#===============================================================================
+# ==============================================================================
 
 if __name__ == "__main__":
   import doctest
