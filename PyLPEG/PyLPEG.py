@@ -54,28 +54,37 @@ def ConfigBackCaptureString4match(fn):
   :returns: The wrapper function that performs the tasks outlined above.
   """
 
-  def match(matchObj, string, index=0):
+  def match(pattern, string, index=0):
     if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
     sz = string.getStackSize()
 
+    # Get the debug value that was passed forward (through the BackCaptureString)
+    # Store the old debug value so that it can be restored in the BackCaptureString.
     debug = olddebug = string.debug()
-    if matchObj.debug() is not False:
-      debug = matchObj.debug()
+
+    # If the current pattern has a debug value (other than None), store the
+    # value in the BackCaptureString to forward the value to subpatterns.
+    if pattern.debug() is not None:
+      debug = pattern.debug()
       string.debug(debug)
-    debug = debug and not (debug is Pattern.NAMED and matchObj.name is None)
 
-    if debug:
-      name = matchObj.name or repr(matchObj)
-      print "Enter: ({0}) {1}".format(index, name)
+    # Set a flag that indicates whether
+    showDebugInfo = (debug is True or
+                     debug is Pattern.NAMED and pattern.name is not None or
+                     False)
 
-    matchResult = fn(matchObj, string, index)
+    if showDebugInfo and pattern.name:
+      print "Enter: {0} => {1}".format(pattern.name, repr(pattern))
 
-    if debug:
+    matchResult = fn(pattern, string, index)
+
+    if showDebugInfo:
+      name = pattern.name or repr(pattern)
+      print "Pattern: ({0}) {1}".format(index, name)
       if not isinstance(matchResult, Match):
-        print "Leave: ({0}) {1}".format(index, name)
+        print "  Failed"
       else:
-        print "Result: ({0}) {1}".format(index, name)
-        print "        {0}".format(str(matchResult))
+        print "  Result: {0}".format(escapeStr(str(matchResult)))
 
     # Clear any nested stored callback items except when:
     #
@@ -87,7 +96,7 @@ def ConfigBackCaptureString4match(fn):
     #    flag indicates whether a PatternAnd object is contained within another
     #    PatternAnd (i.e., is part of a sequence).
 
-    if not isinstance(matchObj, Cb) and not (isinstance(matchObj, PatternAnd) and matchObj.is_sub_and):
+    if not isinstance(pattern, Cb) and not (isinstance(pattern, PatternAnd) and pattern.is_sub_and):
       string.setStackSize(sz)
 
     # restore the debug state
@@ -167,41 +176,55 @@ class Pattern(object):
 
   # This is a debug (dbg) option that indicates that only named items should be
   # printed in the debug output.
-  NAMED = 1  # Debug only named
+  NAMED = 'n'  # Debug only named Patterns
+  HIDE  = 'h'  # Suppress debug output for a Pattern and its children
 
   # ----------------------------------------------------------------------------
 
   def __init__(self):
-    self.dbg  = False
+    self.dbg  = None
     self.name = None
     pass
 
   # ----------------------------------------------------------------------------
 
-  def debug(self, TF=None):
+  def debug(self, debugOpt='R'):
     """
-    .. func:ptn.debug([TF])
+    .. func:ptn.debug([debugOpt)
 
     The debug function returns the debug value for this pattern if no parameter
     is passed in. If a parameter is passed in, it sets the debug value for this
     Pattern.
 
-    :param TF: The debug option to use. The value can be *True* to enable
-               debugging of all subpatterns, or "named" or Pattern.NAMED to
-               show only named subpatterns in the debugging output. This can be
-               set to *False* to disable debugging. Note that if a parent
-               Pattern has debugging set to *True* or *"named"*, then the
-               *False* value is ignored.
+    :param debugOpt: The debug option to use. The possible values are:
+           +----------------+--------------------------------------------------+
+           | *True*         | Enable debugging for all subpatterns that are    |
+           |                | not hidden.                                      |
+           +----------------+--------------------------------------------------+
+           | 'hide', 'h',   | Suppress debugging for all subpatterns (that are |
+           |  or *False*    | not enabled manually).                           |
+           +----------------+--------------------------------------------------+
+           | 'named' or 'n' | Enable debugging for all named Pattern(s).       |
+           +----------------+--------------------------------------------------+
+           | None           | (Default value) use the debug option associated  |
+           |                | a parent pattern.                                |
+           +----------------+--------------------------------------------------+
 
-    :return: When no *TF* parameter is passed in, this returns the debug value for
-             this Pattern. If *TF* is passed in, the Pattern is returned. This is
-             useful for chaining commands.
+    :return: When no *debugOpt* parameter is passed in, this returns the debug
+             value for this Pattern. If *debugOpt* is passed in, the Pattern is
+             returned. This is useful for chaining commands.
     """
-    if TF is None: return self.dbg
-    if isinstance(TF, basestring) and TF.lower() == "named":
-      self.dbg = Pattern.NAMED
+    if debugOpt is 'R':
+      return self.dbg
+
+    if isinstance(debugOpt, basestring) and debugOpt.lower() in ("named","hide","n","h"):
+      self.dbg = debugOpt[0]
+    elif isinstance(debugOpt, bool):
+      self.dbg = 'h' if debugOpt is False else True
+    elif debugOpt is None:
+      self.dbg = None
     else:
-      self.dbg = TF
+      raise Exception("Illegal debug option for Pattern")
     return self
 
   # ----------------------------------------------------------------------------
@@ -270,16 +293,34 @@ class Pattern(object):
 
   def __or__(self, name):
     """
-    ``"<name>" | ptn ``
+    ``"<name>" | ptn``
 
     Used to set the name of a *Pattern*.
 
+    :param name: The name to use for this pattern
     :returns: The original Pattern.
     """
-    if isinstance(name, bool) or name == Pattern.NAMED:
-      self.debug(name)
-    else:
-      self.setName(name)
+    self.setName(name)
+    return self
+
+  # ----------------------------------------------------------------------------
+
+  def __rand__(self, debug_opt):
+    """
+    Set debug option for parameter
+    :param debug_opt: See
+    :return: Pattern with debug option set
+    """
+    return self.__and__(debug_opt)
+
+  # ----------------------------------------------------------------------------
+
+  def __and__(self, debugOpt):
+    """
+    :param debugOpt: Set debug options for the pattern.
+    :return: The pattern with debug option set.
+    """
+    self.debug(debugOpt)
     return self
 
   # ----------------------------------------------------------------------------
@@ -1106,6 +1147,11 @@ class Col(Pattern):
       if string[i] not in ('\r','\n'): continue
       return match.addCapture(index-1-i)
     return match.addCapture(index)
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "Col()"
 
 # ==============================================================================
 # Pattern Operators
