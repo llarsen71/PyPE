@@ -841,6 +841,10 @@ class SOL(Pattern):
       return Match(string, index, index)
     return None
 
+  # ----------------------------------------------------------------------------
+  def __repr__(self):
+    return "SOL()"
+
 # ==============================================================================
 
 class EOL(Pattern):
@@ -880,6 +884,11 @@ class EOL(Pattern):
     if string[index] == '\n' and not string[index-1] == '\r':
       return Match(string, index, index)
     return None
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "EOL()"
 
 # ==============================================================================
 # Captures
