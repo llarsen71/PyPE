@@ -76,6 +76,7 @@ def ConfigBackCaptureString4match(fn):
     if showDebugInfo and pattern.name:
       print "Enter: {0} => {1}".format(pattern.name, repr(pattern))
 
+    index = pattern.positiveIndex(string, index)
     matchResult = fn(pattern, string, index)
 
     if showDebugInfo:
@@ -273,7 +274,7 @@ class Pattern(object):
       if index > sz and msg: raise ValueError(msg)
       return sz if index > sz else index
 
-    idx = sz - index
+    idx = sz + index
     if idx < 0 and msg: raise ValueError(msg)
     return 0 if idx < 0 else idx
 
@@ -837,7 +838,9 @@ class SOL(Pattern):
     >>> p.match("test\\n123\\n", 9) == ""
     True
     """
-    if index == 0 or string[index-1] in ('\n','\r'):
+    if index == 0 or string[index-1] == '\n':
+      return Match(string, index, index)
+    if string[index-1] == '\r' and (index == len(string) or string[index] != '\n'):
       return Match(string, index, index)
     return None
 
@@ -875,13 +878,15 @@ class EOL(Pattern):
     True
     >>> p.match("   \\r\\n", 3) == ""
     True
+    >>> p.match("   \\r\\n", 4) is None
+    True
+    >>> p.match("\\n", 0) == ""
+    True
     """
 
-    if index == 0 and (len(string) == 0 or string[index]) == "\n":
-      return Match(string, index, index)
     if index == len(string) or string[index] == '\r':
       return Match(string, index, index)
-    if string[index] == '\n' and not string[index-1] == '\r':
+    if string[index] == '\n' and (index == 0 or string[index-1] != '\r'):
       return Match(string, index, index)
     return None
 
@@ -1828,42 +1833,6 @@ def _repr_(ptn, prnsCls=None):
   elif prnsCls and isinstance(ptn, prnsCls):
     return "({0})".format(repr(ptn))
   return repr(ptn)
-
-# ==============================================================================
-
-class Tokenizer(object):
-
-  # ----------------------------------------------------------------------------
-
-  def __init__(self, *tokens):
-    self.tokens = []
-    for token in tokens:
-      self.addToken(token)
-
-  # ----------------------------------------------------------------------------
-
-  def addToken(self, pattern):
-    if pattern.name is None:
-      raise ValueError("A token must be a named pattern")
-    self.tokens.append( pattern )
-
-  # ----------------------------------------------------------------------------
-
-  def getTokens(self, string, index=0):
-    """
-    """
-
-    while True:
-      for pattern in self.tokens:
-        name = pattern.name
-        match = pattern.match(string, index)
-        if isinstance(match, Match):
-          yield (name, match)
-          if index == match.end: raise StopIteration() # No Progress
-          index = match.end
-          break
-      else:
-        raise StopIteration()
 
 # ==============================================================================
 
