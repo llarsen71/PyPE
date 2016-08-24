@@ -1,5 +1,5 @@
 from behave import given, when, then
-from PyLPEG.PyLPEG import P, S, R, SOL
+from PyLPEG.PyLPEG import P, S, R, SOL, EOL
 from hamcrest import assert_that, equal_to, none, not_none
 
 # ==============================================================================
@@ -22,9 +22,29 @@ def step_impl(context):
   context.p = SOL()
 
 # ==============================================================================
+@given("p = EOL() [Start of line pattern]")
+def step_impl(context):
+  context.p = EOL()
+
+# ==============================================================================
 @given("p = P({pattern1})*P({pattern2})")
 def step_impl(context, pattern1, pattern2):
   context.p = P(massagePattern(pattern1)) * P(massagePattern(pattern2))
+
+# ==============================================================================
+@given("p = P({pattern1}) + P({pattern2})")
+def step_impl(context, pattern1, pattern2):
+  context.p = P(massagePattern(pattern1)) + P(massagePattern(pattern2))
+
+# ==============================================================================
+@given("p = {pattern1} - {pattern2}")
+def step_impl(context, pattern1, pattern2):
+  context.p = eval(pattern1) - eval(pattern2)
+
+# ==============================================================================
+@given("p = -P({pattern})")
+def step_impl(context, pattern):
+  context.p = -P(pattern[1:-1])
 
 # ******************************************************************************
 # When
@@ -87,6 +107,26 @@ def step_impl(context):
   assert_that(repr(context.p), equal_to("SOL()"))
 
 # ==============================================================================
+@then('repr(match) should be EOL()')
+def step_impl(context):
+  assert_that(repr(context.p), equal_to("EOL()"))
+
+# ==============================================================================
 @then('repr(match) should be P({pattern1})*P({pattern2})')
 def step_impl(context, pattern1, pattern2):
   assert_that(repr(context.p), equal_to("P({0})*P({1})".format(pattern1, pattern2)))
+
+# ==============================================================================
+@then('repr(match) should be P({pattern1}) + P({pattern2})')
+def step_impl(context, pattern1, pattern2):
+  assert_that(repr(context.p), equal_to("P({0}) + P({1})".format(pattern1, pattern2)))
+
+# ==============================================================================
+@then('repr(match) should be {pattern1} - {pattern2}')
+def step_impl(context, pattern1, pattern2):
+  assert_that(repr(context.p), equal_to("{0} - {1}".format(pattern1, pattern2)))
+
+# ==============================================================================
+@then('repr(match) should be -P({pattern})')
+def step_impl(context, pattern):
+  assert_that(repr(context.p), equal_to("-P({0})".format(pattern)))

@@ -1,14 +1,15 @@
 Feature: Basic pattern match operations should be defined in order to make it
   relatively easy to construct basic matching patterns.
 
+#-------------------------------------------------------------------------------
 Scenario Outline: Match a simple pattern.
   Given a pattern p = <cls>(<pattern>) [<desc>]
-  When p.match('<string>',<index>) is called
-  Then the result is a match
-  And match.start should be <start>
-  And match.end should be <end>
-  And str(match) should be '<match>'
-  And repr(match) should be: <cls>(<pattern>)
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <start>
+  And   match.end should be <end>
+  And   str(match) should be '<match>'
+  And   repr(match) should be: <cls>(<pattern>)
 
   Examples:
     | string              | cls | pattern | index | start | end | match | desc                         |
@@ -21,11 +22,12 @@ Scenario Outline: Match a simple pattern.
     | Blue flying monkeys | S   | 'Bs'    | 0     | 0     | 1   | B     | match character in set       |
     | Blue flying monkeys | S   | 'Bs'    | -1    | 18    | 19  | s     | match character in set       |
 
+#-------------------------------------------------------------------------------
 Scenario Outline: A simple pattern fails.
   Given a pattern p = <cls>(<pattern>) [<desc>]
-  When p.match('<string>',<index>) is called
-  Then the result fails because <reason>
-  And the result should be None
+  When  p.match('<string>',<index>) is called
+  Then  the result fails because <reason>
+  And   the result should be None
 
   Examples:
     | string              | cls | pattern | index | desc                         | reason                         |
@@ -35,14 +37,15 @@ Scenario Outline: A simple pattern fails.
     | Blue flying monkeys | R   | 'az'    | 0     | match range                  | B (index 0) is not lower case  |
     | Blue flying monkeys | S   | 'Bs'    | 2     | match character in set       | u (index 2) not in set Bs      |
 
+#-------------------------------------------------------------------------------
 Scenario Outline: Match the start of a line
   Given p = SOL() [Start of line pattern]
-  When p.match('<string>',<index>) is called
-  Then the result is a match
-  And match.start should be <index>
-  And match.end should be <index>
-  And str(match) should be ''
-  And repr(match) should be SOL()
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <index>
+  And   match.end should be <index>
+  And   str(match) should be ''
+  And   repr(match) should be SOL()
 
   Examples:
     | string    | index | end |
@@ -50,54 +53,131 @@ Scenario Outline: Match the start of a line
     | 1\n2\n3\r | 2     | 0   |
     | 1\n2\n3\r | 6     | 0   |
 
+#-------------------------------------------------------------------------------
 Scenario Outline: Match the start of a line fails
   Given p = SOL() [Start of line pattern]
-  When p.match('<string>',<index>) is called
-  Then the result fails because <reason>
-  And the result should be None
+  When  p.match('<string>',<index>) is called
+  Then  the result fails because <reason>
+  And   the result should be None
 
   Examples:
     | string     | index | reason                     |
     | 1\n2\n3\n  | 1     | index not at start of line |
     | 1\n2\n3\n4 | 7     | index not at start of line |
 
+#-------------------------------------------------------------------------------
 Scenario Outline: Match the start of a line
   Given p = SOL() [Start of line pattern]
-  When p.match('<string>',<index>) is called
-  Then the result is a match
-  And match.start should be <index>
-  And match.end should be <index>
-  And str(match) should be ''
-  And repr(match) should be SOL()
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <index>
+  And   match.end should be <index>
+  And   str(match) should be ''
+  And   repr(match) should be SOL()
 
   Examples:
     | string    | index | end |
     | 1\n2\n3\n | 0     | 0   |
-    | 1\n2\n3\n | 2     | 0   |
-    | 1\n2\n3\n | 6     | 0   |
+    | 1\n2\n3\n | 2     | 2   |
+    | 1\n2\n3\n | 6     | 6   |
 
+#-------------------------------------------------------------------------------
 Scenario Outline: Match the start of a line fails
   Given p = SOL() [Start of line pattern]
-  When p.match('<string>',<index>) is called
-  Then the result fails because <reason>
-  And the result should be None
+  When  p.match('<string>',<index>) is called
+  Then  the result fails because <reason>
+  And   the result should be None
 
   Examples:
     | string     | index | reason                     |
     | 1\n2\n3\n  | 1     | index not at start of line |
     | 1\n2\n3\n4 | 7     | index not at start of line |
 
-Scenario Outline: Match a pattern followed by another pattern
-  (i.e., pattern1 * pattern2).
-  Given p = P(<pattern1>)*P(<pattern2>)
-  When p.match('<string>',<index>) is called
-  Then the result is a match
-  And match.start should be <index>
-  And match.end should be <end>
-  And str(match) should be '<match>'
-  And repr(match) should be P(<pattern1>)*P(<pattern2>)
+#-------------------------------------------------------------------------------
+Scenario Outline: Match the end of a line
+  Given p = EOL() [Start of line pattern]
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <index>
+  And   match.end should be <index>
+  And   str(match) should be ''
+  And   repr(match) should be EOL()
 
   Examples:
-    | string       | pattern1 | pattern2 | index | end | match        |
-    | peanutbutter | 'peanut' | 'butter' | 0     | 12  | peanutbutter |
-    | peanutbutter | 'pea'    | 'nut'    | 0     | 6   | peanut       |
+    | string    | index | end |
+    | 1\n2\n3\n | 1     | 1   |
+    | 1\n2\n3\n | 3     | 3   |
+    | 1\n2\n3\n | 6     | 6   |
+
+#-------------------------------------------------------------------------------
+Scenario Outline: Match the end of a line fails
+  Given p = EOL() [Start of line pattern]
+  When  p.match('<string>',<index>) is called
+  Then  the result fails because <reason>
+  And   the result should be None
+
+  Examples:
+    | string     | index | reason                   |
+    | 1\n2\n3\n  | 0     | index not at end of line |
+    | 1\n2\n3\n4 | 6     | index not at end of line |
+
+#-------------------------------------------------------------------------------
+Scenario Outline: Match a pattern, or if that fails, another pattern.
+  (i.e., pattern1 + pattern2).
+  Given p = P(<pattern1>) + P(<pattern2>)
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <index>
+  And   match.end should be <end>
+  And   str(match) should be '<match>'
+  And   repr(match) should be P(<pattern1>) + P(<pattern2>)
+
+  Examples:
+    | string       | pattern1 | pattern2 | index | end | match  |
+    | peanutbutter | 'peanut' | 'butter' | 0     | 6   | peanut |
+    | peanutbutter | 'peanut' | 'butter' | 6     | 12  | butter |
+
+#-------------------------------------------------------------------------------
+Scenario Outline: Match pattern1 if it does not match pattern2.
+  (i.e., pattern1 - pattern2).
+  Given p = <pattern1> - <pattern2>
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <index>
+  And   match.end should be <end>
+  And   str(match) should be '<match>'
+  And   repr(match) should be <pattern1> - <pattern2>
+
+  Examples:
+    | string       | pattern1 | pattern2 | index | end | match  |
+    | peanutbutter | P(6)     | P('tea') | 0     | 6   | peanut |
+    | peanutbutter | P(6)     | P('batt')| 6     | 12  | butter |
+
+#-------------------------------------------------------------------------------
+Scenario Outline: Match pattern1 if it does not match pattern2.
+  (i.e., pattern1 - pattern2).
+  Given p = <pattern1> - <pattern2>
+  When  p.match('<string>',<index>) is called
+  Then  the result fails because <reason>
+  And   the result should be None
+
+  Examples:
+    | string       | pattern1 | pattern2 | index | reason                    |
+    | peanutbutter | P(6)     | P('p')   | 0     | 'p' at 0 is not allowed   |
+    | peanutbutter | P(6)     | P('but') | 6     | 'but' at 6 is not allowed |
+
+#-------------------------------------------------------------------------------
+Scenario Outline: Match not pattern.
+  (i.e., -pattern).
+  Given p = -P(<pattern>)
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   match.start should be <index>
+  And   match.end should be <index>
+  And   str(match) should be ''
+  And   repr(match) should be -P(<pattern>)
+
+  Examples:
+    | string | pattern | index |
+    | Erak   | 'Will'  | 0     |
+    | halt   | 'Will'  | 0     |
