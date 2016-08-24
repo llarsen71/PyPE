@@ -1,3 +1,5 @@
+# ==============================================================================
+
 def removeSrcIndent(pysrc):
   """
   .. function: removeSrcIndent(pysrc)
@@ -58,36 +60,64 @@ def removeSrcIndent(pysrc):
 
   return code.getvalue()
 
+# ==============================================================================
+
 def parseSrc(src):
   """
   Parse the source file and return the parsed data.
 
   :return:  Parsed data
   """
-  from PyLPEG import P, R, S, C, Cc, Cg, Col, whitespace, \
-       whitespace0, newline, SOL
+  from PyLPEG import P, R, S, C, Cb, Cc, Cg, Col, whitespace, whitespace0, newline, \
+       SOL, matchUntil
   from Tokenizer import Tokenizer
 
-  scode = P("@[")     # Start python code block
-  ecode = P("]@")     # End python code block
+  # ----------------------------------------------------------------------------
+  # PYTAG - A python code tag can be embedded in the code as:
+  #
+  #    @[(^)(Options) <pyscr> (^)]@
+  #
+  # The values in parenthesis are optional:
+  #
+  #    ^ is used to indicate that leading or trailing whitespace, including a
+  #      newline, should be removed. If the text preceeding or following the
+  #      block is not a blank line, ^ has no impact.
+  #
+  #    Options include:
+  #    = which indicates that the result of the python block should be written
+  #      to the file.
+  #    > The size of the python block should be preserved, and the value should
+  #      be right aligned.
+  #    > The size of the python block should be preserved, and the value should
+  #      be left aligned.
+  #
+  # ----------------------------------------------------------------------------
 
-  ws = whitespace0 & 'hide'
-  nl = newline
-
-  # For an option, group the option name into an array
-  Opt = lambda cmd: Cg(Cc(cmd))
+  startcode = P("@[")     # Start python code block
+  endcode   = P("]@")     # End python code block
 
   # Remove whitespace flag. Indicate where to remove whitespace (start or end)
   rws = lambda where: ("^" * Cg(Cc("remove ws")*Cc(where)))**-1
 
+  STARTCODE = startcode * rws("start")
+  ENDCODE   = rws("end") ** -1 * endcode
+
+  ws        = whitespace0 & 'hide'
+  nl        = newline
+  endofline = matchUntil(newline)
+
+  # For an option, group the option name into an array
+  Opt = lambda cmd: Cg(Cc(cmd))
+
+
   # ----------------------------------------------------------------------------
   # PYTAG Options
   # ----------------------------------------------------------------------------
-  wrt = ws * "=" * Opt("write")                    # Write to stack flag
-  ral = ws * ">" * Opt("right align")              # Right align flag
-  lal = ws * "<" * Opt("left align")               # Left align flag
+  wrt = "=" * Opt("write")                    # Write to stack flag
+  ral = ">" * Opt("right align")              # Right align flag
+  lal = "<" * Opt("left align")               # Left align flag
 
-  options = (wrt + ral + lal + P(0))
+  options = (wrt + ral + lal + P(True))
 
   # ----------------------------------------------------------------------------
   # Other
@@ -112,7 +142,55 @@ def parseSrc(src):
 
   # ----------------------------------------------------------------------------
 
-  pysrc = ('hide' & 1 - P("^")**-1 * ecode)**0
+  def indentRemover():
+    # Remove base indentation from the python source code lines. Look for lines
+    # with too little indentation.
+    removeSpacesPattern = []
+
+    def getIndent(match):
+      # Get the indent size and return a capture with that number of spaces.
+      indent = match.captures[0]
+      match.captures = [" " * indent] # Add indentation spaces as part of source
+      # TODO: look for too few spaces in src
+      #
+      removeSpacesPattern.append(C(whitespace**-indent))
+      return match
+
+    def removeIndent(string, index=0):
+      pass
+
+  # ----------------------------------------------------------------------------
+
+  def firstLineIndentChecker(match):
+    # Gets the indent for the first line.
+    line1indent_len, line2indent = match.captures
+    if len(line2indent) < line1indent_len:
+      # TODO: report an error
+      match.captures = [line2indent]
+    else:
+      match.captures = [line2indent[:line1indent_len]]
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  firstLineIndent      = endofline*( (C(ws)*(newline*C(ws))**0)/-1 )
+  checkFirstLineIndent = ~(Col()*firstLineIndent) / firstLineIndentChecker
+
+  # Get leading whitespace for python block as:
+  # 1. The whitespace in front of the first line of code in the block if there
+  #    is no code on the first line of python block.
+  # 2. If there is code on the same line as the python block, the number of
+  #    spaces up to the location of the code.
+
+  leading_ws = ws*Cb("indent", (newline*C(ws))**1 / -1 + checkFirstLineIndent, 0)
+
+  #          Regular Source Code line                             Blank Line      Error line
+  lines = (Cb("indent")*C(matchUntil(newline + ENDCODE, False)*newline**-1) + ws*Cc(newline) + endofline)**0
+  # Error line can be
+  # 1. Too little indentation
+  # 2. Not matching indentation
+
+  pysrc = leading_ws * (lines)**0
 
   # ----------------------------------------------------------------------------
 
@@ -143,15 +221,15 @@ def parseSrc(src):
   # ----------------------------------------------------------------------------
 
   # Only allow one line - TODO: check for multiple lines and print error
-  ENDBLK = "END BLOCK" | Cc("END BLOCK") * scode * rws("start") * numUnindents * \
-                         (Col() * C(('hide' & 1-P("^")**-1*ecode)**0)/isBlock) * \
-                         rws("end")**-1 * ecode
+  ENDBLK = "END BLOCK" | Cc("END BLOCK") * STARTCODE * numUnindents * \
+                         (Col() * C(('hide' & 1-P("^")**-1*endcode)**0)/isBlock) * \
+                         ENDCODE
 
-  PYTAG  = "PYTAG"     | Cc("PYTAG") * scode * rws("start") * options * \
+  PYTAG  = "PYTAG"     | Cc("PYTAG") * STARTCODE * options * \
                          ((Col() * C(pysrc)) / srcindent) * \
-                         rws("end") * ecode
+                         ENDCODE
 
-  TEXT   = "TEXT"      | Cc("TEXT") * C(('hide' & 1 - scode)**1)
+  TEXT   = "TEXT"      | Cc("TEXT") * C(('hide' & 1 - startcode)**1)
 
   #PYTAG.debug(True)
   #ENDBLK.debug(True)
