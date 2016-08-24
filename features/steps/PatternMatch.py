@@ -2,12 +2,6 @@ from behave import given, when, then
 from PyLPEG.PyLPEG import P, S, R, SOL, EOL, Match
 from hamcrest import assert_that, equal_to, none, not_none
 
-# ==============================================================================
-def massagePattern(pattern):
-  if pattern.startswith("'") or pattern.startswith('"'): return pattern[1:-1]
-  if pattern in ('True', 'False'):return bool(pattern)
-  return int(pattern)
-
 # ******************************************************************************
 # Given
 # ******************************************************************************
