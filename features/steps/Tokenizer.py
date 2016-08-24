@@ -12,23 +12,24 @@ rest_of_line = (1-newline)**0 * newline
 @given("a Tokenizer T initialized with table")
 def step_impl(context):
   if not context.table.has_column('grammar'):
-    rules = [eval(row["pattern"]) | row['name'] for row in context.table]
+    pattern = lambda row: eval(row["pattern"].replace("!","|"))
+    rules = [pattern(row) for row in context.table]
     context.T = Tokenizer(root=rules)
   else:
     # Get the set of unique grammar names in the table.
     grammar_names = set(row['grammar'] for row in context.table)
 
     def pattern(row):
-      name = row['name']
+      pattern = eval(row["pattern"].replace("!", "|"))
 
-      # Create the pattern and add the token name
-      pattern = eval(row['pattern']) | name
+      # return pattern if it does not start a new grammar
       if row['end pattern'] == "": return pattern
 
       # If this starts a new grammar, return:
       #    (pattern, new grammar name, end pattern)
-      endname = "{0}end {1}".format(name[0], name[1:])
-      return (pattern, row['new grammar'], eval(row['end pattern']) | endname)
+      end_pattern = eval(row['end pattern'].replace('!','|'))
+
+      return (pattern, row['new grammar'], end_pattern)
 
     rules = lambda grammar: [pattern(row) for row in context.table
                              if row['grammar'] == grammar]
