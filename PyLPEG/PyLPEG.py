@@ -945,10 +945,20 @@ class Cb(Pattern):
 
   # ----------------------------------------------------------------------------
 
-  def __init__(self, name, pattern=None):
+  def __init__(self, name, pattern=None, captureIndex=None):
+    """
+
+    :param name: The name to store the back capture under for later reference.
+    :param pattern: The pattern to match. The backcapture will be the full match
+           if captureIndex is None, or the indicated capture index if the index
+           is specified.
+    :param captureIndex: The index of the captured item to use for the backcapture
+           or None if the whole string is to be used.
+    """
     Pattern.__init__(self)
     self.capname = name
     self.pattern = P.asPattern(pattern) if pattern is not None else None
+    self.captureIndex = captureIndex
 
   # ----------------------------------------------------------------------------
 
@@ -969,7 +979,8 @@ class Cb(Pattern):
     else:
       match = self.pattern.match(string, index)
       if isinstance(match, Match):
-        string.addNamedCapture(self.capname, match.getValue())
+        value = match.getValue() if self.captureIndex is None else match.getCapture(self.captureIndex)
+        string.addNamedCapture(self.capname, value)
     return match
 
   # ----------------------------------------------------------------------------
@@ -1744,6 +1755,22 @@ class Match(object):
 
   # ----------------------------------------------------------------------------
 
+  def setCaptures(self, captures):
+    """
+    Set the captures for this match.
+
+    :param captures: A list object which becomes the captures list, or an object
+                     which is added to a new captures list.
+    :return: The match object
+    """
+    if isinstance(captures, list):
+      self.captures = captures
+    else:
+      self.captures = [captures]
+    return self
+
+  # ----------------------------------------------------------------------------
+
   def addSubmatch(self, match):
     """
     """
@@ -1806,6 +1833,24 @@ class Match(object):
 
   def __str__(self):
     return self.getValue()
+
+# ==============================================================================
+
+def matchUntil(pattern, matchAfter=True):
+  """
+  Return a Pattern that matches any text until the given pattern is found. If
+  the `matchAfter` parameter is True (default), the specified pattern is matched
+  afterward.
+
+  :param pattern: Find all text up the the given pattern.
+  :param matchAfter: Indicate whether the pattern should be matched after it is
+         found.
+  :return: A Pattern that matches all text up to the given pattern, and matches
+         the pattern as well if `matchAfter` is True.
+  """
+  beforePattern = (1-pattern & 'hide')**0
+  if not matchAfter: return beforePattern
+  return beforePattern * pattern
 
 # ==============================================================================
 
