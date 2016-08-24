@@ -1563,8 +1563,8 @@ alpha       = R("AZ", "az")
 digit       = R("09")
 quote       = S("\"'")
 whitespace  = S(" \t")
-whitespace0 = whitespace**0
-whitespace1 = whitespace**1
+whitespace0 = whitespace**0  # 0 or more whitespace characters
+whitespace1 = whitespace**1  # 1 or more whitespace characters
 newline     = P("\r\n") + P("\r") + P("\n")
 
 # ==============================================================================
@@ -1633,7 +1633,8 @@ class BackCaptureString(object):
     """
     sz = len(self.backcaptures)
     if size == sz: return
-    if sz < size: raise ValueError("The backcaptures stack is too short.")
+    if sz < size: raise ValueError("The backcaptures stack is shorter than "
+                                   "expected.")
 
     self.backcaptures = self.backcaptures[0:size]
 
@@ -1675,7 +1676,7 @@ class BackCaptureString(object):
         return len(self.startOfLineIndex)-1
       if index == startOfLine:
         return len(self.startOfLineIndex)
-    raise IndexError("Unexpected error calculating line number for string posititon")
+    raise IndexError("Unexpected error calculating line number for string position")
 
   # ----------------------------------------------------------------------------
 
@@ -1811,7 +1812,7 @@ class Match(object):
 def match(pattern, subject, index=0):
   """
   """
-  pass
+  return pattern.match(subject, index)
 
 # ==============================================================================
 
