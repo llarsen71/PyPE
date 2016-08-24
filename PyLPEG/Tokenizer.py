@@ -57,7 +57,7 @@ class Tokenizer(object):
   """
 
   # ----------------------------------------------------------------------------
-  def __init__(self, initial_grammar = "root", end_grammer = None, **grammars):
+  def __init__(self, initial_grammar = "root", end_grammar = None, **grammars):
     """
     Initialize the Tokenizer. Grammars are passed as keyword arguments to the
     Tokenizer constructor. A 'root' grammar must be passed to the constructor,
@@ -66,7 +66,7 @@ class Tokenizer(object):
 
     :param initial_grammar: This indicates which grammar is root grammar. By
            default, the grammar named 'root' is the root grammar.
-    :param end_grammer: If the root grammar has a pattern that ends parsing, it
+    :param end_grammar: If the root grammar has a pattern that ends parsing, it
            is specified via this parameter.
     :param \**grammars: All keyword arguments passed to the Tokenizer
            constructor are considered to be grammars. The grammar should contain
@@ -74,7 +74,7 @@ class Tokenizer(object):
            :func:`__addGrammar__` for more details about the grammar rules list.
     """
     self.initial_grammar = initial_grammar
-    # grammar stack - indicate which grammar we are in and the end grammer marker
+    # grammar stack - indicate which grammar we are in and the end grammar marker
     self.stack = []
     self.grammars = {}
 
@@ -82,7 +82,7 @@ class Tokenizer(object):
       self.__addGrammar__(name, grammar)
 
     # Set the initial grammar
-    self.__setGrammar__(initial_grammar, end_grammer)
+    self.__setGrammar__(initial_grammar, end_grammar)
 
   # ----------------------------------------------------------------------------
   def __addGrammar__(self, name, rules):
