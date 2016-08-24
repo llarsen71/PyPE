@@ -1343,15 +1343,6 @@ class PatternAnd(Pattern):
 
   # ----------------------------------------------------------------------------
 
-  def __sub__(self, other):
-    """
-    Support 'ptn-a'
-    """
-    self.prependPattern(PatternNot(other))
-    return self
-
-  # ----------------------------------------------------------------------------
-
   def __repr__(self):
     if self.is_not_ptn:
       # Get the pattern contained by PatternNot since we will add the '-' manually
