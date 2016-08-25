@@ -1836,15 +1836,14 @@ class Match(object):
 
 # ==============================================================================
 
-def matchUntil(pattern, matchAfter=True):
+def matchUntil(pattern, matchAfter=False):
   """
   Return a Pattern that matches any text until the given pattern is found. If
-  the `matchAfter` parameter is True (default), the specified pattern is matched
-  afterward.
+  the `matchAfter` parameter is True, the specified pattern is matched afterward.
 
   :param pattern: Find all text up the the given pattern.
   :param matchAfter: Indicate whether the pattern should be matched after it is
-         found.
+         found (default False).
   :return: A Pattern that matches all text up to the given pattern, and matches
          the pattern as well if `matchAfter` is True.
   """
