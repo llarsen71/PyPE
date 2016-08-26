@@ -74,18 +74,24 @@ def ConfigBackCaptureString4match(fn):
                      False)
 
     if showDebugInfo and pattern.name:
-      print "Enter: {0} => {1}".format(pattern.name, repr(pattern))
+      print "Enter: <{0}> => {1}".format(pattern.name, repr(pattern))
 
     index = pattern.positiveIndex(string, index)
     matchResult = fn(pattern, string, index)
 
-    if showDebugInfo:
-      name = pattern.name or repr(pattern)
+    match_failed = not isinstance(matchResult, Match)
+    is_sub_and = isinstance(pattern, PatternAnd) and pattern.is_sub_and
+    ignore_sub_and_on_fail = match_failed and is_sub_and and olddebug
+
+    if showDebugInfo and not ignore_sub_and_on_fail:
+      name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
       print "Pattern: ({0}) {1}".format(index, name)
-      if not isinstance(matchResult, Match):
+      if match_failed:
         print "  Failed"
       else:
         print "  Result: {0}".format(escapeStr(str(matchResult)))
+        if isinstance(pattern, Capture):
+          print "  Captures: {0}".format(matchResult.captures)
 
     # Clear any nested stored callback items except when:
     #
@@ -174,6 +180,7 @@ class Pattern(object):
             *"whitespace" | S(" \t")* sets the name of this pattern to
             "whitespace".
   """
+  precedence = 100
 
   # This is a debug (dbg) option that indicates that only named items should be
   # printed in the debug output.
@@ -277,6 +284,25 @@ class Pattern(object):
     idx = sz + index
     if idx < 0 and msg: raise ValueError(msg)
     return 0 if idx < 0 else idx
+
+  # ----------------------------------------------------------------------------
+
+  def addPrn(self, toWrap):
+    """
+    Add parenthesis to the 'toWrap' item if the precedence is higher than the
+    current object.
+    """
+    if toWrap.name is not None:
+      return "<{0}>".format(toWrap.name)
+
+    getPrecedence = lambda obj: obj.precedence if hasattr(obj, 'precedence') else 101
+    toWrapPrecedence = getPrecedence(toWrap)
+
+    if toWrapPrecedence > self.precedence:
+      return "({0})".format(repr(toWrap))
+    elif toWrapPrecedence == self.precedence and type(toWrap) is not type(self):
+      return "({0})".format(repr(toWrap))
+    return repr(toWrap)
 
   # ----------------------------------------------------------------------------
 
@@ -472,7 +498,12 @@ class Pattern(object):
 
 # ==============================================================================
 
-class P(Pattern):
+class AtomicPattern(Pattern):
+  precedence = 1
+
+# ==============================================================================
+
+class P(AtomicPattern):
   """
   The Pattern class matches a literal string or a specific number characters or
   checks against a user defined matcher function or matches against another
@@ -689,7 +720,7 @@ class P(Pattern):
 
 # ==============================================================================
 
-class S(Pattern):
+class S(AtomicPattern):
   """
   Match any of a given set of characters.
   """
@@ -729,7 +760,7 @@ class S(Pattern):
 
 # ==============================================================================
 
-class R(Pattern):
+class R(AtomicPattern):
   """
   Match characters in a given range.
   """
@@ -773,39 +804,9 @@ class R(Pattern):
     # TODO: Handle single quote in range values
     return "R(%s)" % (",".join(["'{0}'".format(escapeStr(range)) for range in self.ranges]))
 
-# ==============================================================================
-
-class V(Pattern):
-
-  # ----------------------------------------------------------------------------
-
-  def __init__(self, var=None):
-    Pattern.__init__(self)
-    self.var = var
-
-  # ----------------------------------------------------------------------------
-
-  def setPattern(self, pattern):
-    if not isinstance(pattern, Pattern):
-      raise ValueError("The setPattern method of V class needs to be passed a Pattern object.")
-    self.pattern = pattern
-
-  # ----------------------------------------------------------------------------
-
-  @ConfigBackCaptureString4match
-  def match(self, string, index=0):
-    """
-    """
-    return self.pattern.match(string, index)
-
-  # ----------------------------------------------------------------------------
-
-  def __repr__(self):
-    return "V(%s)" % self.var if self.var else "V(%s)" % _repr_(self.pattern)
-
 # ===============================================================================
 
-class SOL(Pattern):
+class SOL(AtomicPattern):
   """
   Check if his is the Start of Line (SOL).
   """
@@ -848,7 +849,7 @@ class SOL(Pattern):
 
 # ==============================================================================
 
-class EOL(Pattern):
+class EOL(AtomicPattern):
   """
   Detect whether the current position is at the end of a line.
   """
@@ -897,7 +898,12 @@ class EOL(Pattern):
 # Captures
 # ==============================================================================
 
-class C(Pattern):
+class Capture(Pattern):
+  precedence = 1
+
+# ==============================================================================
+
+class C(Capture):
   """
   Capture a pattern
   """
@@ -936,7 +942,7 @@ class C(Pattern):
 
 # ==============================================================================
 
-class Cb(Pattern):
+class Cb(AtomicPattern):
   """
   Backcapture
   """
@@ -991,7 +997,7 @@ class Cb(Pattern):
 
 # ==============================================================================
 
-class Cc(Pattern):
+class Cc(Capture):
   """
   Capture a constant value.
   """
@@ -1022,7 +1028,7 @@ class Cc(Pattern):
 
 # ==============================================================================
 
-class Cg(Pattern):
+class Cg(Capture):
   """
   Group Captures into a single capture. If there are no captures, the single
   capture will be an empty array.
@@ -1063,7 +1069,7 @@ class Cg(Pattern):
 
 # ==============================================================================
 
-class Cl(Pattern):
+class Cl(Capture):
   """
   Capture the current line number.
   """
@@ -1101,7 +1107,7 @@ class Cl(Pattern):
 
 # ==============================================================================
 
-class Cp(Pattern):
+class Cp(Capture):
   """
   Capture the current position.
   """
@@ -1134,7 +1140,7 @@ class Cp(Pattern):
 
 # ==============================================================================
 
-class Col(Pattern):
+class Col(Capture):
   """
   Capture the column (distance since last newline).
   """
@@ -1185,6 +1191,7 @@ class PatternFnWrap(Pattern):
   Pass the match to the given function and return the match returned by the
   function
   """
+  precedence = 6
 
   # ----------------------------------------------------------------------------
 
@@ -1229,6 +1236,7 @@ class PatternCaptureN(Pattern):
   Keep the nth capture in the list of captures. If the capture does not exist,
   a default is used if specified or no captures are added.
   """
+  precedence = 6
 
   # ----------------------------------------------------------------------------
 
@@ -1295,6 +1303,7 @@ class PatternAnd(Pattern):
   """
   Match pattern1 followed by pattern2.
   """
+  precedence = 6
 
   # ----------------------------------------------------------------------------
 
@@ -1317,6 +1326,8 @@ class PatternAnd(Pattern):
     self.patterns = (asPattern(pattern1), asPattern(pattern2))
     self.is_sub_and = False # Is this contained in another and operation
     self.is_not_ptn = isinstance(pattern1, PatternNot) # Indicate if this is (Ptn1 - Ptn)
+    if self.is_not_ptn:
+      self.precedence = 7
 
     if isinstance(pattern1, PatternAnd): pattern1.is_sub_and = True
     if isinstance(pattern2, PatternAnd): pattern2.is_sub_and = True
@@ -1356,10 +1367,9 @@ class PatternAnd(Pattern):
     if self.is_not_ptn:
       # Get the pattern contained by PatternNot since we will add the '-' manually
       notPtn = self.patterns[0].pattern
-      return "%s - %s" % (repr(self.patterns[1]), repr(notPtn))
+      return "%s - %s" % (self.addPrn(self.patterns[1]), self.addPrn(notPtn))
     else:
-      prns = lambda ptn: isinstance(ptn, PatternOr) or (isinstance(ptn, PatternAnd) and ptn.is_not_ptn)
-      return "{0}*{1}".format(_repr_(self.patterns[0], prns), _repr_(self.patterns[1], prns))
+      return "{0}*{1}".format(self.addPrn(self.patterns[0]), self.addPrn(self.patterns[1]))
 
 # ==============================================================================
 
@@ -1367,6 +1377,7 @@ class PatternOr(Pattern):
   """
   Look for the first pattern in the list that matches the string.
   """
+  precedence = 7
 
   # ----------------------------------------------------------------------------
 
@@ -1407,7 +1418,7 @@ class PatternOr(Pattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "{0} + {1}".format(_repr_(self.patterns[0]), _repr_(self.patterns[1]))
+    return "{0} + {1}".format(self.addPrn(self.patterns[0]), self.addPrn(self.patterns[1]))
 
 # ==============================================================================
 
@@ -1416,6 +1427,7 @@ class PatternNot(Pattern):
   Verify that the text ahead does not match the pattern. The string index does
   not advance.
   """
+  precedence = 5
 
   # ----------------------------------------------------------------------------
 
@@ -1444,11 +1456,12 @@ class PatternNot(Pattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "-%s" % _repr_(self.pattern)
+    return "-%s" % self.addPrn(self.pattern)
 
 # ==============================================================================
 
 class PatternRepeat(Pattern):
+  precedence = 4
 
   # ----------------------------------------------------------------------------
 
@@ -1555,7 +1568,7 @@ class PatternRepeat(Pattern):
     n = self.n
     if self.matcher == self.match_at_most_n: n = -n
     if self.matcher == self.match_n: n = "[{0}]".format(n)
-    return "{0}**{1}".format(_repr_(self.pattern, (PatternOr, PatternAnd, PatternNot, PatternRepeat)), n)
+    return "{0}**{1}".format(self.addPrn(self.pattern), n)
 
 # ==============================================================================
 
@@ -1564,6 +1577,7 @@ class PaternLookAhead(Pattern):
   Check whether the patern matches the string that follows without consuming the
   string
   """
+  precedence = 5
 
   # ----------------------------------------------------------------------------
 
