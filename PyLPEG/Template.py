@@ -69,7 +69,8 @@ class Template(object):
     #ifTrimWS    = 'ifTrimWS'   | ((SOL() + newline)*ws)**-1
 
     TEXT = Cc("TEXT") * ~P(1) * C((maybeTrimWS*oneLine)**0) * ifTrimWS
-    return "TEXT" | TEXT / self.__processTextMatch__
+    TEXT = "TEXT" | TEXT / self.__processTextMatch__
+    return TEXT
 
   # ----------------------------------------------------------------------------
   def __processTextMatch__(self, match):
@@ -182,8 +183,8 @@ class Template(object):
 
     PYTAG = Cc("PYTAG") * \
             (start * options * unindent * initial_code * code_line**0 * end)
-
-    return "PYTAG" | PYTAG / self.__processPyTagMatch__
+    PYTAG = "PYTAG" | PYTAG / self.__processPyTagMatch__
+    return PYTAG
 
   # ----------------------------------------------------------------------------
   def __processPyTagMatch__(self, match):
