@@ -651,8 +651,6 @@ class P(Pattern):
     True
     >>> p("test",3) == ""
     True
-    >>> p("test",5) is None
-    True
     """
     if not self.TF or index > len(string): return None
     return Match(string, index, index)
@@ -1456,11 +1454,20 @@ class PatternRepeat(Pattern):
 
   def __init__(self, pattern, n):
     Pattern.__init__(self)
+
     if not isinstance(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
-    if not isinstance(n, int): raise ValueError("In ptn^n, n must be an integer value")
+    matchExact = True if isinstance(n, list) else False
+    if matchExact:
+      if len(n) == 0: raise ValueError("In ptn**[n], n calue is missing")
+      n = n[0]
+    if not isinstance(n, (int,list)): raise ValueError("In ptn**n, n must be an integer value or [n]")
+
     self.pattern = pattern
 
-    if n >= 0:
+    if matchExact:
+      self.matcher = self.match_n
+      self.n = abs(n)
+    elif n >= 0:
       self.matcher = self.match_at_least_n
       self.n = n
     else:
@@ -1472,6 +1479,27 @@ class PatternRepeat(Pattern):
   @ConfigBackCaptureString4match
   def match(self, string, index=0):
     return self.matcher(string, index)
+
+  # ----------------------------------------------------------------------------
+
+  def match_n(self, string, index=0):
+    """
+
+    >>> p = S("abc")**[3]
+    >>> p("ab") is None
+    True
+    >>> p("abcd")
+    abc
+    """
+    MATCH = Match(string, index)
+    cnt = 0
+    for i in xrange(self.n):
+      match = self.pattern.match(string, index)
+      if not isinstance(match, Match): return None
+      index = match.end
+      MATCH.addSubmatch(match)
+      MATCH.setEnd(index)
+    return MATCH
 
   # ----------------------------------------------------------------------------
 
