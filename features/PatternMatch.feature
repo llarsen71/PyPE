@@ -170,16 +170,17 @@ Scenario Outline: Match a pattern repeating n or more times (pattern^n) or
   And   repr(pattern) should be <pattern>
 
   Examples:
-    | pattern    | desc           | string | index | end | result |
-    | P('a')**0  | 0 or more a(s) | b      | 0     | 0   |        |
-    | P('a')**0  | 0 or more a(s) | aab    | 0     | 2   | aa     |
-    | P('a')**3  | 3 or more a(s) | aaab   | 0     | 3   | aaa    |
-    | P('a')**3  | 3 or more a(s) | aaaaab | 0     | 5   | aaaaa  |
-    | P('a')**-1 | 1 or less a(s) | b      | 0     | 0   |        |
-    | P('a')**-1 | 1 or less a(s) | ab     | 0     | 1   | a      |
-    | P('a')**-1 | 1 or less a(s) | aab    | 0     | 1   | a      |
-    | P('a')**-2 | 2 or less a(s) | aab    | 0     | 2   | aa     |
-    | P('a')**-2 | 2 or less a(s) | aaab   | 0     | 2   | aa     |
+    | pattern      | desc           | string | index | end | result |
+    | P('a')**0    | 0 or more a(s) | b      | 0     | 0   |        |
+    | P('a')**0    | 0 or more a(s) | aab    | 0     | 2   | aa     |
+    | P('a')**3    | 3 or more a(s) | aaab   | 0     | 3   | aaa    |
+    | P('a')**3    | 3 or more a(s) | aaaaab | 0     | 5   | aaaaa  |
+	| P('a')**[3]  | exactly 3 a(s) | aaaa   | 0     | 3   | aaa    |
+    | P('a')**-1   | 1 or less a(s) | b      | 0     | 0   |        |
+    | P('a')**-1   | 1 or less a(s) | ab     | 0     | 1   | a      |
+    | P('a')**-1   | 1 or less a(s) | aab    | 0     | 1   | a      |
+    | P('a')**-2   | 2 or less a(s) | aab    | 0     | 2   | aa     |
+    | P('a')**-2   | 2 or less a(s) | aaab   | 0     | 2   | aa     |
 
 #-------------------------------------------------------------------------------
 Scenario Outline: Fail a pattern repeating n or more times (pattern^n).
@@ -189,5 +190,6 @@ Scenario Outline: Fail a pattern repeating n or more times (pattern^n).
   And   the result should be None
 
   Examples:
-    | pattern    | desc           | string | index | reason |
-    | P('a')**3  | 3 or more a(s) | aab    | 0     | has less than 3 a(s)|
+    | pattern     | desc           | string | index | reason |
+    | P('a')**3   | 3 or more a(s) | aab    | 0     | has less than 3 a(s)|
+    | P('a')**[3] | exactly 3 a(s) | aab    | 0     | has less than 3 a(s)|

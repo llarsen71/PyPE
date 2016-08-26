@@ -1552,9 +1552,10 @@ class PatternRepeat(Pattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    n = -self.n if self.matcher == self.match_at_most_n else self.n
+    n = self.n
+    if self.matcher == self.match_at_most_n: n = -n
+    if self.matcher == self.match_n: n = "[{0}]".format(n)
     return "{0}**{1}".format(_repr_(self.pattern, (PatternOr, PatternAnd, PatternNot, PatternRepeat)), n)
-
 
 # ==============================================================================
 
