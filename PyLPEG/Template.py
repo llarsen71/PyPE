@@ -1,5 +1,5 @@
-from PyLPEG import P, C, Cc, Cg, Col, whitespace, whitespace0 as ws, newline, \
-  matchUntil
+from PyLPEG import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
+     newline, matchUntil, SOL
 from Tokenizer import Tokenizer
 
 whitespace.debug(False)
@@ -9,20 +9,45 @@ whitespace.debug(False)
 # ==============================================================================
 
 class Template(object):
-  startPyTag = P("@[")     # Start python code block
-  endPyTag   = P("]@")     # End python code block
-  trimWS     = P("^")      # Symbol to trim whitespace
+  startPyTag  = P("@[")     # Start python code block
+  endPyTag    = P("]@")     # End python code block
+  trimWS      = P("^")      # Symbol to trim whitespace
+  brk = "# =============================================================================="
 
-  escapeDblQuote = (C((P('\\')*P(1) + P(1)) - P('"')) * (P('"') * Cc('\\"') + P(True))) ** 0
+  templateDir = "temp"
+
+  # Escape the double quote character (") and slash character in TEXT to be written out.
+  escapeDblQuoteAndEscChr = (C(1 - S('"\\')) *
+                             (P('"') * Cc('\\"') + P('\\')*Cc('\\\\') + P(0)))**0
 
   # ----------------------------------------------------------------------------
-  def __init__(self, filename, src=None):
-    self.filename = filename
-    if src is not None:
-      self.src = src
-    else:
+  def __init__(self, filename, readFile=True, base_function="function"):
+    """
+
+    :param filename: The filename to use for the template. When readFile is true,
+                     this should be the name of the file being read. The name of
+                     the python file that is generated in the templateDir is
+                     the base name from the filename plus '.py' if not already the
+                     file extension.
+    :param readFile: Indicate if the source should be read from the given file.
+    :param base_function: The base name to use for auto generated function names.
+    """
+    from os.path import basename
+
+    if filename is None:
+      raise ValueError("The filename must be specified for a Template")
+
+    self.templatename    = basename(filename if filename.endswith("*.py") else filename + ".py")
+    self.base_function   = base_function # Base name to use for generated functions
+    self.function_num    = 0
+    self.code_blocks     = []
+    self.function_names  = []
+    self.isCodeGenerated = False
+
+    if readFile:
       with open(filename, "rb") as file:
-        self.src = file.read()
+        src = file.read()
+      self.addPythonFunction(src)
 
   # ----------------------------------------------------------------------------
   def __textParser__(self):
@@ -36,9 +61,12 @@ class Template(object):
     startPyTag = self.startPyTag
     trimWS     = self.trimWS
 
+
     oneLine     = 'one line'   | matchUntil(newline + startPyTag)
-    maybeTrimWS = 'maybe trim' | (newline*ws)**-1*(-(startPyTag*trimWS))
-    ifTrimWS    = 'ifTrimWS'   | (newline*ws)**-1
+    maybeTrimWS = 'maybe trim' | ((newline + SOL())*ws)**-1*(-(startPyTag*trimWS))
+    ifTrimWS    = 'ifTrimWS'   | ((newline + SOL())*ws)**-1
+    #maybeTrimWS = 'maybe trim' | ((SOL() + newline)*ws)**-1*(-(startPyTag*trimWS))
+    #ifTrimWS    = 'ifTrimWS'   | ((SOL() + newline)*ws)**-1
 
     TEXT = Cc("TEXT") * ~P(1) * C((maybeTrimWS*oneLine)**0) * ifTrimWS
     return "TEXT" | TEXT / self.__processTextMatch__
@@ -48,10 +76,11 @@ class Template(object):
     from PyLPEG import quote
 
     text = match.captures[1]
-    escaped_text = "".join(self.escapeDblQuote(text).captures)
+    escaped_text = "".join(self.escapeDblQuoteAndEscChr(text).captures)
+    if escaped_text == "":
+      return match.setCaptures([])
+
     pycode = PyCodeBlock(['write("""{0}""")'.format(escaped_text)])
-
-
     return match.setCaptures(pycode)
 
   # ----------------------------------------------------------------------------
@@ -169,6 +198,7 @@ class Template(object):
     code_lines   = []    # The processed lines of code
     indent_stack = []    # Store the indent whitespace
     state = {
+      'option'        : None,  # Write option
       'start_indent'  : 0,     # Location just before the pyTag start marker '@['
       'end_indent'    : 0,     # Location just after the pyTag end marker ']@'
       'unindentLvl'   : 0,     # Indicate the number of unindent levels before this code block
@@ -297,6 +327,24 @@ class Template(object):
         state['end_indent'] = capture[1]    # Column where the PyTag ended
         continue
 
+      # ['write']
+      if cmd == "write":
+        state['option'] = 'write'
+        # TODO: Finish the write processing
+        continue
+
+      # ['right align']
+      if cmd == "right align":
+        state['option'] = 'right align'
+        # TODO: Finish the right align processing
+        continue
+
+      # ['left align']
+      if cmd == "left align":
+        state['option'] = 'left align'
+        # TODO: Finish the left align processing
+        continue
+
       # ['unindent', '::'] - Number of unindents (number of colons)
       if cmd == 'unindent':
         state['unindentLvl'] = len(capture[1])
@@ -322,23 +370,115 @@ class Template(object):
         addCodeAndCheckForColon(indent, code)
         continue
 
+    # --------------------------------------------------------------------------
+    # Handle the write options.
+    # --------------------------------------------------------------------------
+
+    write_option = state['option']
+    indentLvl = max(len(indent_stack)-1, 0)
+    if write_option is not None:
+      if indentLvl != 0:
+        # TODO: Report an error. A write command cannot be used with a series of comamnds.
+        pass
+      elif write_option == "write":
+        if len(code_lines) == 1:
+          code_lines[0] = 'write({0})'.format(code_lines[0].strip())
+        else:
+          code_lines.insert(0, "write(")
+          code_lines.append(")")
+      else:
+        width = max(state['end_indent'] - state['start_indent'],0)
+        align = "<" if write_option == "left align" else ">"
+        if len(code_lines) ==1:
+          code_lines[0] = "write('{{0:{0}{1}}}'.format({2}))".format(align, width, code_lines[0].strip())
+        else:
+          code_lines.insert(0, "write('{{0:{0}{1}}}'.format(".format(align, width))
+          code_lines.append("))")
+
+    # --------------------------------------------------------------------------
+    # Set the PyCodeBlock as the .
+    # --------------------------------------------------------------------------
+
     pycode = PyCodeBlock(code_lines,
                          unindent_before = state['unindentLvl'],
-                         indent_after    = max(len(indent_stack)-1,0))
+                         indent_after    = indentLvl)
     return match.setCaptures([pycode])
 
   # ----------------------------------------------------------------------------
-  def generateCode(self):
-    T = Tokenizer(root = (self.__pyTagParser__(), self.__textParser__()))
+  def __getFunctionName__(self, function_name=None):
+    if function_name is not None:
+      self.function_names.append(function_name)
+      return function_name
 
-    for token, match in T.getTokens(self.src):
-      print
-      print(token)
-      print(match.captures)
+    self.function_num += 1
+    function_name = self.base_function + str(self.function_num)
+    self.function_names.append(function_name)
+    return function_name
 
   # ----------------------------------------------------------------------------
-  def render(self, parameters=None):
-    pass
+  def __addCodeBlock__(self, pycodeblock):
+    self.code_blocks.append(pycodeblock)
+
+  # ----------------------------------------------------------------------------
+  def addPythonFunction(self, src, function_name=None):
+    T = Tokenizer(root = (self.__pyTagParser__(), self.__textParser__()))
+
+    code = ["", self.brk,
+            "def {0}():".format(self.__getFunctionName__(function_name))]
+    pcb = PyCodeBlock(code, indent_after=1)
+    self.__addCodeBlock__(pcb)
+
+    for token, match in T.getTokens(src):
+      if match.hasCaptures(): self.__addCodeBlock__(match.getCapture(0))
+
+    self.__addCodeBlock__("set indent to 0")
+
+  # ----------------------------------------------------------------------------
+  def __generateCode__(self):
+    from os.path import join
+
+    header = [self.brk,
+              'def __moduleParams__(params):',
+              '  import sys',
+              '  module = sys.modules[__name__]',
+              '  for param, value in params.items():',
+              '    setattr(module, param, value)']
+    self.code_blocks.insert(0, PyCodeBlock(header))
+
+    with open(join(self.templateDir, self.templatename), "wb") as file:
+      indent = 0
+      for pycodeblock in self.code_blocks:
+        if pycodeblock == "set indent to 0":
+          indent = 0
+          continue
+
+        indent -= pycodeblock.unindent_before
+        # TODO: report an error
+        if indent < 0:
+          raise Exception("The generated python code specified too many unindents")
+        file.write(pycodeblock.getSource(indent))
+        indent += pycodeblock.indent_after
+
+    self.isCodeGenerated = True
+
+  # ----------------------------------------------------------------------------
+  def render(self, parameters={}, function=None, stack=None):
+    function = function or self.function_names[0]
+
+    if not self.isCodeGenerated: self.__generateCode__()
+    modulename = self.templatename[:-3]
+    module = getattr(__import__(self.templateDir, fromlist=[modulename]), modulename)
+
+    stack1 = stack or Stack()
+
+    module.__moduleParams__(parameters)
+    module.__moduleParams__({'write':stack1.write})
+
+    fn = getattr(module, function)
+    fn()
+
+    if stack is None:
+      return stack1.toString()
 
 # ==============================================================================
 # PyCodeBlock Class
@@ -364,26 +504,64 @@ class PyCodeBlock(object):
     return "\n".join(self.lines_of_code)
 
 # ==============================================================================
+# Stack class
+# ==============================================================================
+
+class Stack(object):
+  """
+  Stack that holds the values written from Template
+  """
+
+  # ----------------------------------------------------------------------------
+  def __init__(self):
+    self.stack = []
+
+  # ----------------------------------------------------------------------------
+  def write(self, line):
+    self.stack.append(line)
+
+  # ----------------------------------------------------------------------------
+
+  def toString(self):
+    from StringIO import StringIO
+    stack = self.stack
+    self.stack = []
+
+    output = StringIO()
+    for line in stack:
+      if callable(line):
+        value = line()
+        # If any items were added to the new stack, get those values.
+        stackstuff = self.toString()
+        output.write(stackstuff)
+        if value is not None:
+          output.write(str(value))
+      else:
+        output.write(line)
+
+    return output.getvalue()
+
+# ==============================================================================
 
 
 src = r"""
     "This is a test"
-    @[^ :: elif asdf and:
-             asdfn and adfn:
-                test
-             fred
-           alice]@
-    @[^
-       a = src.select(block="test")
+    @[ if name == "fred":
+          write(name)
+          write("done")
+    ]@
+    @[: a = "testing"
        bob = 5
-          more stuff
-
+       q=7
       ^]@
-@[  bob  ]@
+    @[^= bob  ]@
 
-    @[^ :: else : ]@
+    @[^>"this is a test"^]@
     "Stuff
 """
+#from Template import Template
 
-t = Template(src)
-t.generateCode()
+t = Template("Temp", False)
+t.addPythonFunction(src)
+t.addPythonFunction(src)
+print t.render({'name':"fred",'a':"A Value"})
