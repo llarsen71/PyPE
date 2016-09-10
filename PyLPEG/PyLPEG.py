@@ -478,8 +478,8 @@ class Pattern(object):
 
     :returns: A PatternLookAhead object.
     """
-    if isinstance(self, PaternLookAhead): return self
-    return PaternLookAhead(self)
+    if isinstance(self, PatternLookAhead): return self
+    return PatternLookAhead(self)
 
   # ----------------------------------------------------------------------------
 
@@ -1461,11 +1461,21 @@ class PatternNot(Pattern):
 # ==============================================================================
 
 class PatternRepeat(Pattern):
+  """
+  Repeat a pattern n or more times, n or less times, or exactly n times.
+  """
   precedence = 4
 
   # ----------------------------------------------------------------------------
 
   def __init__(self, pattern, n):
+    """
+    :param pattern: The pattern to repeat
+    :param n: The repeat rule:
+      - For n positive, repeat at least n times.
+      - For n negative, repeat at most n times.
+      - For [n], with n positive, repeat exactly n times.
+    """
     Pattern.__init__(self)
 
     if not isinstance(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
@@ -1572,9 +1582,9 @@ class PatternRepeat(Pattern):
 
 # ==============================================================================
 
-class PaternLookAhead(Pattern):
+class PatternLookAhead(Pattern):
   """
-  Check whether the patern matches the string that follows without consuming the
+  Check whether the pattern matches the string that follows without consuming the
   string
   """
   precedence = 5
