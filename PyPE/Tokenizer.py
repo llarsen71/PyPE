@@ -1,4 +1,4 @@
-from PyLPEG import Pattern, BackCaptureString
+from PyPE import Pattern, BackCaptureString
 # ==============================================================================
 
 class Grammar(object):
@@ -139,7 +139,7 @@ class Tokenizer(object):
     :param string: The string to tokenize.
     :param index: The location in the string to start (default 0)
     """
-    from PyLPEG import Match
+    from PyPE import Match
 
     while True:
       grammar, end_grammar = [self.stack[-1][item] for item in ('grammar','end grammar')]

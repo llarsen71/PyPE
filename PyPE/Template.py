@@ -1,4 +1,4 @@
-from PyLPEG import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
+from PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
      newline, matchUntil, SOL
 from Tokenizer import Tokenizer
 
@@ -74,7 +74,7 @@ class Template(object):
 
   # ----------------------------------------------------------------------------
   def __processTextMatch__(self, match):
-    from PyLPEG import quote
+    from PyPE import quote
 
     text = match.captures[1]
     escaped_text = "".join(self.escapeDblQuoteAndEscChr(text).captures)
@@ -544,25 +544,23 @@ class Stack(object):
 
 # ==============================================================================
 
+if __name__ == "__main__":
+  src = r"""
+      "This is a test"
+      @[ if name == "fred":
+            write(name)
+            write("done")
+      ]@
+      @[: a = "testing"
+         bob = 5
+         q=7
+        ^]@
+      @[^= bob  ]@
 
-src = r"""
-    "This is a test"
-    @[ if name == "fred":
-          write(name)
-          write("done")
-    ]@
-    @[: a = "testing"
-       bob = 5
-       q=7
-      ^]@
-    @[^= bob  ]@
-
-    @[^>"this is a test"^]@
-    "Stuff
-"""
-#from Template import Template
-
-t = Template("Temp", False)
-t.addPythonFunction(src)
-t.addPythonFunction(src)
-print t.render({'name':"fred",'a':"A Value"})
+      @[^>"this is a test"^]@
+      "Stuff
+  """
+  t = Template("Temp", False)
+  t.addPythonFunction(src)
+  t.addPythonFunction(src)
+  print t.render({'name':"fred",'a':"A Value"})

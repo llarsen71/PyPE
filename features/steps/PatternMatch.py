@@ -1,5 +1,6 @@
 from behave import given, when, then
-from PyLPEG.PyLPEG import P, S, R, SOL, EOL, Match
+from PyPE.PyPE import Match
+from PyPE import P, S, R, SOL, EOL, Cc, C, Cp, Cg
 from hamcrest import assert_that, equal_to, none, not_none
 
 # ******************************************************************************
@@ -64,3 +65,9 @@ def step_impl(context):
 @then('repr(pattern) should be {pattern}')
 def step_impl(context, pattern):
   assert_that(repr(context.p), equal_to(pattern))
+
+# ==============================================================================
+@then("captures should be {captures}")
+def step_impl(context, captures):
+  captures = eval(captures)
+  assert_that(context.match.captures, equal_to(captures))

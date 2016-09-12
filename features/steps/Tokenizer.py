@@ -1,6 +1,6 @@
 from behave import given, when, then
-from PyLPEG.PyLPEG import P, S, R, SOL, whitespace0, newline
-from PyLPEG.Tokenizer import Tokenizer
+from PyPE.PyPE import P, S, R, SOL, whitespace0, newline
+from PyPE.Tokenizer import Tokenizer
 from hamcrest import assert_that, equal_to, none, not_none
 
 ws          = whitespace0

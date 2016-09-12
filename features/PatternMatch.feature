@@ -193,3 +193,17 @@ Scenario Outline: Fail a pattern repeating n or more times (pattern^n).
     | pattern     | desc           | string | index | reason |
     | P('a')**3   | 3 or more a(s) | aab    | 0     | has less than 3 a(s)|
     | P('a')**[3] | exactly 3 a(s) | aab    | 0     | has less than 3 a(s)|
+
+#-------------------------------------------------------------------------------
+Scenario Outline: Captures are applied.
+  Given p = <pattern> [<desc>]
+  When  p.match('<string>',<index>) is called
+  Then  the result is a match
+  And   captures should be <captures>
+
+  Examples:
+    | pattern            | desc                    | string    | index | captures                  |
+    | Cc('Test')         | Constant Capture 'Test' | any       | 0     | ['Test']                  |
+    | 3*C(3)*C(2)        | Basic Captures          | 123456789 | 0     | ['456','78']              |
+    | 3*Cp()*3*Cp()      | Position Captures       | 123456789 | 0     | [3,6]                     |
+    | (Cg(C(2)*C(2)))**1 | Capture Group           | 12ab34cd5 | 0     | [['12','ab'],['34','cd']] |
