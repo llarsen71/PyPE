@@ -1,31 +1,10 @@
-# ==============================================================================
-# MIT license
-#
-# Copyright (c) 2016 Lance Larsen
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-# ==============================================================================
 """
-.. module::PyLPEG
+This module is a pure python parsing expression grammar (PEG) library loosely
+designed to mimic the Lua LPEG library. Features are added to ease debugging
+of PEG patterns and to build lexers.
 
-  This module is a pure python parsing expression grammar (PEG) library loosely
-  designed to mimic the Lua LPEG library. Features are added to ease debugging
-  of PEG patterns and to build lexers.
+.. autoclass:: Pattern
+   :members:
 """
 
 # ==============================================================================
@@ -60,7 +39,7 @@ def ConfigBackCaptureString4match(fn):
 
     # Get the debug value that was passed forward (through the BackCaptureString)
     # Store the old debug value so that it can be restored in the BackCaptureString.
-    debug = olddebug = string.debug()
+    debug = old_debug = string.debug()
 
     # If the current pattern has a debug value (other than None), store the
     # value in the BackCaptureString to forward the value to subpatterns.
@@ -81,7 +60,7 @@ def ConfigBackCaptureString4match(fn):
 
     match_failed = not isinstance(matchResult, Match)
     is_sub_and = isinstance(pattern, PatternAnd) and pattern.is_sub_and
-    ignore_sub_and_on_fail = match_failed and is_sub_and and olddebug
+    ignore_sub_and_on_fail = match_failed and is_sub_and and old_debug
 
     if showDebugInfo and not ignore_sub_and_on_fail:
       name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
@@ -107,7 +86,7 @@ def ConfigBackCaptureString4match(fn):
       string.setStackSize(sz)
 
     # restore the debug state
-    string.debug(olddebug)
+    string.debug(old_debug)
 
     return matchResult
 
@@ -126,7 +105,7 @@ def escapeStr(string):
 
 class Pattern(object):
   """
-  .. class:: Pattern()
+  .. class:: Pattern
 
   This is the base class for all Pattern objects. The most important function
   for patterns is *ptn.match(string[, index])*, which checks a string starting
@@ -159,26 +138,28 @@ class Pattern(object):
   Some patterns contain other patterns. Below the contained patterns will be
   referenced as *ptn1* or *ptn2*. The supported operators are:
 
-  * ``*`` - This is used to indicate a sequence of patterns that must come in
+  ========  ====================================================================
+  ``*``     This is used to indicate a sequence of patterns that must come in
             order. The can be referred to as the *and* or *followed by*
             operator. If *ptn1* and *ptn2* are two Pattern objects, then
             *ptn1 ``*`` ptn2* matches *ptn1* followed by *ptn2*. If either
             pattern fails, then the combination fails.
-  * ``+`` - This is an ordered choice operator. The expression *ptn1 + ptn2*
+  ``+``     This is an ordered choice operator. The expression *ptn1 + ptn2*
             matches *ptn1* starting at *index*. If this succeeds, the
             :class:`Match` is returned. Otherwise, it tries to match *ptn2* and
             returns the :class:`Match` if the pattern succeeds, or None if it
             fails.
-  * ``-`` - This is a *not* operator. It matches anything that does not match
+  ``-``     This is a *not* operator. It matches anything that does not match
             the given pattern. No string input is consumed for this operation.
             This is commonly written in an expression like (P(1)-P("]")), which
             is any character except for "]".
-  * ``~`` - This is a look ahead operator. It matches the pattern, but consumes
+  ``~``     This is a look ahead operator. It matches the pattern, but consumes
             no input. For example, *~P("test")* checks a string for "test", but
             does not consume this text.
-  * ``|`` - This operator is used to set the name of a pattern. For example,
+  ``|``     This operator is used to set the name of a pattern. For example,
             *"whitespace" | S(" \t")* sets the name of this pattern to
             "whitespace".
+  ========  ====================================================================
   """
   precedence = 100
 
@@ -205,6 +186,7 @@ class Pattern(object):
     Pattern.
 
     :param debugOpt: The debug option to use. The possible values are:
+
            +----------------+--------------------------------------------------+
            | *True*         | Enable debugging for all subpatterns that are    |
            |                | not hidden.                                      |
@@ -771,9 +753,9 @@ class R(AtomicPattern):
     Pattern.__init__(self)
     self.ranges = ranges
     for range in ranges:
-      if len(range) != 2: raise ValueError("Ranges must have two values: %s" % value)
+      if len(range) != 2: raise ValueError("Ranges must have two values: %s" % range)
       if range[0] > range[1]:
-        raise ValueError("Lower range value must be less than upper range value: %s" % value)
+        raise ValueError("Lower range value must be less than upper range value: %s" % range)
 
   # ----------------------------------------------------------------------------
 
@@ -1030,8 +1012,8 @@ class Cc(Capture):
 
 class Cg(Capture):
   """
-  Group Captures into a single capture. If there are no captures, the single
-  capture will be an empty array.
+  Group and contained Captures into a single capture. If there are no captures,
+  the single capture will be an empty array.
   """
 
   # ----------------------------------------------------------------------------
@@ -1294,7 +1276,7 @@ class PatternCaptureN(Pattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    n = n if self.default is None else "({0},{1})".format(self.n, self.default)
+    n = self.n if self.default is None else "({0},{1})".format(self.n, self.default)
     return "({0})/{1}".format(repr(self.pattern),n)
 
 # ===============================================================================
@@ -1364,6 +1346,7 @@ class PatternAnd(Pattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
+    # Check if this is a NOT pattern (i.e., ptn1 - ptn2)
     if self.is_not_ptn:
       # Get the pattern contained by PatternNot since we will add the '-' manually
       notPtn = self.patterns[0].pattern
