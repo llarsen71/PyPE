@@ -81,6 +81,7 @@ class Template(object):
     if escaped_text == "":
       return match.setCaptures([])
 
+    # Add command to write the text to the file.
     pycode = PyCodeBlock(['write("""{0}""")'.format(escaped_text)])
     return match.setCaptures(pycode)
 
@@ -89,7 +90,7 @@ class Template(object):
     """
     Define the parser for python tags @[...]@. The format of the python tag is:
 
-       @[(^)(=|>|<)(:) <code> (^)]@
+       @[(^)(=|>|<)(:*) <code> (^)]@
 
     The values in parenthesis are optional and parenthesis should not be
     included. No whitespace is allowed between the python tag '@[' and '^' and
@@ -430,7 +431,8 @@ class Template(object):
     self.__addCodeBlock__(pcb)
 
     for token, match in T.getTokens(src):
-      if match.hasCaptures(): self.__addCodeBlock__(match.getCapture(0))
+      if match.hasCaptures():
+        self.__addCodeBlock__(match.getCapture(0))
 
     self.__addCodeBlock__("set indent to 0")
 
@@ -545,22 +547,22 @@ class Stack(object):
 # ==============================================================================
 
 if __name__ == "__main__":
-  src = r"""
-      "This is a test"
-      @[ if name == "fred":
-            write(name)
-            write("done")
-      ]@
-      @[: a = "testing"
-         bob = 5
+src = r"""
+    "This is a test"
+    @[ if name == "fred":
+          write(name)
+          write("done")
+    ]@
+    @[: a = "testing"
+        bob = 5
          q=7
-        ^]@
-      @[^= bob  ]@
+      ^]@
+    @[^= bob  ]@
 
-      @[^>"this is a test"^]@
-      "Stuff
+    @[^>"this is a test"^]@
+    "Stuff
   """
-  t = Template("Temp", False)
-  t.addPythonFunction(src)
-  t.addPythonFunction(src)
-  print t.render({'name':"fred",'a':"A Value"})
+t = Template("Temp", False)
+t.addPythonFunction(src)
+t.addPythonFunction(src)
+print t.render({'name':"fred",'a':"A Value"})
