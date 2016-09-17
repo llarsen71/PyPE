@@ -235,6 +235,15 @@ class Pattern(object):
 
   # ----------------------------------------------------------------------------
 
+  def containsPatterns(self):
+    """
+    Inidcate whether this is a container of other patterns
+    :return: True if this contains other Patterns, or False if not.
+    """
+    return False
+
+  # ----------------------------------------------------------------------------
+
   def match(self, string, index=0):
     """
     .. func:ptn.match(string[, index])
@@ -1168,7 +1177,87 @@ class Col(Capture):
 # Pattern Operators
 # ==============================================================================
 
-class PatternFnWrap(Pattern):
+class CompositePattern(Pattern):
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self):
+    Pattern.__init__(self)
+    self.patterns = []
+
+  # ----------------------------------------------------------------------------
+
+  def containsPatterns(self):
+    return True
+
+  # ----------------------------------------------------------------------------
+
+  def getPatterns(self):
+    return self.patterns
+
+# ===============================================================================
+
+class V(CompositePattern):
+  precedence = 1
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, name):
+    """
+    :param name: The is a pattern place holder. The name is the name of this
+                 pattern. The associated Pattern will be set later.
+    """
+    CompositePattern.__init__(self)
+    self.setName(name)
+
+  # ----------------------------------------------------------------------------
+
+  def setPattern(self, pattern):
+    """
+    Set the pattern for this V object.
+    :param pattern: The pattern associated with this V object
+    """
+    self.patterns.insert(0, pattern)
+
+  # ----------------------------------------------------------------------------
+
+  def match(self, string, index=0):
+    if len(self.patterns) > 0:
+      return self.patterns[0].match(string, index)
+    return None
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "V('{0}')".format(self.name)
+
+# ==============================================================================
+
+def setVs(pattern, Vs):
+  """
+  Set the pattern for V objects within this Pattern.
+
+  :param pattern: A Pattern object (may contain other patterns)
+  :param Vs: A dictionary of V objects to set.
+  """
+  if not isinstance(pattern, Pattern): return
+
+  # If we get to a V object, set the value if it is defined.
+  if isinstance(pattern, V):
+    if pattern.name in Vs:
+      pattern.setPattern(Vs[pattern.name])
+    return
+
+  # If this does not contain patterns return
+  if not pattern.containsPatterns(): return
+
+  # Set the Vs for all contained patterns
+  for pattern in self.getPatterns():
+    setVs(pattern, Vs)
+
+# ==============================================================================
+
+class PatternFnWrap(CompositePattern):
   """
   Pass the match to the given function and return the match returned by the
   function
@@ -1178,8 +1267,8 @@ class PatternFnWrap(Pattern):
   # ----------------------------------------------------------------------------
 
   def __init__(self, pattern, fn):
-    Pattern.__init__(self)
-    self.pattern = pattern
+    CompositePattern.__init__(self)
+    self.patterns.append(pattern)
     self.fn      = fn
 
   # ----------------------------------------------------------------------------
@@ -1200,7 +1289,7 @@ class PatternFnWrap(Pattern):
     >>> p("Cat").captures
     ['test']
     """
-    match = self.pattern.match(string, index)
+    match = self.patterns[0].match(string, index)
     if match is None: return None
 
     return self.fn(match)
@@ -1209,11 +1298,11 @@ class PatternFnWrap(Pattern):
 
   def __repr__(self):
     name = self.fn.__name__ if hasattr(self.fn,"__name__") else "<fn>"
-    return "({0})/{1}".format(repr(self.pattern), name)
+    return "({0})/{1}".format(repr(self.patterns[0]), name)
 
 # ===============================================================================
 
-class PatternCaptureN(Pattern):
+class PatternCaptureN(CompositePattern):
   """
   Keep the nth capture in the list of captures. If the capture does not exist,
   a default is used if specified or no captures are added.
@@ -1228,8 +1317,8 @@ class PatternCaptureN(Pattern):
     :param n: The capture to take from the pattern match.
     :param default: The default to use if the given capture is not present
     """
-    Pattern.__init__(self)
-    self.pattern = pattern
+    CompositePattern.__init__(self)
+    self.patterns.append(pattern)
     self.n       = n
     self.default = default
 
@@ -1261,7 +1350,7 @@ class PatternCaptureN(Pattern):
     'invalid capture'
     """
 
-    match = self.pattern.match(string, index)
+    match = self.patterns[0].match(string, index)
     if match is None: return None
 
     newmatch = Match(string, index, match.end)
@@ -1277,11 +1366,11 @@ class PatternCaptureN(Pattern):
 
   def __repr__(self):
     n = self.n if self.default is None else "({0},{1})".format(self.n, self.default)
-    return "({0})/{1}".format(repr(self.pattern),n)
+    return "({0})/{1}".format(repr(self.patterns[0]),n)
 
 # ===============================================================================
 
-class PatternAnd(Pattern):
+class PatternAnd(CompositePattern):
   """
   Match pattern1 followed by pattern2.
   """
@@ -1296,7 +1385,7 @@ class PatternAnd(Pattern):
     :param pattern1: The first pattern to match
     :param pattern2: The second pattern to match
     """
-    Pattern.__init__(self)
+    CompositePattern.__init__(self)
     if not isinstance(pattern1, Pattern) and not isinstance(pattern2, Pattern):
       raise ValueError("PatternAnd requires the first or second constructor item to be a Pattern")
 
@@ -1349,14 +1438,14 @@ class PatternAnd(Pattern):
     # Check if this is a NOT pattern (i.e., ptn1 - ptn2)
     if self.is_not_ptn:
       # Get the pattern contained by PatternNot since we will add the '-' manually
-      notPtn = self.patterns[0].pattern
+      notPtn = self.patterns[0].getPatterns()[0]
       return "%s - %s" % (self.addPrn(self.patterns[1]), self.addPrn(notPtn))
     else:
       return "{0}*{1}".format(self.addPrn(self.patterns[0]), self.addPrn(self.patterns[1]))
 
 # ==============================================================================
 
-class PatternOr(Pattern):
+class PatternOr(CompositePattern):
   """
   Look for the first pattern in the list that matches the string.
   """
@@ -1365,7 +1454,7 @@ class PatternOr(Pattern):
   # ----------------------------------------------------------------------------
 
   def __init__(self, pattern1, pattern2):
-    Pattern.__init__(self)
+    CompositePattern.__init__(self)
     if not isinstance(pattern1, Pattern) and not isinstance(pattern2, Pattern):
       raise ValueError("PatternOr requires the first or second constructor item to be a Pattern")
 
@@ -1405,7 +1494,7 @@ class PatternOr(Pattern):
 
 # ==============================================================================
 
-class PatternNot(Pattern):
+class PatternNot(CompositePattern):
   """
   Verify that the text ahead does not match the pattern. The string index does
   not advance.
@@ -1415,9 +1504,9 @@ class PatternNot(Pattern):
   # ----------------------------------------------------------------------------
 
   def __init__(self, pattern):
-    Pattern.__init__(self)
+    CompositePattern.__init__(self)
     P.isValidValue(pattern, msg ="Invalid '-ptn' expression")
-    self.pattern = P.asPattern(pattern)
+    self.patterns.append(P.asPattern(pattern))
 
   # ----------------------------------------------------------------------------
 
@@ -1432,18 +1521,18 @@ class PatternNot(Pattern):
     True
     """
 
-    match = self.pattern(string, index)
+    match = self.patterns[0](string, index)
     if not isinstance(match, Match): return Match(string, index, index)
     return None
 
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "-%s" % self.addPrn(self.pattern)
+    return "-%s" % self.addPrn(self.patterns[0])
 
 # ==============================================================================
 
-class PatternRepeat(Pattern):
+class PatternRepeat(CompositePattern):
   """
   Repeat a pattern n or more times, n or less times, or exactly n times.
   """
@@ -1459,7 +1548,7 @@ class PatternRepeat(Pattern):
       - For n negative, repeat at most n times.
       - For [n], with n positive, repeat exactly n times.
     """
-    Pattern.__init__(self)
+    CompositePattern.__init__(self)
 
     if not isinstance(pattern, Pattern): raise ValueError("First value to PatternRepeat must be a pattern")
     matchExact = True if isinstance(n, list) else False
@@ -1468,7 +1557,7 @@ class PatternRepeat(Pattern):
       n = n[0]
     if not isinstance(n, (int,list)): raise ValueError("In ptn**n, n must be an integer value or [n]")
 
-    self.pattern = pattern
+    self.patterns.append(pattern)
 
     if matchExact:
       self.matcher = self.match_n
@@ -1500,7 +1589,7 @@ class PatternRepeat(Pattern):
     MATCH = Match(string, index)
     cnt = 0
     for i in xrange(self.n):
-      match = self.pattern.match(string, index)
+      match = self.patterns[0].match(string, index)
       if not isinstance(match, Match): return None
       index = match.end
       MATCH.addSubmatch(match)
@@ -1523,7 +1612,7 @@ class PatternRepeat(Pattern):
     MATCH = Match(string, index)
     cnt = 0
     while True:
-      match = self.pattern.match(string, index)
+      match = self.patterns[0].match(string, index)
 
       if not isinstance(match, Match):
         return MATCH.setEnd(index) if cnt >= self.n else None
@@ -1549,7 +1638,7 @@ class PatternRepeat(Pattern):
     """
     MATCH = Match(string, index)
     for i in range(self.n):
-      match = self.pattern.match(string, index)
+      match = self.patterns[0].match(string, index)
       if not isinstance(match, Match): return MATCH.setEnd(index)
       MATCH.addSubmatch(match)
       index = match.end
@@ -1561,11 +1650,11 @@ class PatternRepeat(Pattern):
     n = self.n
     if self.matcher == self.match_at_most_n: n = -n
     if self.matcher == self.match_n: n = "[{0}]".format(n)
-    return "{0}**{1}".format(self.addPrn(self.pattern), n)
+    return "{0}**{1}".format(self.addPrn(self.patterns[0]), n)
 
 # ==============================================================================
 
-class PatternLookAhead(Pattern):
+class PatternLookAhead(CompositePattern):
   """
   Check whether the pattern matches the string that follows without consuming the
   string
@@ -1575,9 +1664,9 @@ class PatternLookAhead(Pattern):
   # ----------------------------------------------------------------------------
 
   def __init__(self, pattern):
-    Pattern.__init__(self)
+    CompositePattern.__init__(self)
     P.isValidValue(pattern)
-    self.pattern = P.asPattern(pattern)
+    self.patterns.append(P.asPattern(pattern))
 
   # ----------------------------------------------------------------------------
 
@@ -1593,14 +1682,14 @@ class PatternLookAhead(Pattern):
     >>> p("Failed") is None
     True
     """
-    match = self.pattern.match(string, index)
+    match = self.patterns[0].match(string, index)
     if isinstance(match, Match): return match.setEnd(index)
     return None
 
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "~%s" % repr(self.pattern)
+    return "~%s" % repr(self.patterns[0])
 
 # ==============================================================================
 # General patterns
@@ -1911,4 +2000,3 @@ def _repr_(ptn, prnsCls=None):
 if __name__ == "__main__":
   import doctest
   doctest.testmod()
-
