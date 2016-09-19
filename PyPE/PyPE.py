@@ -476,7 +476,7 @@ class Pattern(object):
 
   def __call__(self, string, index=0):
     """
-    .. func:ptn(string[, index])
+    .. func: ptn(string[, index])
 
     Shorthand for calling ``ptn.match(string[, index]).
 
@@ -490,6 +490,10 @@ class Pattern(object):
 # ==============================================================================
 
 class AtomicPattern(Pattern):
+  """
+  A Pattern that stands on its own (i.e., does not wrap one or more other
+  Patterns).
+  """
   precedence = 1
 
 # ==============================================================================
