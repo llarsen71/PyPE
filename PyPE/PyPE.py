@@ -1237,27 +1237,36 @@ class V(CompositePattern):
 
 # ==============================================================================
 
-def setVs(pattern, Vs):
+def setVs(pattern, Vs, replace=False):
   """
   Set the pattern for V objects within this Pattern.
 
   :param pattern: A Pattern object (may contain other patterns)
-  :param Vs: A dictionary of V objects to set.
+  :param Vs: A dictionary of V objects to set, or an array of named Patterns.
+  :param replace: Replace the V objects with the associated Pattern (default False).
+  :return: The updated (or replaced) Pattern
   """
-  if not isinstance(pattern, Pattern): return
+  if not isinstance(pattern, Pattern): return pattern
+  if isinstance(Vs, (list, tuple)):
+    Vs = {ptn.name: ptn for ptn in Vs}
 
   # If we get to a V object, set the value if it is defined.
   if isinstance(pattern, V):
     if pattern.name in Vs:
+      if replace: return Vs[pattern.name]
       pattern.setPattern(Vs[pattern.name])
-    return
+    return pattern
 
   # If this does not contain patterns return
-  if not pattern.containsPatterns(): return
+  if not pattern.containsPatterns(): return pattern
 
   # Set the Vs for all contained patterns
-  for pattern in self.getPatterns():
-    setVs(pattern, Vs)
+  patterns = pattern.getPatterns()
+  for i, pattern in enumerate(patterns):
+    ptn = setVs(pattern, Vs, replace)
+    if replace: patterns[i] = ptn
+
+  return pattern
 
 # ==============================================================================
 
