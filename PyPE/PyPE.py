@@ -1262,8 +1262,8 @@ def setVs(pattern, Vs, replace=False):
 
   # Set the Vs for all contained patterns
   patterns = pattern.getPatterns()
-  for i, pattern in enumerate(patterns):
-    ptn = setVs(pattern, Vs, replace)
+  for i, ptn in enumerate(patterns):
+    ptn = setVs(ptn, Vs, replace)
     if replace: patterns[i] = ptn
 
   return pattern
@@ -1989,6 +1989,23 @@ def matchUntil(pattern, matchAfter=False):
   if not matchAfter: return beforePattern
   return beforePattern * pattern
 
+# ==============================================================================
+# Match processing functions
+# ==============================================================================
+
+def join(match, joiner=""):
+  """
+  Join the values in a capture.
+
+  :param match: A match object.
+  :param joiner: The string to use to join the capture values (Empty sting by default)
+  :return: The match object with the joined string as the only capture.
+  """
+  joined = joiner.join(match.captures)
+  match.captures = [joined]
+  return match
+
+# ==============================================================================
 # ==============================================================================
 
 def match(pattern, subject, index=0):
