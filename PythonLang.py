@@ -280,16 +280,19 @@ def PythonGrammar():
   # # lambda x: 5 if x else 2
   # # (But not a mix of the two)
   # old_lambdef: 'lambda' [varargslist] ':' old_test
-  old_lambdadef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('old_test')
+  old_lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('old_test')
 
   # old_test: or_test | old_lambdef
+  old_test = or_test + old_lambdef
+
   # testlist_safe: old_test [(',' old_test)+ [',']]
+  testlist_safe = old_test *ws* ((','*ws*old_test)**1 *ws* P(',')**-1)**-1
 
   # comp_for: 'for' exprlist 'in' or_test [comp_iter]
-  comp_for = 'comp_for' | 'for' *ws1* V('exprlist') *ws1* 'in' *ws1* or_test * (V('comp_iter')**-1
+  comp_for = 'comp_for' | 'for' *ws1* V('exprlist') *ws1* 'in' *ws1* or_test * V('comp_iter')**-1
 
   # comp_if: 'if' old_test [comp_iter]
-  comp_if = 'if' * ws1 * old_test * (V('comp_iter')) ** -1
+  comp_if = 'if' * ws1 * old_test * V('comp_iter')**-1
 
   # comp_iter: comp_for | comp_if
   comp_iter = 'comp_iter' | comp_for + comp_if
@@ -299,9 +302,10 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # lambdef: 'lambda' [varargslist] ':' test
-  lambdadef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('test')
+  lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('test')
 
   # test: or_test ['if' or_test 'else' test] | lambdef
+  test = 'test' | or_test * (ws1*'if'*ws*or_test*ws1*'else'*ws1*V('test'))**-1 + lambdef
 
   # ----------------------------------------------------------------------------
   # Atom
@@ -309,40 +313,82 @@ def PythonGrammar():
 
   # dictorsetmaker: ( (test ':' test (comp_for | (',' test ':' test)* [','])) |
   #                   (test (comp_for | (',' test)* [','])) )
-  # list_for: 'for' exprlist 'in' testlist_safe [list_iter]
-  # list_if: 'if' old_test [list_iter]
+  dictorsetmaker = (test *ws*':'*ws* test *ws* (comp_for + (',' *ws* test *ws*':'*ws)**0 * P(',')**-1)) + \
+                   (test *ws* (comp_for + (',' *ws* test*ws)**0 * P(',')**-1))
+
+
   # list_iter: list_for | list_if
+  list_iter = V('list_for') + V('list_if')
+
+  # list_for: 'for' exprlist 'in' testlist_safe [list_iter]
+  list_for = 'for' *ws1* V('exprlist') *ws1* 'in' *ws1* testlist_safe * list_iter**-1
+
+  # list_if: 'if' old_test [list_iter]
+  list_if = 'if' *ws* old_test *ws* list_iter**-1
+
   # listmaker: test ( list_for | (',' test)* [','] )
+  listmaker = test *ws* (list_for + (',' *ws* test*ws)**0 * P(',')**-1)
+
   # testlist_comp: test ( comp_for | (',' test)* [','] )
+  testlist_comp = test *ws* (comp_for + (',' *ws* test *ws)**0 * P(',')**-1)
+
   # yield_expr: 'yield' [testlist]
+  yield_expr = 'yield' *ws1* (testlist)**-1
+
   # testlist1: test (',' test)*
+  testlist1 = test *ws* (',' *ws* test*ws)**0
+
   # atom: ('(' [yield_expr|testlist_comp] ')' |
   #        '[' [listmaker] ']' |
   #        '{' [dictorsetmaker] '}' |
   #        '`' testlist1 '`' |
   #        NAME | NUMBER | STRING+)
-
-  # ----------------------------------------------------------------------------
-  # Term
-  # ----------------------------------------------------------------------------
-
-  # sliceop: ':' [test]
-  # subscript: '.' '.' '.' | test | [test] ':' [test] [sliceop]
-  # subscriptlist: subscript (',' subscript)* [',']
-  # trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
-  # power: atom trailer* ['**' factor]
-  # factor: ('+'|'-'|'~') factor | power
-  # term: factor (('*'|'/'|'%'|'//') factor)*
+  atom = ( '(' *ws* (yield_expr + testlist_comp)**-1 +
+           '[' *ws* listmaker**-1 *ws* ']' +
+           '{' *ws* dictorsetmaker**-1 *ws* '}' +
+           '`' * testlist1 * '`' +
+           NAME + NUMBER() + (STRING()*ws)**1)
 
   # ----------------------------------------------------------------------------
   # Expression
   # ----------------------------------------------------------------------------
 
+  # sliceop: ':' [test]
+  sliceop = ':' *ws* (test)**-1
+
+  # subscript: '.' '.' '.' | test | [test] ':' [test] [sliceop]
+  subscript = '.'*ws*'.'*ws*'.' + test + (test)**-1 *ws*':'*ws * (test)**-1 * (sliceop)**-1
+
+  # subscriptlist: subscript (',' subscript)* [',']
+  subscriptlist = subscript * (ws*','*ws*subscript)**0 *ws* P(',')**-1
+
+  # trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
+  trailer = ws*'(' *ws* (arglist)**-1 *ws* ')' + ws*'[' *ws* subscriptlist *ws* ']' + '.' * NAME
+
+  # factor: ('+'|'-'|'~') factor | power
+  factor = (S('+-~')*ws)**0 * V('power')
+
+  # power: atom trailer* ['**' factor]
+  power = 'power' | atom * trailer**0 * (ws*'**'*ws * factor)**-1
+
+  # term: factor (('*'|'/'|'%'|'//') factor)*
+  term = factor *ws* ((P('//') + S('*/%')) *ws* factor)**0
+
   # arith_expr: term (('+'|'-') term)*
+  arith_expr = term *ws* (S('+-') *ws* term*ws)**0
+
   # shift_expr: arith_expr (('<<'|'>>') arith_expr)*
+  shift_expr = arith_expr *ws* ((P('<<') + P('>>')) *ws* arith_expr*ws)**0
+
   # and_expr: shift_expr ('&' shift_expr)*
+  and_expr = shift_expr *ws* ('&' *ws* shift_expr*ws)**0
+
   # xor_expr: and_expr ('^' and_expr)*
+  xor_expr = and_expr *ws* ('^' *ws* and_expr*ws)**0
+
   # expr: xor_expr ('|' xor_expr)*
+  expr = xor_expr *ws* ('|' *ws* xor_expr*ws)**0
+
   # exprlist: expr (',' expr)* [',']
 
   setVs(fpdef, [fplist])
