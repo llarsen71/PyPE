@@ -68,7 +68,7 @@ def ConfigBackCaptureString4match(fn):
       if match_failed:
         print "  Failed"
       else:
-        print "  Result: {0}".format(escapeStr(str(matchResult)))
+        print "  Result: '{0}'".format(escapeStr(str(matchResult)))
         if isinstance(pattern, Capture):
           print "  Captures: {0}".format(matchResult.captures)
 

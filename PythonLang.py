@@ -2,9 +2,16 @@ from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, \
                  whitespace1 as ws1, whitespace0 as ws, \
                  alpha, digit, newline, quote, V, setVs
 
+kw = P('and') + P('as') + P('assert') + P('break') + P('class') + P('continue') + \
+     P('def') + P('del') + P('elif') + P('else') + P('except') + P('exec') + \
+     P('finally') + P('for') + P('from') + P('global') + P('if') + P('import') + \
+     P('in') + P('is') + P('lambda') + P('not') + P('or') + P('pass') + \
+     P('print') + P('raise') + P('return') + P('try') + P('while') + P('with') + \
+     P('yield')
+
 # ==============================================================================
 def NAME_():
-  return  "name" | (alpha + '_') * (alpha + digit + '_')**0 & 'hide'
+  return  "name" | ((alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0)
 
 # ==============================================================================
 def NUMBER():
@@ -21,8 +28,8 @@ def NUMBER():
   hexinteger     = "0" * S("xX") * hexdigit**1
   bininteger     = "0" * S("bB") * bindigit**1
 
-  integer        = decimalinteger + octinteger + hexinteger + bininteger
-  longinteger    = integer * S("lL")
+  integer        = decimalinteger + octinteger + hexinteger + bininteger  & 'hide'
+  longinteger    = integer * S("lL")  & 'hide'
 
   # ----------------------------------------------------------------------------
   # floating point numbers
@@ -32,17 +39,17 @@ def NUMBER():
   intpart       = digit**1
   pointfloat    = (intpart**-1 * fraction) + (intpart * ".")
   exponentfloat = (intpart + pointfloat) * exponent
-  floatnumber   = pointfloat + exponentfloat
+  floatnumber   = pointfloat + exponentfloat  & 'hide'
 
   # ----------------------------------------------------------------------------
   # imaginary number
   # ----------------------------------------------------------------------------
-  imagnumber = (floatnumber + intpart) * S("jJ")
+  imagnumber = (floatnumber + intpart) * S("jJ") & 'hide'
 
   # ----------------------------------------------------------------------------
   # numbers
   # ----------------------------------------------------------------------------
-  return "number" | integer + longinteger + floatnumber + imagnumber & "hide"
+  return "number" | integer + longinteger + floatnumber + imagnumber
 
 # ==============================================================================
 def STRING():
@@ -53,13 +60,13 @@ def STRING():
   shortstringitem = shortstringchar + escapeseq
 
   longstring      = ("'''" * longstringitem**0 * "'''" +
-                     '"""' * longstringitem**0 * '"""')
-  shortstring     = Cb("quote",quote) * shortstringitem**0 * Cb("quote")
+                     '"""' * longstringitem**0 * '"""')  & "hide"
+  shortstring     = Cb("quote",quote) * shortstringitem**0 * Cb("quote")  & "hide"
 
   stringprefix    =  S("rR") + S("uUbB") * S("rR")**-1
-  stringliteral   =  stringprefix**-1 * (shortstring + longstring)
+  stringliteral   =  stringprefix**-1 * (shortstring + longstring)  & "hide"
 
-  return "string" | longstring + shortstring + stringliteral & "hide"
+  return "string" | longstring + shortstring + stringliteral
 
 # ==============================================================================
 def PythonGrammar():
@@ -83,6 +90,8 @@ def PythonGrammar():
   augassign = 'augassign' | P('+=') + P('-=') + P('*=') + P('/=') + P('%=') + P('&=') + P('|=') + \
               P('^=') + P('<<=') + P('>>=') + P('**=') + P('//=')
 
+  assign = 'assign' | P('=')
+
   # ----------------------------------------------------------------------------
   # Simple Statement
   # ----------------------------------------------------------------------------
@@ -90,7 +99,7 @@ def PythonGrammar():
   # expr_stmt: testlist (augassign (yield_expr|testlist) |
   #                      ('=' (yield_expr|testlist))*)
   expr_stmt = 'expr_stmt' | V('testlist') * (ws*augassign*ws* (V('yield_expr')+V('testlist')) +
-                               (ws*'='*ws*(V('yield_expr')+V('testlist')))**0)
+                               (ws*assign*ws*(V('yield_expr')+V('testlist')))**0)
 
   # # For normal assignments, additional restrictions enforced by the interpreter
   # print_stmt: 'print' ( [ test (',' test)* [','] ] |
@@ -160,8 +169,8 @@ def PythonGrammar():
 
   # small_stmt: (expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt |
   #              import_stmt | global_stmt | exec_stmt | assert_stmt)
-  small_stmt = 'small_stmt' | expr_stmt + print_stmt + del_stmt + pass_stmt + \
-               flow_stmt + import_stmt + global_stmt + exec_stmt + assert_stmt
+  small_stmt = 'small_stmt' | print_stmt + del_stmt + pass_stmt + \
+               flow_stmt + import_stmt + global_stmt + exec_stmt + assert_stmt + expr_stmt
 
   # simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
   simple_stmt = 'simple_stmt' | small_stmt * (ws*';'*ws*small_stmt)**0 * (ws*P(';'))**-1 *ws* (newline)**-1
@@ -170,11 +179,11 @@ def PythonGrammar():
   # Compound Statement
   # ----------------------------------------------------------------------------
   # TODO: Track the indentation and unindent
-  INDENT = ws
-  DEDENT = ws
+  INDENT = 'INDENT' | P(ws)
+  DEDENT = 'DEDENT' | P(ws)
 
   # suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
-  suite = 'suite' | simple_stmt + ws* newline * INDENT * V('stmt')**1 * DEDENT
+  suite = 'suite' | ws* newline * INDENT * V('stmt')**1 * DEDENT + simple_stmt
 
   # if_stmt: 'if' test ':' suite ('elif' test ':' suite)* ['else' ':' suite]
   if_stmt = 'if_stmt' | 'if'*ws*V('test')*ws*':'*suite
@@ -249,7 +258,8 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # stmt: simple_stmt | compound_stmt
-  stmt = 'stmt' | simple_stmt + compound_stmt
+  stmt = 'stmt' | compound_stmt + simple_stmt
+
 
   # ----------------------------------------------------------------------------
   # Comparison
@@ -263,13 +273,13 @@ def PythonGrammar():
   comparison = 'comparison' | V('expr') * (ws*comp_op*ws*V('expr'))**0
 
   # not_test: 'not' not_test | comparison
-  not_test = ('not'*ws1)**0  * comparison
+  not_test = 'not_test' | ('not'*ws1)**0  * comparison
 
   # and_test: not_test ('and' not_test)*
-  and_test = not_test * (ws1*'and'*ws1* not_test)**0
+  and_test = 'and_test' | not_test * (ws1*'and'*ws1* not_test)**0
 
   # or_test: and_test ('or' and_test)*
-  or_test = and_test * (ws1*'or'*ws1 * and_test)**0
+  or_test = 'or_test' | and_test * (ws1*'or'*ws1 * and_test)**0
 
   # # Backward compatibility cruft to support:
   # # [ x for x in lambda: True, lambda: False if x() ]
@@ -310,7 +320,7 @@ def PythonGrammar():
 
   # dictorsetmaker: ( (test ':' test (comp_for | (',' test ':' test)* [','])) |
   #                   (test (comp_for | (',' test)* [','])) )
-  dictorsetmaker = (test *ws*':'*ws* test *ws* (comp_for + (',' *ws* test *ws*':'*ws)**0 * P(',')**-1)) + \
+  dictorsetmaker = 'dictorsetmaker' | (test *ws*':'*ws* test *ws* (comp_for + (',' *ws* test *ws*':'*ws)**0 * P(',')**-1)) + \
                    (test *ws* (comp_for + (',' *ws* test*ws)**0 * P(',')**-1))
 
 
@@ -324,23 +334,23 @@ def PythonGrammar():
   list_if = 'list_if' | 'if' *ws* old_test *ws* list_iter**-1
 
   # listmaker: test ( list_for | (',' test)* [','] )
-  listmaker = test *ws* (list_for + (',' *ws* test*ws)**0 * P(',')**-1)
+  listmaker = 'listmaker' | test *ws* (list_for + (',' *ws* test*ws)**0 * P(',')**-1)
 
   # testlist_comp: test ( comp_for | (',' test)* [','] )
-  testlist_comp = test *ws* (comp_for + (',' *ws* test *ws)**0 * P(',')**-1)
+  testlist_comp = 'testlist_comp' | test *ws* (comp_for + (',' *ws* test *ws)**0 * P(',')**-1)
 
   # yield_expr: 'yield' [testlist]
   yield_expr = 'yield_expr' | 'yield' *ws1* (testlist)**-1
 
   # testlist1: test (',' test)*
-  testlist1 = test *ws* (',' *ws* test*ws)**0
+  testlist1 = 'testlist1' | test *ws* (',' *ws* test*ws)**0
 
   # atom: ('(' [yield_expr|testlist_comp] ')' |
   #        '[' [listmaker] ']' |
   #        '{' [dictorsetmaker] '}' |
   #        '`' testlist1 '`' |
   #        NAME | NUMBER | STRING+)
-  atom = ( '(' *ws* (yield_expr + testlist_comp)**-1 +
+  atom = 'atom' | ( '(' *ws* (yield_expr + testlist_comp)**-1 +
            '[' *ws* listmaker**-1 *ws* ']' +
            '{' *ws* dictorsetmaker**-1 *ws* '}' +
            '`' * testlist1 * '`' +
@@ -351,47 +361,47 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # sliceop: ':' [test]
-  sliceop = ':' *ws* (test)**-1
+  sliceop = 'sliceop' | ':' *ws* (test)**-1
 
   # subscript: '.' '.' '.' | test | [test] ':' [test] [sliceop]
-  subscript = '.'*ws*'.'*ws*'.' + test + (test)**-1 *ws*':'*ws * (test)**-1 * (sliceop)**-1
+  subscript = 'subscript' | '.'*ws*'.'*ws*'.' + test + (test)**-1 *ws*':'*ws * (test)**-1 * (sliceop)**-1
 
   # subscriptlist: subscript (',' subscript)* [',']
-  subscriptlist = subscript * (ws*','*ws*subscript)**0 *ws* P(',')**-1
+  subscriptlist = 'subscriptlist' | subscript * (ws*','*ws*subscript)**0 *ws* P(',')**-1
 
   # trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
-  trailer = ws*'(' *ws* (arglist)**-1 *ws* ')' + ws*'[' *ws* subscriptlist *ws* ']' + '.' * NAME
+  trailer = 'trailer' | ws*'(' *ws* (arglist)**-1 *ws* ')' + ws*'[' *ws* subscriptlist *ws* ']' + '.' * NAME
 
   # factor: ('+'|'-'|'~') factor | power
-  factor = (S('+-~')*ws)**0 * V('power')
+  factor = 'factor' | (S('+-~')*ws)**0 * V('power')
 
   # power: atom trailer* ['**' factor]
 
   power = 'power' | atom * trailer**0 * (ws*'**'*ws * factor)**-1
 
   # term: factor (('*'|'/'|'%'|'//') factor)*
-  term = factor *ws* ((P('//') + S('*/%')) *ws* factor)**0
+  term = 'term' | factor *(ws* (P('//') + S('*/%')) *ws* factor)**0
 
   # arith_expr: term (('+'|'-') term)*
-  arith_expr = term *ws* (S('+-') *ws* term*ws)**0
+  arith_expr = 'arith_expr' | term * (ws*S('+-') *ws* term)**0
 
   # shift_expr: arith_expr (('<<'|'>>') arith_expr)*
-  shift_expr = arith_expr *ws* ((P('<<') + P('>>')) *ws* arith_expr*ws)**0
+  shift_expr = 'shift_expr' | arith_expr * (ws*(P('<<') + P('>>')) *ws* arith_expr)**0
 
   # and_expr: shift_expr ('&' shift_expr)*
-  and_expr = shift_expr *ws* ('&' *ws* shift_expr*ws)**0
+  and_expr = 'and_expr' | shift_expr * (ws*'&' *ws* shift_expr)**0
 
   # xor_expr: and_expr ('^' and_expr)*
-  xor_expr = and_expr *ws* ('^' *ws* and_expr*ws)**0
+  xor_expr = 'xor_expr' | and_expr * (ws*'^' *ws* and_expr)**0
 
   # expr: xor_expr ('|' xor_expr)*
-  expr = 'expr' | xor_expr *ws* ('|' *ws* xor_expr*ws)**0
+  expr = 'expr' | xor_expr * (ws*'|' *ws* xor_expr)**0
 
   # exprlist: expr (',' expr)* [',']
-  exprlist = 'exprlist' | expr *ws* (',' *ws* expr)**0 * P(',')**-1
+  exprlist = 'exprlist' | expr * (ws*',' *ws* expr)**0 * P(',')**-1
 
   # file_input: (NEWLINE | stmt)* ENDMARKER
-  file_input = (ws*newline + ws*stmt)**0
+  file_input = 'file_input' | (ws*newline + ws*stmt)**0
 
   # ----------------------------------------------------------------------------
   # Close grammar
@@ -430,11 +440,11 @@ def PythonGrammar():
   return file_input
 
 pygrammar = PythonGrammar()
-pygrammar.debug(True)
+pygrammar.debug("named")
 
 m = pygrammar.match("""
 def test(one, two="none"):
-  a = 5
+  a = 5 and 2
   print "Stuff"
 """)
 
