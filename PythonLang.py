@@ -65,9 +65,6 @@ def STRING():
 def PythonGrammar():
   NAME = NAME_()
 
-  # file_input: (NEWLINE | stmt)* ENDMARKER
-  file_input = (ws*newline + ws*V('stmt'))**0
-
   # fpdef: NAME | '(' fplist ')'
   fpdef = 'fpdef' | NAME + '(' *ws* V('fplist') *ws* ')'
 
@@ -83,7 +80,7 @@ def PythonGrammar():
 
   # augassign: ('+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' |
   #             '<<=' | '>>=' | '**=' | '//=')
-  augassign = P('+=') + P('-=') + P('*=') + P('/=') + P('%=') + P('&=') + P('|=') + \
+  augassign = 'augassign' | P('+=') + P('-=') + P('*=') + P('/=') + P('%=') + P('&=') + P('|=') + \
               P('^=') + P('<<=') + P('>>=') + P('**=') + P('//=')
 
   # ----------------------------------------------------------------------------
@@ -126,31 +123,40 @@ def PythonGrammar():
   # flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt | yield_stmt
   flow_stmt = 'flow_stmt' | break_stmt + continue_stmt + return_stmt + raise_stmt + yield_stmt
 
+  # dotted_name: NAME ('.' NAME)*
+  dotted_name = NAME * ("." * NAME)**0
+
+  # dotted_as_name: dotted_name ['as' NAME]
+  dotted_as_name = dotted_name * (ws1*'as'*ws1*NAME)**-1
+
+  # dotted_as_names: dotted_as_name (',' dotted_as_name)*
+  dotted_as_names = dotted_as_name * (ws* ',' *ws* dotted_as_name)**0
+
   # import_name: 'import' dotted_as_names
-  import_name = 'import_name' | 'import' *ws1* V('dotted_as_names')
+  import_name = 'import_name' | 'import' *ws1* dotted_as_names
 
   # import_as_name: NAME ['as' NAME]
-  import_as_name = NAME * (ws1*'as'*ws1*NAME)**-1
+  import_as_name = 'import_as_name' | NAME * (ws1*'as'*ws1*NAME)**-1
 
   # import_as_names: import_as_name (',' import_as_name)* [',']
-  import_as_names = import_as_name * (ws*','*import_as_name)**0 * (ws*P(','))**-1
+  import_as_names = 'import_as_names' | import_as_name * (ws*','*import_as_name)**0 * (ws*P(','))**-1
 
   # import_from: ('from' ('.'* dotted_name | '.'+)
   #               'import' ('*' | '(' import_as_names ')' | import_as_names))
-  import_from = 'from' *ws1* (P('.')**0*V('dotted_name') + P('.')**1) *ws* \
+  import_from = 'import_from' | 'from' *ws1* (P('.')**0*dotted_name + P('.')**1) *ws* \
                 'import' * (ws*'*' + '('*ws*import_as_name*ws*')' )
 
   # import_stmt: import_name | import_from
-  import_stmt = import_name + import_from
+  import_stmt = 'import_stmt' | import_name + import_from
 
   # global_stmt: 'global' NAME (',' NAME)*
-  global_stmt = 'global'*ws1*NAME*(ws*','*ws*NAME)**0
+  global_stmt = 'global_stmt' | 'global'*ws1*NAME*(ws*','*ws*NAME)**0
 
   # exec_stmt: 'exec' expr ['in' test [',' test]]
-  exec_stmt = 'exec'*ws1*V('expr')*(ws1*'in'*V('test') * (ws*','*ws*V('test'))**-1)**-1
+  exec_stmt = 'exec_stmt' | 'exec'*ws1*V('expr')*(ws1*'in'*V('test') * (ws*','*ws*V('test'))**-1)**-1
 
   # assert_stmt: 'assert' test [',' test]
-  assert_stmt = 'assert'*ws1*V('test') * (ws*','*V('test'))**-1
+  assert_stmt = 'assert_stmt' | 'assert' *ws1* V('test') * (ws*','*V('test'))**-1
 
   # small_stmt: (expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt |
   #              import_stmt | global_stmt | exec_stmt | assert_stmt)
@@ -168,7 +174,7 @@ def PythonGrammar():
   DEDENT = ws
 
   # suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
-  suite = simple_stmt + ws* newline * INDENT * V('stmt')**1 * DEDENT
+  suite = 'suite' | simple_stmt + ws* newline * INDENT * V('stmt')**1 * DEDENT
 
   # if_stmt: 'if' test ':' suite ('elif' test ':' suite)* ['else' ':' suite]
   if_stmt = 'if_stmt' | 'if'*ws*V('test')*ws*':'*suite
@@ -182,7 +188,7 @@ def PythonGrammar():
 
   # # NB compile.c makes sure that the default except clause is last
   # except_clause: 'except' [test [('as' | ',') test]]
-  except_clause = 'except' * (ws1* V('test') * ((ws1*'as'*ws1 + ws*','*ws)*V('test'))**-1)**-1
+  except_clause = 'except_clause' | 'except' * (ws1* V('test') * ((ws1*'as'*ws1 + ws*','*ws)*V('test'))**-1)**-1
 
   # try_stmt: ('try' ':' suite
   #            ((except_clause ':' suite)+
@@ -197,29 +203,20 @@ def PythonGrammar():
                           ('finally'*ws*':' * suite)**-1)
 
   # with_item: test ['as' expr]
-  with_item = V('test') * (ws1*'as'*ws1*V('expr'))**-1
+  with_item = 'with_item' | V('test') * (ws1*'as'*ws1*V('expr'))**-1
 
   # with_stmt: 'with' with_item (',' with_item)*  ':' suite
   with_stmt = 'with_stmt' | 'with' *ws1* with_item *(ws*','*ws*with_item)**0 *ws*':' * suite
 
-  # dotted_name: NAME ('.' NAME)*
-  dotted_name = NAME * ("." * NAME)**0
-
-  # dotted_as_name: dotted_name ['as' NAME]
-  dotted_as_name = dotted_name * (ws1*'as'*ws1*NAME)**-1
-
-  # dotted_as_names: dotted_as_name (',' dotted_as_name)*
-  dotted_as_names = dotted_as_name * (ws* ',' *ws* dotted_as_name)**0
-
   # # The reason that keywords are test nodes instead of NAME is that using NAME
   # # results in an ambiguity. ast.c makes sure it's a NAME.
   # argument: test [comp_for] | test '=' test
-  argument = V('test') *ws* (V('comp_for'))**-1 + V('test') *ws*'='*ws* V('test')
+  argument = 'argument' | V('test') *ws* (V('comp_for'))**-1 + V('test') *ws*'='*ws* V('test')
 
   # arglist: (argument ',')* (argument [',']
   #                          |'*' test (',' argument)* [',' '**' test]
   #                          |'**' test)
-  arglist = (argument*ws*',')**0 * (argument * (ws*',')**-1 +
+  arglist = 'arglist' | (argument*ws*',')**0 * (argument * (ws*',')**-1 +
                                     ws*'*'*ws*V('test')*(ws*','*ws*argument)**0*(ws*',' * '**' * V('test'))**-1 +
                                     ws * '**' * V('test'))
 
@@ -236,7 +233,7 @@ def PythonGrammar():
   funcdef = 'funcdef' | 'def' *ws1* NAME *ws* parameters *ws* ':' * V('suite')
 
   # testlist: test (',' test)* [',']
-  testlist = V('test') * (ws*','*ws*V('test'))**0 * (ws*',')**-1
+  testlist = 'testlist' | V('test') * (ws*','*ws*V('test'))**0 * (ws*',')**-1
 
   # classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
   classdef = 'classdef' | 'class' *ws1* NAME * ('('*ws*testlist*ws*')')**-1 * ':' *suite
@@ -245,7 +242,7 @@ def PythonGrammar():
   decorated = 'decorated' | decorators * (classdef + funcdef)
 
   # compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef | decorated
-  compound_stmt = if_stmt + while_stmt + for_stmt + try_stmt + with_stmt + funcdef + classdef + decorated
+  compound_stmt = 'compount_stmt' | if_stmt + while_stmt + for_stmt + try_stmt + with_stmt + funcdef + classdef + decorated
 
   # ----------------------------------------------------------------------------
   # Statement
@@ -259,11 +256,11 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # comp_op: '<'|'>'|'=='|'>='|'<='|'<>'|'!='|'in'|'not' 'in'|'is'|'is' 'not'
-  comp_op = P('<') + P('>') + P('==') + P('>=') + P('<=') + P('<>') + P('!=') + \
+  comp_op = 'comp_op' | P('<') + P('>') + P('==') + P('>=') + P('<=') + P('<>') + P('!=') + \
             P('in') + P('not')*ws1*P('in') + P('is') + P('is')*ws1*P('not')
 
   # comparison: expr (comp_op expr)*
-  comparison = V('expr') * (ws*comp_op*ws*V('expr'))**0
+  comparison = 'comparison' | V('expr') * (ws*comp_op*ws*V('expr'))**0
 
   # not_test: 'not' not_test | comparison
   not_test = ('not'*ws1)**0  * comparison
@@ -283,7 +280,7 @@ def PythonGrammar():
   old_lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('old_test')
 
   # old_test: or_test | old_lambdef
-  old_test = or_test + old_lambdef
+  old_test = 'old_test' | or_test + old_lambdef
 
   # testlist_safe: old_test [(',' old_test)+ [',']]
   testlist_safe = old_test *ws* ((','*ws*old_test)**1 *ws* P(',')**-1)**-1
@@ -321,10 +318,10 @@ def PythonGrammar():
   list_iter = V('list_for') + V('list_if')
 
   # list_for: 'for' exprlist 'in' testlist_safe [list_iter]
-  list_for = 'for' *ws1* V('exprlist') *ws1* 'in' *ws1* testlist_safe * list_iter**-1
+  list_for = 'list_for' | 'for' *ws1* V('exprlist') *ws1* 'in' *ws1* testlist_safe * list_iter**-1
 
   # list_if: 'if' old_test [list_iter]
-  list_if = 'if' *ws* old_test *ws* list_iter**-1
+  list_if = 'list_if' | 'if' *ws* old_test *ws* list_iter**-1
 
   # listmaker: test ( list_for | (',' test)* [','] )
   listmaker = test *ws* (list_for + (',' *ws* test*ws)**0 * P(',')**-1)
@@ -333,7 +330,7 @@ def PythonGrammar():
   testlist_comp = test *ws* (comp_for + (',' *ws* test *ws)**0 * P(',')**-1)
 
   # yield_expr: 'yield' [testlist]
-  yield_expr = 'yield' *ws1* (testlist)**-1
+  yield_expr = 'yield_expr' | 'yield' *ws1* (testlist)**-1
 
   # testlist1: test (',' test)*
   testlist1 = test *ws* (',' *ws* test*ws)**0
@@ -369,6 +366,7 @@ def PythonGrammar():
   factor = (S('+-~')*ws)**0 * V('power')
 
   # power: atom trailer* ['**' factor]
+
   power = 'power' | atom * trailer**0 * (ws*'**'*ws * factor)**-1
 
   # term: factor (('*'|'/'|'%'|'//') factor)*
@@ -387,10 +385,58 @@ def PythonGrammar():
   xor_expr = and_expr *ws* ('^' *ws* and_expr*ws)**0
 
   # expr: xor_expr ('|' xor_expr)*
-  expr = xor_expr *ws* ('|' *ws* xor_expr*ws)**0
+  expr = 'expr' | xor_expr *ws* ('|' *ws* xor_expr*ws)**0
 
   # exprlist: expr (',' expr)* [',']
+  exprlist = 'exprlist' | expr *ws* (',' *ws* expr)**0 * P(',')**-1
 
-  setVs(fpdef, [fplist])
+  # file_input: (NEWLINE | stmt)* ENDMARKER
+  file_input = (ws*newline + ws*stmt)**0
 
-PythonGrammar()
+  # ----------------------------------------------------------------------------
+  # Close grammar
+  # ----------------------------------------------------------------------------
+
+  setVs(fpdef,       [fplist])
+  setVs(varargslist, [test])
+  setVs(expr_stmt,   [testlist, yield_expr])
+  setVs(print_stmt,  [test])
+  setVs(del_stmt,    [exprlist])
+  setVs(return_stmt, [testlist])
+  setVs(raise_stmt,  [test])
+  setVs(yield_stmt,  [yield_expr])
+  setVs(exec_stmt,   [test])
+  setVs(assert_stmt, [test])
+  setVs(suite,       [stmt])
+  setVs(if_stmt,     [test])
+  setVs(while_stmt,  [test])
+  setVs(for_stmt,    [exprlist, testlist])
+  setVs(except_clause, [test])
+  setVs(with_item,   [test, expr])
+  setVs(argument,    [test, comp_for])
+  setVs(arglist,     [test])
+  setVs(funcdef,     [suite])
+  setVs(testlist,    [test])
+  setVs(comparison,  [expr])
+  setVs(old_lambdef, [old_test])
+  setVs(comp_for,    [exprlist, comp_iter])
+  setVs(comp_if,     [comp_iter])
+  setVs(lambdef,     [test])
+  setVs(test,        [test])
+  setVs(list_iter,   [list_for, list_if])
+  setVs(list_for,    [exprlist])
+  setVs(factor,      [power])
+
+  return file_input
+
+pygrammar = PythonGrammar()
+pygrammar.debug(True)
+
+m = pygrammar.match("""
+def test(one, two="none"):
+  a = 5
+  print "Stuff"
+""")
+
+
+print m

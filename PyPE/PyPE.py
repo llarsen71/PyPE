@@ -1248,7 +1248,7 @@ def setVs(pattern, Vs, replace=False):
   """
   if not isinstance(pattern, Pattern): return pattern
   if isinstance(Vs, (list, tuple)):
-    Vs = {ptn.name: ptn for ptn in Vs}
+    Vs = {ptn.name: ptn for ptn in Vs if ptn.name is not None}
 
   # If we get to a V object, set the value if it is defined.
   if isinstance(pattern, V):
@@ -1407,7 +1407,7 @@ class PatternAnd(CompositePattern):
     isValidValue(pattern2, msg="For 'a*b', 'b' must be Pattern or int value")
 
     asPattern = P.asPattern
-    self.patterns = (asPattern(pattern1), asPattern(pattern2))
+    self.patterns = [asPattern(pattern1), asPattern(pattern2)]
     self.is_sub_and = False # Is this contained in another and operation
     self.is_not_ptn = isinstance(pattern1, PatternNot) # Indicate if this is (Ptn1 - Ptn)
     if self.is_not_ptn:
@@ -1475,7 +1475,7 @@ class PatternOr(CompositePattern):
     isValidValue(pattern1, msg="For 'a+b', 'a' must be Pattern or int value")
     isValidValue(pattern2, msg="For 'a+b', 'b' must be Pattern or int value")
 
-    self.patterns = (P.asPattern(pattern1), P.asPattern(pattern2))
+    self.patterns = [P.asPattern(pattern1), P.asPattern(pattern2)]
 
   # ----------------------------------------------------------------------------
 
