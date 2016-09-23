@@ -1,6 +1,6 @@
 from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, \
                  whitespace1 as ws1, whitespace0 as ws, \
-                 alpha, digit, newline, quote, V, setVs
+                 alpha, digit, newline, quote, V, setVs, Sc
 
 # kw = P('and') + P('as') + P('assert') + P('break') + P('class') + P('continue') + \
 #      P('def') + P('del') + P('elif') + P('else') + P('except') + P('exec') + \
@@ -66,6 +66,10 @@ def STRING():
 
 # ==============================================================================
 def PythonGrammar():
+  # TODO: Track the indentation and unindent
+  INDENT = 'INDENT' | P((ws * newline)**0 *Sc('indent',C(ws)))
+  DEDENT = 'DEDENT' | P(ws)
+
   NAME =  "name" | (alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0
 
   # fpdef: NAME | '(' fplist ')'
@@ -174,9 +178,6 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
   # Compound Statement
   # ----------------------------------------------------------------------------
-  # TODO: Track the indentation and unindent
-  INDENT = 'INDENT' | P(ws)
-  DEDENT = 'DEDENT' | P(ws)
 
   # suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
   suite = 'suite' | ws* newline * INDENT * V('stmt')**1 * DEDENT + simple_stmt
@@ -436,12 +437,15 @@ def PythonGrammar():
   return file_input
 
 pygrammar = PythonGrammar()
-pygrammar.debug("named")
+pygrammar.debug(True)
 
 m = pygrammar.match("""
 def test(one, two="none"):
   a = 5 and 2
   print "Stuff"
+
+  if a:
+    print "Got %s" % a
 """)
 
 

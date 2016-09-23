@@ -15,7 +15,9 @@ class Stack(object):
   Stack are only make permanent when commit is called.
   """
 
-  def __init__(self, parent):
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, parent = None):
     self.parent = parent
     self.parent_pop = 0   # Record how many values have been popped from the parent.
     self.stack = []
@@ -23,6 +25,7 @@ class Stack(object):
   # ----------------------------------------------------------------------------
 
   def __parentlen__(self):
+    if not self.hasParent(): return 0
     return len(self.parent) - self.parent_pop
 
   # ----------------------------------------------------------------------------
@@ -33,7 +36,7 @@ class Stack(object):
     :param value: The value to look for
     :return: True if the value is in the stack. Otherwise False.
     """
-    return value in self.stack or value in self.parent
+    return value in self.stack or (self.hasParent() and value in self.parent)
 
   # ----------------------------------------------------------------------------
 
@@ -49,12 +52,12 @@ class Stack(object):
 
   def __getitem__(self, index):
     if index < 0: index = len(self) + index
-    if 0 > index or index >= len(self): raise IndexError("Invalid stack index {0}".format(index))
+    if index < 0 or len(self) <= index: raise IndexError("Invalid stack index {0}".format(index))
 
     parentlen = self.__parentlen__()
     if index < parentlen: return self.parent[index]
     index = index - parentlen
-    return self.stacx[index]
+    return self.stack[index]
 
   # ----------------------------------------------------------------------------
 
@@ -105,6 +108,10 @@ class Stack(object):
   # ----------------------------------------------------------------------------
 
   def hasParent(self):
+    """
+    Check whether a parent is specified for this stack object.
+    :return: Boolean indicating whether this Stack object has a parent.
+    """
     return self.parent is not None
 
   # ----------------------------------------------------------------------------
@@ -124,6 +131,11 @@ class Stack(object):
     self.parent_pop = 0
     return self.parent
 
+  # ----------------------------------------------------------------------------
+
+  def __str__(self):
+    return str([item for item in self])
+
 # ==============================================================================
 
 class Context(object):
@@ -140,14 +152,23 @@ class Context(object):
   # ----------------------------------------------------------------------------
 
   def __contains__(self, stack):
-    return stack in self.stacks or stack in self.parent
+    return stack in self.stacks or (self.hasParent() and stack in self.parent)
 
   # ----------------------------------------------------------------------------
 
   def __getitem__(self, stack):
     if stack in self.stacks: return self.stacks[stack]
-    if stack in self.parent: return self.parent[stack]
+    if self.hasParent() and stack in self.parent: return self.parent[stack]
     raise IndexError("Requested stack not found ({0})".format(stack))
+
+  # ----------------------------------------------------------------------------
+
+  def hasParent(self):
+    """
+    Check whether a parent is specified for this stack object.
+    :return: Boolean indicating whether this Stack object has a parent.
+    """
+    return self.parent is not None
 
   # ----------------------------------------------------------------------------
 
@@ -161,17 +182,38 @@ class Context(object):
     """
     if stack in self.stacks: return self.stacks[stack]
     if wrapStack:
-      thestack = Stack(self.parent[stack]) if stack in self.parent else Stack()
+      thestack = Stack(self.parent[stack]) if self.hasParent() and stack in self.parent else Stack()
       self.stacks[stack] = thestack
       return thestack
-    if stack in self.parent: return self.parent[stack]
+    if self.hasParent() and stack in self.parent: return self.parent[stack]
     return None
 
   # ----------------------------------------------------------------------------
 
   def append(self, stack, value):
+    """
+    Append the given value to the stack.
+    :param stack: The stack to append to
+    :param values: The value to append
+    :return: The Context object
+    """
     thestack = self.getStack(stack, wrapStack=True)
     thestack.append(value)
+    return self
+
+  # ----------------------------------------------------------------------------
+
+  def extend(self, stack, values):
+    """
+    Extend the stack with the given values
+    :param stack: The stack to append to
+    :param values: A list of values to append
+    :return: The Context object
+    """
+    if len(values) == 0: return
+    thestack = self.getStack(stack, wrapStack=True)
+    thestack.extend(values)
+    return self
 
   # ----------------------------------------------------------------------------
 
@@ -202,10 +244,10 @@ class Context(object):
     Commit the changes in the context to the parent context
     :return: The parent Context
     """
-    if self.parent is None: return
+    if not self.hasParent(): return
 
     # Commit all of the stacks from the current Context to the parent
-    for stack, thestack in self.stack.items():
+    for stack, thestack in self.stacks.items():
       if not thestack.hasParent():
         if stack in self.parent:
           raise IndexError("The current Context is out of sync with its parent Context - unconnected stack {0}".format(stack))
@@ -214,8 +256,12 @@ class Context(object):
       thestack.commit()
 
     # Clear the stacks since they are committed.
-    self.stack = {}
+    self.stacks = {}
     return self.parent
+
+# ==============================================================================
+
+debug_skip_fails = True
 
 # ==============================================================================
 
@@ -243,7 +289,7 @@ def ConfigBackCaptureString4match(fn):
   :returns: The wrapper function that performs the tasks outlined above.
   """
 
-  def match(pattern, string, index=0):
+  def match(pattern, string, index=0, context=None):
     if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
     sz = string.getStackSize()
 
@@ -265,12 +311,15 @@ def ConfigBackCaptureString4match(fn):
     if showDebugInfo and pattern.name:
       print "Enter: <{0}> => {1}".format(pattern.name, repr(pattern))
 
+    # Wrap the context
+    context = Context(context)
+
     index = pattern.positiveIndex(string, index)
-    matchResult = fn(pattern, string, index)
+    matchResult = fn(pattern, string, index, context)
 
     match_failed = not isinstance(matchResult, Match)
     is_sub_and = isinstance(pattern, PatternAnd) and pattern.is_sub_and
-    ignore_sub_and_on_fail = match_failed and is_sub_and and old_debug
+    ignore_sub_and_on_fail = match_failed and ((is_sub_and and old_debug) or debug_skip_fails)
 
     if showDebugInfo and not ignore_sub_and_on_fail:
       name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
@@ -281,6 +330,8 @@ def ConfigBackCaptureString4match(fn):
         print "  Result: '{0}'".format(escapeStr(str(matchResult)))
         if isinstance(pattern, Capture):
           print "  Captures: {0}".format(matchResult.captures)
+        if isinstance(pattern, StackPtn):
+          print "  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack))
 
     # Clear any nested stored callback items except when:
     #
@@ -294,6 +345,12 @@ def ConfigBackCaptureString4match(fn):
 
     if not isinstance(pattern, Cb) and not (isinstance(pattern, PatternAnd) and pattern.is_sub_and):
       string.setStackSize(sz)
+
+    # Pass context result to the parent context.
+    if not match_failed:
+      #if showDebugInfo and len(context.stacks) > 0:
+      #  print "  Commit Stacks: {0}".format(context.stacks.keys())
+      context.commit()
 
     # restore the debug state
     string.debug(old_debug)
@@ -454,14 +511,17 @@ class Pattern(object):
 
   # ----------------------------------------------------------------------------
 
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     .. func:ptn.match(string[, index])
 
     Match the *ptn* against the *string* starting at the given *index*.
 
+    :param context:
     :param string: A string to match.
     :param index:  The location in the string to look for the given pattern.
+    :param context: Store stack information and information that is passed
+           forward during match operations.
     :return: A :class:`Match` object if the pattern succeeds, or None if the
              pattern fails.
     """
@@ -684,7 +744,7 @@ class Pattern(object):
 
   # ----------------------------------------------------------------------------
 
-  def __call__(self, string, index=0):
+  def __call__(self, string, index=0, context=None):
     """
     .. func: ptn(string[, index])
 
@@ -695,7 +755,7 @@ class Pattern(object):
     :return: A :class:`Match` object if the pattern succeeds, or None if the
              pattern fails.
     """
-    return self.match(string, index)
+    return self.match(string, index, context)
 
 # ==============================================================================
 
@@ -723,8 +783,8 @@ class P(AtomicPattern):
 
     * *string* - Match against the literal string that is passed in.
     * *int*    - Match a given number of characters.
-    * *fn*     - Match against a matcher function of form ``fn(string, index)``.
-                 The *fn* may return:
+    * *fn*     - Match against a matcher function of form ``fn(string, index, context)``.
+       The *fn* may return:
 
       * A :class:`Match` object with the start and end index set correctly for
         the match.
@@ -793,15 +853,16 @@ class P(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Match the given pattern
+    :param context:
     """
-    return self.matcher(string, index)
+    return self.matcher(string, index, context)
 
   # ----------------------------------------------------------------------------
 
-  def match_ptn(self, string, index=0):
+  def match_ptn(self, string, index=0, context=None):
     """
     Matches the pattern passed in.
 
@@ -811,11 +872,11 @@ class P(AtomicPattern):
     >>> p("abba",1) is None
     True
     """
-    return self.ptn(string, index)
+    return self.ptn.match(string, index, context)
 
   # ----------------------------------------------------------------------------
 
-  def match_str(self, string, index=0):
+  def match_str(self, string, index=0, context=None):
     """
     Matches an exact string.
 
@@ -834,7 +895,7 @@ class P(AtomicPattern):
 
   # ----------------------------------------------------------------------------
 
-  def match_n(self, string, index=0):
+  def match_n(self, string, index=0, context=None):
     """
     Matches exactly n characters.
 
@@ -856,7 +917,7 @@ class P(AtomicPattern):
 
   # ----------------------------------------------------------------------------
 
-  def match_neg(self, string, index=0):
+  def match_neg(self, string, index=0, context=None):
     """
     Matches less than n characters only (end of string).
 
@@ -874,7 +935,7 @@ class P(AtomicPattern):
 
   # ----------------------------------------------------------------------------
 
-  def match_TF(self, string, index=0):
+  def match_TF(self, string, index=0, context=None):
     """
     Return False if the value is False, or the 'index' value if not past end of
     string.
@@ -893,7 +954,7 @@ class P(AtomicPattern):
 
   # ----------------------------------------------------------------------------
 
-  def match_fn(self, string, index=0):
+  def match_fn(self, string, index=0, context=None):
     """
     Call the function with the string and the index value. If the function returns
     an integer between the index value and the length of the string, return this
@@ -908,10 +969,14 @@ class P(AtomicPattern):
     >>> p("test",4) == ""
     True
     """
-    match = self.fn(string, index)
-    if match is True: return Match(string, index, index)
-    if match in (False, None): return None
-    if isinstance(match, Match): return match
+    match = self.fn(string, index, context)
+
+    if match is True:
+      return Match(string, index, index)
+    if match in (False, None):
+      return None
+    if isinstance(match, Match):
+      return match
 
     if isinstance(match, int):
         if index <= match and match <= len(string):
@@ -941,7 +1006,7 @@ class S(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Match character in the given set.
 
@@ -952,6 +1017,7 @@ class S(AtomicPattern):
     True
     >>> p("abc",2)
     c
+    :param context:
     """
     if len(string) - index < 1: return None
     if string[index] not in self.set: return None
@@ -983,7 +1049,7 @@ class R(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Matches any character in the given set of ranges.
 
@@ -994,6 +1060,7 @@ class R(AtomicPattern):
     Q
     >>> p("1") is None
     True
+    :param context:
     """
     if len(string) - index < 1: return False
 
@@ -1022,10 +1089,11 @@ class SOL(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Match the start of a line.
 
+    :param context:
     :param string: The string to match
     :param index: The index to start at
     :return: A match object. No characters are consumed.
@@ -1037,9 +1105,9 @@ class SOL(AtomicPattern):
     True
     >>> p.match("test\\n123\\n",5) == ""
     True
-    >>> p.match("test\\n123\\n", 6) is None
+    >>> p.match("test\\n123\\n",6) is None
     True
-    >>> p.match("test\\n123\\n", 9) == ""
+    >>> p.match("test\\n123\\n",9) == ""
     True
     """
     if index == 0 or string[index-1] == '\n':
@@ -1067,10 +1135,11 @@ class EOL(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Detect whether the current position is at the end of a line.
 
+    :param context:
     :param string: The string to compare against
     :param index: The location to check.
     :return: A match object that consumes no input.
@@ -1078,13 +1147,13 @@ class EOL(AtomicPattern):
     >>> p = EOL()
     >>> p.match("") == ""
     True
-    >>> p.match("   \\r\\n", 2) is None
+    >>> p.match("   \\r\\n",2) is None
     True
-    >>> p.match("   \\r\\n", 3) == ""
+    >>> p.match("   \\r\\n",3) == ""
     True
-    >>> p.match("   \\r\\n", 4) is None
+    >>> p.match("   \\r\\n",4) is None
     True
-    >>> p.match("\\n", 0) == ""
+    >>> p.match("\\n",0) == ""
     True
     """
 
@@ -1125,7 +1194,7 @@ class C(Capture):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     >>> p = C(C(P(2))*P(1))
     >>> match = p("abcd")
@@ -1133,9 +1202,10 @@ class C(Capture):
     'abc'
     >>> match.getCapture(1)
     'ab'
+    :param context:
     """
 
-    match = self.pattern.match(string, index)
+    match = self.pattern.match(string, index, context)
     if isinstance(match, Match):
       match.captures.insert(0, str(match))
     return match
@@ -1172,7 +1242,7 @@ class Cb(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     >>> p = Cb("test",P("cat")+P("dog")) * P(" ") * Cb("test")
     >>> p.match("dog dog")
@@ -1181,12 +1251,13 @@ class Cb(AtomicPattern):
     cat cat
     >>> p.match("cat dog") == None
     True
+    :param context:
     """
     if self.pattern is None:
       tomatch = string.getNamedCapture(self.capname)
-      return P(tomatch).match(string, index)
+      return P(tomatch).match(string, index, context)
     else:
-      match = self.pattern.match(string, index)
+      match = self.pattern.match(string, index, context)
       if isinstance(match, Match):
         value = match.getValue() if self.captureIndex is None else match.getCapture(self.captureIndex)
         string.addNamedCapture(self.capname, value)
@@ -1216,13 +1287,14 @@ class Cc(Capture):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
 
     >>> p = Cc("test")
     >>> match = p("")
     >>> match[0]
     'test'
+    :param context:
     """
     return Match(string, index, index).addCapture(self.value)
 
@@ -1252,16 +1324,17 @@ class Cg(Capture):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     >>> p = Cg(C(P(1)) * C(P(1)))
     >>> p("Test").getCapture(0)
     ['T', 'e']
     >>> p("b") is None
     True
+    :param context:
     """
 
-    match = self.pattern.match(string, index)
+    match = self.pattern.match(string, index, context)
     if not isinstance(match, Match): return match
 
     match.captures = [match.captures]
@@ -1287,10 +1360,11 @@ class Cl(Capture):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Capture the line number at the given index.
 
+    :param context:
     :param string: The string to match against
     :param index: The index for which to get the line number
     :return: A match object with the line number added to the captures
@@ -1325,10 +1399,11 @@ class Cp(Capture):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Capture the current position in the string (index value).
 
+    :param context:
     :param string: The string being matched.
     :param index:  The position in the string.
 
@@ -1358,10 +1433,11 @@ class Col(Capture):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Capture the column for the current index (distance past last newline)
 
+    :param context:
     :param string: The string to match
     :param index: The index to start at
     :return: A match object that consumes no characters, but adds a column
@@ -1370,7 +1446,7 @@ class Col(Capture):
     >>> p = Col()
     >>> #        0  123  456789
     >>> #                012345
-    >>> p.match("\\n  \\n  Test", 9).getCapture(0)
+    >>> p.match("\\n  \\n  Test",9).getCapture(0)
     5
     """
     match = Match(string, index, index)
@@ -1386,6 +1462,63 @@ class Col(Capture):
 
   def __repr__(self):
     return "Col()"
+
+# ==============================================================================
+# Captures
+# ==============================================================================
+
+class StackPtn(Pattern):
+  precedence = 1
+
+# ==============================================================================
+
+class Sc(StackPtn):
+  """
+  Move captures to the specified stack in the context.
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, stack, pattern):
+    """
+
+    :param stack: The name of the stack in the context to move captures to.
+    :param pattern: The pattern to use. Typically will have captures.
+    """
+    Pattern.__init__(self)
+    self.stack = stack
+    self.pattern = P.asPattern(pattern)
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0, context=None):
+    """
+    Move the captured values to the specified stack.
+
+    :param context:
+    :param string: The string to match
+    :param index: The index to start at
+    :return: A match object that consumes no characters, but adds a column
+             capture.
+    """
+
+    match = self.pattern.match(string, index, context)
+    if not isinstance(match, Match): return match
+
+    if match.hasCaptures():
+      context.extend(self.stack, match.captures)
+      match.captures = []
+      print "{0}: {1}".format(self.stack, context.getStack(self.stack))
+
+
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    return "Sc({0})".format(_repr_(self.pattern))
+
 
 # ==============================================================================
 # Pattern Operators
@@ -1435,9 +1568,9 @@ class V(CompositePattern):
 
   # ----------------------------------------------------------------------------
 
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     if len(self.patterns) > 0:
-      return self.patterns[0].match(string, index)
+      return self.patterns[0].match(string, index, context)
     return None
 
   # ----------------------------------------------------------------------------
@@ -1497,9 +1630,10 @@ class PatternFnWrap(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
 
+    :param context:
     :param string: String to match
     :param index: Index in string to start at
     :return: None if pattern fails, or a match object returned by the function
@@ -1512,7 +1646,7 @@ class PatternFnWrap(CompositePattern):
     >>> p("Cat").captures
     ['test']
     """
-    match = self.patterns[0].match(string, index)
+    match = self.patterns[0].match(string, index, context)
     if match is None: return None
 
     return self.fn(match)
@@ -1548,11 +1682,12 @@ class PatternCaptureN(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Get the nth capture of a pattern. If capture does not exist, use the default
     if specified, or include no captures in match that is returned.
 
+    :param context:
     :param string: String to match
     :param index:  The location of in the current string for pattern searches.
     :return:  A match with just the nth capture retained.
@@ -1573,7 +1708,7 @@ class PatternCaptureN(CompositePattern):
     'invalid capture'
     """
 
-    match = self.patterns[0].match(string, index)
+    match = self.patterns[0].match(string, index, context)
     if match is None: return None
 
     newmatch = Match(string, index, match.end)
@@ -1629,7 +1764,7 @@ class PatternAnd(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Find the first pattern that matches the string.
 
@@ -1643,12 +1778,13 @@ class PatternAnd(CompositePattern):
     tes
     >>> p("testing") is None
     True
+    :param context:
     """
 
     MATCH = Match(string, index)
     # Make sure all the patterns match
     for pattern in self.patterns:
-      match = pattern.match(string, index)
+      match = pattern.match(string, index, context)
       if not isinstance(match, Match): return None
       MATCH.addSubmatch(match)
       index = match.end
@@ -1690,7 +1826,7 @@ class PatternOr(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
     Find the first pattern that matches the string.
 
@@ -1703,10 +1839,11 @@ class PatternOr(CompositePattern):
     fred
     >>> p("none") is None
     True
+    :param context:
     """
 
     for pattern in self.patterns:
-      match = pattern.match(string, index)
+      match = pattern.match(string, index, context)
       if isinstance(match, Match): return match
     return None
 
@@ -1734,7 +1871,7 @@ class PatternNot(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
 
     >>> p = -P("bob")
@@ -1742,9 +1879,10 @@ class PatternNot(CompositePattern):
     True
     >>> p("fred") == ""
     True
+    :param context:
     """
 
-    match = self.patterns[0](string, index)
+    match = self.patterns[0](string, index, context)
     if not isinstance(match, Match): return Match(string, index, index)
     return None
 
@@ -1795,12 +1933,12 @@ class PatternRepeat(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
-    return self.matcher(string, index)
+  def match(self, string, index=0, context=None):
+    return self.matcher(string, index, context)
 
   # ----------------------------------------------------------------------------
 
-  def match_n(self, string, index=0):
+  def match_n(self, string, index=0, context=None):
     """
 
     >>> p = S("abc")**[3]
@@ -1812,7 +1950,7 @@ class PatternRepeat(CompositePattern):
     MATCH = Match(string, index)
     cnt = 0
     for i in xrange(self.n):
-      match = self.patterns[0].match(string, index)
+      match = self.patterns[0].match(string, index, context)
       if not isinstance(match, Match): return None
       index = match.end
       MATCH.addSubmatch(match)
@@ -1821,7 +1959,7 @@ class PatternRepeat(CompositePattern):
 
   # ----------------------------------------------------------------------------
 
-  def match_at_least_n(self, string, index=0):
+  def match_at_least_n(self, string, index=0, context=None):
     """
 
     >>> p = S("abc")**3
@@ -1835,7 +1973,7 @@ class PatternRepeat(CompositePattern):
     MATCH = Match(string, index)
     cnt = 0
     while True:
-      match = self.patterns[0].match(string, index)
+      match = self.patterns[0].match(string, index, context)
 
       if not isinstance(match, Match):
         return MATCH.setEnd(index) if cnt >= self.n else None
@@ -1850,7 +1988,7 @@ class PatternRepeat(CompositePattern):
 
   # ----------------------------------------------------------------------------
 
-  def match_at_most_n(self, string, index=0):
+  def match_at_most_n(self, string, index=0, context=None):
     """
 
     >>> p = S("abc")**-3
@@ -1861,7 +1999,7 @@ class PatternRepeat(CompositePattern):
     """
     MATCH = Match(string, index)
     for i in range(self.n):
-      match = self.patterns[0].match(string, index)
+      match = self.patterns[0].match(string, index, context)
       if not isinstance(match, Match): return MATCH.setEnd(index)
       MATCH.addSubmatch(match)
       index = match.end
@@ -1894,7 +2032,7 @@ class PatternLookAhead(CompositePattern):
   # ----------------------------------------------------------------------------
 
   @ConfigBackCaptureString4match
-  def match(self, string, index=0):
+  def match(self, string, index=0, context=None):
     """
 
     >>> p = ~P("test")
@@ -1904,8 +2042,9 @@ class PatternLookAhead(CompositePattern):
     True
     >>> p("Failed") is None
     True
+    :param context:
     """
-    match = self.patterns[0].match(string, index)
+    match = self.patterns[0].match(string, index, context)
     if isinstance(match, Match): return match.setEnd(index)
     return None
 
@@ -2218,10 +2357,10 @@ def join(match, joiner=""):
 # ==============================================================================
 # ==============================================================================
 
-def match(pattern, subject, index=0):
+def match(pattern, subject, index=0, context=None):
   """
   """
-  return pattern.match(subject, index)
+  return pattern.match(subject, index, context)
 
 # ==============================================================================
 
