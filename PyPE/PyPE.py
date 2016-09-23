@@ -9,6 +9,216 @@ of PEG patterns and to build lexers.
 
 # ==============================================================================
 
+class Stack(object):
+  """
+  This implements a stack that wraps a parent stack. Changes to the parent
+  Stack are only make permanent when commit is called.
+  """
+
+  def __init__(self, parent):
+    self.parent = parent
+    self.parent_pop = 0   # Record how many values have been popped from the parent.
+    self.stack = []
+
+  # ----------------------------------------------------------------------------
+
+  def __parentlen__(self):
+    return len(self.parent) - self.parent_pop
+
+  # ----------------------------------------------------------------------------
+
+  def __contains__(self, value):
+    """
+    Check whether the stack contains a value
+    :param value: The value to look for
+    :return: True if the value is in the stack. Otherwise False.
+    """
+    return value in self.stack or value in self.parent
+
+  # ----------------------------------------------------------------------------
+
+  def __len__(self):
+    """
+    Get the length of the stack. This includes the length inherited from the
+    parent stack.
+    :return: The length of the stack.
+    """
+    return self.__parentlen__() + len(self.stack)
+
+  # ----------------------------------------------------------------------------
+
+  def __getitem__(self, index):
+    if index < 0: index = len(self) + index
+    if 0 > index or index >= len(self): raise IndexError("Invalid stack index {0}".format(index))
+
+    parentlen = self.__parentlen__()
+    if index < parentlen: return self.parent[index]
+    index = index - parentlen
+    return self.stacx[index]
+
+  # ----------------------------------------------------------------------------
+
+  def append(self, value):
+    """
+    Add a value to the Stack.
+    :param value: The value to add to the Stack
+    :return: The Stack object
+    """
+    self.stack.append(value)
+    return self
+
+  # ----------------------------------------------------------------------------
+
+  def extend(self, values):
+    """
+    Extend the Stack with a set of values
+    :param values: The list of values to add to the Stack
+    :return: The Stack object
+    """
+    self.stack.extend(values)
+    return self
+
+  # ----------------------------------------------------------------------------
+
+  def pop(self):
+    """
+    Pop and item from the stack and return it.
+    :return: The last item added to the stack.
+    """
+    item = self.peek()
+    if len(self.stack) > 0: self.stack.pop()
+    elif self.__parentlen__() > 0: self.parent_pop += 1
+    return item
+
+  # ----------------------------------------------------------------------------
+
+  def peek(self):
+    """
+    View the last item added to the stack
+    :return: The last item added to the stack
+    """
+    if len(self.stack) > 0: return self.stack[-1]
+    parentlen = self.__parentlen__()
+    if parentlen == 0: return None
+    return self.parent[parentlen-1]
+
+  # ----------------------------------------------------------------------------
+
+  def hasParent(self):
+    return self.parent is not None
+
+  # ----------------------------------------------------------------------------
+
+  def commit(self):
+    """
+    Commit the changes to the parent stack
+    :return: The parent Stack
+    """
+    if not self.hasParent(): return
+
+    for i in range(self.parent_pop): self.parent.pop()
+    self.parent.extend(self.stack)
+
+    # Reset the stack and
+    self.stack = []
+    self.parent_pop = 0
+    return self.parent
+
+# ==============================================================================
+
+class Context(object):
+  """
+  Store context for a match. This includes any stacks used by the match routine.
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, parent = None):
+    self.parent = parent
+    self.stacks = {}
+
+  # ----------------------------------------------------------------------------
+
+  def __contains__(self, stack):
+    return stack in self.stacks or stack in self.parent
+
+  # ----------------------------------------------------------------------------
+
+  def __getitem__(self, stack):
+    if stack in self.stacks: return self.stacks[stack]
+    if stack in self.parent: return self.parent[stack]
+    raise IndexError("Requested stack not found ({0})".format(stack))
+
+  # ----------------------------------------------------------------------------
+
+  def getStack(self, stack, wrapStack=False):
+    """
+    Get the requested stack.
+    :param stack: The name of the stack.
+    :param wrapStack: If the stack is only in the parent object, create a new
+           stack wrapper in this object if wrapStack is True.
+    :return: The stack object.
+    """
+    if stack in self.stacks: return self.stacks[stack]
+    if wrapStack:
+      thestack = Stack(self.parent[stack]) if stack in self.parent else Stack()
+      self.stacks[stack] = thestack
+      return thestack
+    if stack in self.parent: return self.parent[stack]
+    return None
+
+  # ----------------------------------------------------------------------------
+
+  def append(self, stack, value):
+    thestack = self.getStack(stack, wrapStack=True)
+    thestack.append(value)
+
+  # ----------------------------------------------------------------------------
+
+  def peek(self, stack):
+    """
+    Return the last value added to the stack without removing it.
+    :param stack: The stack to peek at.
+    :return: The last value added to the stack.
+    """
+    thestack = self[stack]
+    return thestack.peek() if thestack is not None else None
+
+  # ----------------------------------------------------------------------------
+
+  def pop(self, stack):
+    """
+    Pop the last value added to the stack off the stack and return it.
+    :param stack: The stack to work with.
+    :return: The last value added to the stack.
+    """
+    thestack = self.getStack(stack, wrapStack=True)
+    return thestack.pop()
+
+  # ----------------------------------------------------------------------------
+
+  def commit(self):
+    """
+    Commit the changes in the context to the parent context
+    :return: The parent Context
+    """
+    if self.parent is None: return
+
+    # Commit all of the stacks from the current Context to the parent
+    for stack, thestack in self.stack.items():
+      if not thestack.hasParent():
+        if stack in self.parent:
+          raise IndexError("The current Context is out of sync with its parent Context - unconnected stack {0}".format(stack))
+        self.parent.stacks[stack] = thestack
+        continue
+      thestack.commit()
+
+    # Clear the stacks since they are committed.
+    self.stack = {}
+    return self.parent
+
+# ==============================================================================
+
 def ConfigBackCaptureString4match(fn):
   """
   ..function:: ConfigBackCaptureString4match(fn)
@@ -237,7 +447,7 @@ class Pattern(object):
 
   def containsPatterns(self):
     """
-    Inidcate whether this is a container of other patterns
+    Indicate whether this is a container of other patterns
     :return: True if this contains other Patterns, or False if not.
     """
     return False

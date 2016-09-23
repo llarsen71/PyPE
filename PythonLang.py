@@ -2,16 +2,12 @@ from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, \
                  whitespace1 as ws1, whitespace0 as ws, \
                  alpha, digit, newline, quote, V, setVs
 
-kw = P('and') + P('as') + P('assert') + P('break') + P('class') + P('continue') + \
-     P('def') + P('del') + P('elif') + P('else') + P('except') + P('exec') + \
-     P('finally') + P('for') + P('from') + P('global') + P('if') + P('import') + \
-     P('in') + P('is') + P('lambda') + P('not') + P('or') + P('pass') + \
-     P('print') + P('raise') + P('return') + P('try') + P('while') + P('with') + \
-     P('yield')
-
-# ==============================================================================
-def NAME_():
-  return  "name" | ((alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0)
+# kw = P('and') + P('as') + P('assert') + P('break') + P('class') + P('continue') + \
+#      P('def') + P('del') + P('elif') + P('else') + P('except') + P('exec') + \
+#      P('finally') + P('for') + P('from') + P('global') + P('if') + P('import') + \
+#      P('in') + P('is') + P('lambda') + P('not') + P('or') + P('pass') + \
+#      P('print') + P('raise') + P('return') + P('try') + P('while') + P('with') + \
+#      P('yield')
 
 # ==============================================================================
 def NUMBER():
@@ -70,7 +66,7 @@ def STRING():
 
 # ==============================================================================
 def PythonGrammar():
-  NAME = NAME_()
+  NAME =  "name" | (alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0
 
   # fpdef: NAME | '(' fplist ')'
   fpdef = 'fpdef' | NAME + '(' *ws* V('fplist') *ws* ')'
@@ -133,7 +129,7 @@ def PythonGrammar():
   flow_stmt = 'flow_stmt' | break_stmt + continue_stmt + return_stmt + raise_stmt + yield_stmt
 
   # dotted_name: NAME ('.' NAME)*
-  dotted_name = NAME * ("." * NAME)**0
+  dotted_name = 'dotted_name' | NAME * ("." * NAME)**0
 
   # dotted_as_name: dotted_name ['as' NAME]
   dotted_as_name = dotted_name * (ws1*'as'*ws1*NAME)**-1
