@@ -1,6 +1,5 @@
-from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, \
-                 whitespace1 as ws1, whitespace0 as ws, \
-                 alpha, digit, newline, quote, V, setVs, Sc
+from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, alpha, digit, newline, \
+                 quote, V, setVs, Sc, Sp, Sm, matchUntil, whitespace
 
 # kw = P('and') + P('as') + P('assert') + P('break') + P('class') + P('continue') + \
 #      P('def') + P('del') + P('elif') + P('else') + P('except') + P('exec') + \
@@ -66,9 +65,17 @@ def STRING():
 
 # ==============================================================================
 def PythonGrammar():
+  ws = (P(whitespace) & 'hide')**0
+  ws1 = (P(whitespace) & 'hide')**1
+  newline.setName('newline')
+
   # TODO: Track the indentation and unindent
-  INDENT = 'INDENT' | P((ws * newline)**0 *Sc('indent',C(ws)))
+  INDENT = 'INDENT' | (ws * newline)**0 * Sc('indent',C(ws))
   DEDENT = 'DEDENT' | P(ws)
+
+  comment = 'comment' | '#' * matchUntil(newline)
+  next_stmt_line = 'next_stmt_line' | (ws * comment**-1 * (newline + -P(1)))**1
+  match_indent = 'match_indent' | (Sm('indent')*(-whitespace) + P(0) & True)
 
   NAME =  "name" | (alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0
 
@@ -173,14 +180,14 @@ def PythonGrammar():
                flow_stmt + import_stmt + global_stmt + exec_stmt + assert_stmt + expr_stmt
 
   # simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
-  simple_stmt = 'simple_stmt' | small_stmt * (ws*';'*ws*small_stmt)**0 * (ws*P(';'))**-1 *ws* (newline)**-1
+  simple_stmt = 'simple_stmt' | small_stmt * (ws*';'*ws*small_stmt)**0 * (ws*P(';'))**-1 * next_stmt_line
 
   # ----------------------------------------------------------------------------
   # Compound Statement
   # ----------------------------------------------------------------------------
 
   # suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
-  suite = 'suite' | ws* newline * INDENT * V('stmt')**1 * DEDENT + simple_stmt
+  suite = 'suite' | next_stmt_line * INDENT * V('stmt') * (match_indent * V('stmt'))**0 * DEDENT + simple_stmt
 
   # if_stmt: 'if' test ':' suite ('elif' test ':' suite)* ['else' ':' suite]
   if_stmt = 'if_stmt' | 'if'*ws*V('test')*ws*':'*suite
@@ -256,7 +263,6 @@ def PythonGrammar():
 
   # stmt: simple_stmt | compound_stmt
   stmt = 'stmt' | compound_stmt + simple_stmt
-
 
   # ----------------------------------------------------------------------------
   # Comparison
@@ -434,18 +440,22 @@ def PythonGrammar():
   setVs(list_for,    [exprlist])
   setVs(factor,      [power])
 
+  funcdef.debug(True, showOnlySuccess=True)
   return file_input
 
 pygrammar = PythonGrammar()
-pygrammar.debug(True)
+#pygrammar.debug(True)
 
 m = pygrammar.match("""
 def test(one, two="none"):
+# test
+    # test
   a = 5 and 2
   print "Stuff"
 
   if a:
     print "Got %s" % a
+more
 """)
 
 
