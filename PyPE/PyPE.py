@@ -262,10 +262,6 @@ class Context(object):
 
 # ==============================================================================
 
-debug_skip_fails = True
-
-# ==============================================================================
-
 def ConfigBackCaptureString4match(fn):
   """
   ..function:: ConfigBackCaptureString4match(fn)
@@ -309,8 +305,13 @@ def ConfigBackCaptureString4match(fn):
     index = pattern.positiveIndex(string, index)
 
     if debug: debug.beforeMatch(pattern, string, index, context)
+
+    # Get the match result and add the context to it.
     matchResult = fn(pattern, string, index, context)
     matchSucceeded = isinstance(matchResult, Match)
+    if matchSucceeded:
+      matchResult.context = context
+
     if debug: debug.afterMatch(pattern, string, index, context, matchResult)
 
     # Clear any nested stored callback items except when:
@@ -401,11 +402,11 @@ class DebugOptions(object):
   def beforeMatch(self, pattern, string, index, context):
     """
     Called before a match is performed to print debug information
-    :param pattern:
-    :param string:
-    :param index:
-    :param context:
-    :return:
+
+    :param pattern: The pattern that was ging matched.
+    :param string: The string to match against
+    :param index: Location where match starts
+    :param context: The context that is forwarded while matching
     """
     show = (True if self.showPatternBefore and
                     self.show != self.HIDE  and
@@ -419,13 +420,13 @@ class DebugOptions(object):
 
   def afterMatch(self, pattern, string, index, context, match):
     """
-    Called after a match is performed to print debug information
-    :param pattern:
-    :param string:
-    :param index:
-    :param context:
-    :param match:
-    :return:
+    Called after a match is performed to print debug information.
+
+    :param pattern: The pattern that was ging matched.
+    :param string: The string to match against
+    :param index: Location where match starts
+    :param context: The context that is forwarded while matching
+    :param match: The pattern match (may be None)
     """
 
     if self.show == self.HIDE or self.show == self.NAMED and pattern.name is None: return
@@ -1824,9 +1825,9 @@ class PatternFnWrap(CompositePattern):
   def match(self, string, index=0, context=None):
     """
 
-    :param context:
     :param string: String to match
     :param index: Index in string to start at
+    :param context: Information forwarded between matches
     :return: None if pattern fails, or a match object returned by the function
              after receiving the pattern match object.
 
@@ -2408,6 +2409,7 @@ class Match(object):
     self.start    = start
     self.end      = end
     self.captures = []
+    self.context  = None
 
   # ----------------------------------------------------------------------------
 
