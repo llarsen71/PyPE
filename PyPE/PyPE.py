@@ -148,6 +148,7 @@ class Context(object):
   def __init__(self, parent = None):
     self.parent = parent
     self.stacks = {}
+    self.debug = parent.debug if parent is not None else None
 
   # ----------------------------------------------------------------------------
 
@@ -293,45 +294,24 @@ def ConfigBackCaptureString4match(fn):
     if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
     sz = string.getStackSize()
 
-    # Get the debug value that was passed forward (through the BackCaptureString)
-    # Store the old debug value so that it can be restored in the BackCaptureString.
-    debug = old_debug = string.debug()
-
-    # If the current pattern has a debug value (other than None), store the
-    # value in the BackCaptureString to forward the value to subpatterns.
-    if pattern.debug() is not None:
-      debug = pattern.debug()
-      string.debug(debug)
-
-    # Set a flag that indicates whether
-    showDebugInfo = (debug is True or
-                     debug is Pattern.NAMED and pattern.name is not None or
-                     False)
-
-    if showDebugInfo and pattern.name:
-      print "Enter: <{0}> => {1}".format(pattern.name, repr(pattern))
+    # Get the currently active debug options
+    debug = context.debug if context is not None else None
 
     # Wrap the context
     context = Context(context)
 
+    # If the current pattern has a debug object (other than None), store the
+    # value in the context to forward to other patterns.
+    if pattern.debug() is not None:
+      debug = context.debug = pattern.debug()
+
+    # Convert negative index to positive index
     index = pattern.positiveIndex(string, index)
+
+    if debug: debug.beforeMatch(pattern, string, index, context)
     matchResult = fn(pattern, string, index, context)
-
-    match_failed = not isinstance(matchResult, Match)
-    is_sub_and = isinstance(pattern, PatternAnd) and pattern.is_sub_and
-    ignore_sub_and_on_fail = match_failed and ((is_sub_and and old_debug) or debug_skip_fails)
-
-    if showDebugInfo and not ignore_sub_and_on_fail:
-      name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
-      print "Pattern: ({0}) {1}".format(index, name)
-      if match_failed:
-        print "  Failed"
-      else:
-        print "  Result: '{0}'".format(escapeStr(str(matchResult)))
-        if isinstance(pattern, Capture):
-          print "  Captures: {0}".format(matchResult.captures)
-        if isinstance(pattern, StackPtn):
-          print "  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack))
+    matchSucceeded = isinstance(matchResult, Match)
+    if debug: debug.afterMatch(pattern, string, index, context, matchResult)
 
     # Clear any nested stored callback items except when:
     #
@@ -347,13 +327,7 @@ def ConfigBackCaptureString4match(fn):
       string.setStackSize(sz)
 
     # Pass context result to the parent context.
-    if not match_failed:
-      #if showDebugInfo and len(context.stacks) > 0:
-      #  print "  Commit Stacks: {0}".format(context.stacks.keys())
-      context.commit()
-
-    # restore the debug state
-    string.debug(old_debug)
+    if matchSucceeded: context.commit()
 
     return matchResult
 
@@ -367,6 +341,111 @@ def escapeStr(string):
   for c, v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
     string = string.replace(c, v)
   return string
+
+# ==============================================================================
+
+class DebugOptions(object):
+
+  # This is a debug (dbg) option that indicates that only named items should be
+  # printed in the debug output.
+  NAMED = 'named' # Debug only named Patterns
+  HIDE  = False   # Suppress debug output for a Pattern and its children
+  SHOW  = True    # Show debug info
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, show = True, showOnlySuccess=False, showPatternBefore=True):
+    """
+    This object stores the debug options associated with a pattern.
+
+    :param debugOpt: The debug option to use. The possible values are:
+
+           +----------------+--------------------------------------------------+
+           | *True*         | Enable debugging for all subpatterns that are    |
+           |                | not hidden.                                      |
+           +----------------+--------------------------------------------------+
+           | 'hide', 'h',   | Suppress debugging for all subpatterns (that are |
+           |  or *False*    | not enabled manually).                           |
+           +----------------+--------------------------------------------------+
+           | 'named' or 'n' | Enable debugging for all named Pattern(s).       |
+           +----------------+--------------------------------------------------+
+           | None           | (Default value) use the debug option associated  |
+           |                | a parent pattern.                                |
+           +----------------+--------------------------------------------------+
+
+    :param showOnlySuccess: Show only patterns that are successful.
+
+    :param showPatternBefore: Show a pattern before performing a match.
+
+    :return: When no *debugOpt* parameter is passed in, this returns the debug
+             value for this Pattern. If *debugOpt* is passed in, the Pattern is
+             returned. This is useful for chaining commands.
+    """
+
+    self.showOnlySuccess   = showOnlySuccess
+    self.showPatternBefore = showPatternBefore
+
+    if isinstance(show, basestring): show = show.lower()
+    if isinstance(show, bool):
+      pass
+    elif show in ('hide','h'):
+      show = False
+    elif show in ('named', 'n'):
+      show = "named"
+    else:
+      raise Exception("Illegal Debug Options for Pattern")
+    self.show = show
+
+  # ----------------------------------------------------------------------------
+
+  def beforeMatch(self, pattern, string, index, context):
+    """
+    Called before a match is performed to print debug information
+    :param pattern:
+    :param string:
+    :param index:
+    :param context:
+    :return:
+    """
+    show = (True if self.showPatternBefore and
+                    self.show != self.HIDE  and
+                    pattern.name is not None
+            else False)
+
+    if show:
+      print "Enter: <{0}> => ({1}) {2}".format(pattern.name, index, repr(pattern))
+
+  # ----------------------------------------------------------------------------
+
+  def afterMatch(self, pattern, string, index, context, match):
+    """
+    Called after a match is performed to print debug information
+    :param pattern:
+    :param string:
+    :param index:
+    :param context:
+    :param match:
+    :return:
+    """
+
+    if self.show == self.HIDE or self.show == self.NAMED and pattern.name is None: return
+
+    match_failed = not isinstance(match, Match)
+    if self.showOnlySuccess and match_failed: return
+
+    in_and_sequence = isinstance(pattern, PatternAnd) and pattern.is_sub_and
+    if context.parent is not None and context.parent.debug is not None and in_and_sequence: return
+
+    name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
+    print "Pattern: ({0}) {1}".format(index, name)
+    if match_failed:
+      print "  Failed"
+    else:
+      print "  Result: '{0}'".format(escapeStr(str(match)))
+      if isinstance(pattern, Capture):
+        print "  Captures: {0}".format(match.captures)
+      if isinstance(pattern, StackPtn):
+        print "  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack))
 
 # ==============================================================================
 
@@ -430,11 +509,6 @@ class Pattern(object):
   """
   precedence = 100
 
-  # This is a debug (dbg) option that indicates that only named items should be
-  # printed in the debug output.
-  NAMED = 'n'  # Debug only named Patterns
-  HIDE  = 'h'  # Suppress debug output for a Pattern and its children
-
   # ----------------------------------------------------------------------------
 
   def __init__(self):
@@ -444,44 +518,22 @@ class Pattern(object):
 
   # ----------------------------------------------------------------------------
 
-  def debug(self, debugOpt='R'):
+  def debug(self, *args, **kwargs):
     """
     .. func:ptn.debug([debugOpt)
 
-    The debug function returns the debug value for this pattern if no parameter
-    is passed in. If a parameter is passed in, it sets the debug value for this
-    Pattern.
+    Set or return the debug options for this pattern. For the available options,
+    see the DebugOptions class constructor which is called with the parameters
+    sent to this function.
 
-    :param debugOpt: The debug option to use. The possible values are:
-
-           +----------------+--------------------------------------------------+
-           | *True*         | Enable debugging for all subpatterns that are    |
-           |                | not hidden.                                      |
-           +----------------+--------------------------------------------------+
-           | 'hide', 'h',   | Suppress debugging for all subpatterns (that are |
-           |  or *False*    | not enabled manually).                           |
-           +----------------+--------------------------------------------------+
-           | 'named' or 'n' | Enable debugging for all named Pattern(s).       |
-           +----------------+--------------------------------------------------+
-           | None           | (Default value) use the debug option associated  |
-           |                | a parent pattern.                                |
-           +----------------+--------------------------------------------------+
-
-    :return: When no *debugOpt* parameter is passed in, this returns the debug
-             value for this Pattern. If *debugOpt* is passed in, the Pattern is
-             returned. This is useful for chaining commands.
+    :return: When no options are passed in, this returns the debug options object
+             for this Pattern. If parameters are passed in, a DebugOptions object
+             is created and associated with this Pattern.
     """
-    if debugOpt is 'R':
-      return self.dbg
 
-    if isinstance(debugOpt, basestring) and debugOpt.lower() in ("named","hide","n","h"):
-      self.dbg = debugOpt[0]
-    elif isinstance(debugOpt, bool):
-      self.dbg = 'h' if debugOpt is False else True
-    elif debugOpt is None:
-      self.dbg = None
-    else:
-      raise Exception("Illegal debug option for Pattern")
+    if len(args) == 0 and len(kwargs) == 0: return self.dbg
+
+    self.dbg = DebugOptions(*args, **kwargs)
     return self
 
   # ----------------------------------------------------------------------------
@@ -517,7 +569,6 @@ class Pattern(object):
 
     Match the *ptn* against the *string* starting at the given *index*.
 
-    :param context:
     :param string: A string to match.
     :param index:  The location in the string to look for the given pattern.
     :param context: Store stack information and information that is passed
@@ -911,6 +962,10 @@ class P(AtomicPattern):
     abc
     >>> p("abc",1) is None
     True
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     if len(string) - index < self.n: return None
     return Match(string, index, index + self.n)
@@ -928,6 +983,10 @@ class P(AtomicPattern):
     ab
     >>> p("abc") is None
     True
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     sz = len(string)
     if sz - index >= self.n: return None
@@ -956,18 +1015,30 @@ class P(AtomicPattern):
 
   def match_fn(self, string, index=0, context=None):
     """
-    Call the function with the string and the index value. If the function returns
-    an integer between the index value and the length of the string, return this
-    value. If the function returns True, return index. Otherwise, return False.
+    Call the function with signature:
 
-    >>> p = P(lambda str, i: i+2)
+      `match = fn(string, index, context)`
+
+    The function can return one of the following:
+
+    * A match object
+    * An integer between `index` and the length of the string. This results in a
+      match object ending at the given integer.
+    * True results in a match object beginning and ending at the current index
+    * False or any value not matching the above results in a match value of None.
+
+    >>> p = P(lambda str, i, ctxt: i+2)
     >>> p("test")
     te
     >>> p("test",3) is None
     True
-    >>> p = P(lambda str, i: True)
+    >>> p = P(lambda str, i, ctxt: True)
     >>> p("test",4) == ""
     True
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     match = self.fn(string, index, context)
 
@@ -1017,7 +1088,10 @@ class S(AtomicPattern):
     True
     >>> p("abc",2)
     c
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     if len(string) - index < 1: return None
     if string[index] not in self.set: return None
@@ -1060,7 +1134,10 @@ class R(AtomicPattern):
     Q
     >>> p("1") is None
     True
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     if len(string) - index < 1: return False
 
@@ -1196,13 +1273,18 @@ class C(Capture):
   @ConfigBackCaptureString4match
   def match(self, string, index=0, context=None):
     """
+    Add a Pattern match to the list of Captures.
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+
     >>> p = C(C(P(2))*P(1))
     >>> match = p("abcd")
     >>> match.getCapture(0)
     'abc'
     >>> match.getCapture(1)
     'ab'
-    :param context:
     """
 
     match = self.pattern.match(string, index, context)
@@ -1226,6 +1308,7 @@ class Cb(AtomicPattern):
 
   def __init__(self, name, pattern=None, captureIndex=None):
     """
+    Match a previously captured value (i.e., a back capture).
 
     :param name: The name to store the back capture under for later reference.
     :param pattern: The pattern to match. The backcapture will be the full match
@@ -1244,6 +1327,10 @@ class Cb(AtomicPattern):
   @ConfigBackCaptureString4match
   def match(self, string, index=0, context=None):
     """
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+
     >>> p = Cb("test",P("cat")+P("dog")) * P(" ") * Cb("test")
     >>> p.match("dog dog")
     dog dog
@@ -1251,7 +1338,11 @@ class Cb(AtomicPattern):
     cat cat
     >>> p.match("cat dog") == None
     True
-    :param context:
+    >>> p = Cb("quote", S("\\"'")) * C((1-Cb("quote"))**0) * Cb("quote")
+    >>> p.match("'Matched quoted string'").captures[0]
+    'Matched quoted string'
+    >>> p.match('"Quoted String"').captures[0]
+    'Quoted String'
     """
     if self.pattern is None:
       tomatch = string.getNamedCapture(self.capname)
@@ -1289,12 +1380,16 @@ class Cc(Capture):
   @ConfigBackCaptureString4match
   def match(self, string, index=0, context=None):
     """
+    Capture the specified value.
 
     >>> p = Cc("test")
     >>> match = p("")
     >>> match[0]
     'test'
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     return Match(string, index, index).addCapture(self.value)
 
@@ -1326,12 +1421,17 @@ class Cg(Capture):
   @ConfigBackCaptureString4match
   def match(self, string, index=0, context=None):
     """
+    Group the contained captures into a single capture.
+
     >>> p = Cg(C(P(1)) * C(P(1)))
     >>> p("Test").getCapture(0)
     ['T', 'e']
     >>> p("b") is None
     True
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
 
     match = self.pattern.match(string, index, context)
@@ -1364,9 +1464,9 @@ class Cl(Capture):
     """
     Capture the line number at the given index.
 
-    :param context:
     :param string: The string to match against
     :param index: The index for which to get the line number
+    :param context: Information that is forwarded between matches.
     :return: A match object with the line number added to the captures
 
     :Example:
@@ -1403,9 +1503,9 @@ class Cp(Capture):
     """
     Capture the current position in the string (index value).
 
-    :param context:
-    :param string: The string being matched.
-    :param index:  The position in the string.
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
 
     >>> p = Cp()
     >>> p("test",3).getCapture(0)
@@ -1437,9 +1537,9 @@ class Col(Capture):
     """
     Capture the column for the current index (distance past last newline)
 
-    :param context:
     :param string: The string to match
-    :param index: The index to start at
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     :return: A match object that consumes no characters, but adds a column
              capture.
 
@@ -1496,9 +1596,9 @@ class Sc(StackPtn):
     """
     Move the captured values to the specified stack.
 
-    :param context:
     :param string: The string to match
-    :param index: The index to start at
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     :return: A match object that consumes no characters, but adds a column
              capture.
     """
@@ -1511,14 +1611,105 @@ class Sc(StackPtn):
       match.captures = []
       print "{0}: {1}".format(self.stack, context.getStack(self.stack))
 
-
     return match
 
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "Sc({0})".format(_repr_(self.pattern))
+    # TODO: Support single quotes in stack name
+    return "Sc('{0}', {1})".format(self.stack, _repr_(self.pattern))
 
+# ==============================================================================
+
+class Sp(StackPtn):
+  """
+  Pop captures from the stack
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, stack, n=1):
+    """
+
+    :param stack: The name of the stack to pop values from.
+    :param pattern: The number of values to pop.
+    """
+    Pattern.__init__(self)
+    self.stack = stack
+    self.n = n
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0, context=None):
+    """
+    Pop values from the stack.
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+    :return: A match object that consumes no characters, but adds a column
+             capture.
+    """
+
+    match = Match(string, index, index)
+    stack = context.getStack(self.stack)
+    for i in range(self.n): stack.pop()
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    # TODO: Support single quotes in stack name
+    return "Sp('{0}', {1})".format(self.stack, "" if self.n == 1 else self.n)
+
+# ==============================================================================
+
+class Sm(StackPtn):
+  """
+  Match value on Stack
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, stack, n=-1):
+    """
+
+    :param stack: The name of the stack to pop values from.
+    :param pattern: Index of the value to match (-1 by default).
+    """
+    Pattern.__init__(self)
+    self.stack = stack
+    self.n = n
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0, context=None):
+    """
+    Match value on the stack.
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+    :return: A match object that consumes no characters, but adds a column
+             capture.
+    """
+
+    stack = context.getStack(self.stack)
+    if stack is not None:
+      top_of_stack = stack.peek()
+      if isinstance(top_of_stack, basestring):
+        match = P(top_of_stack).match(string, index, context)
+        return match
+    match = Match(string, index, index)
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    # TODO: Support single quotes in stack name
+    return "Sm('{0}', {1})".format(self.stack, "" if self.n == 1 else self.n)
 
 # ==============================================================================
 # Pattern Operators
@@ -1687,9 +1878,9 @@ class PatternCaptureN(CompositePattern):
     Get the nth capture of a pattern. If capture does not exist, use the default
     if specified, or include no captures in match that is returned.
 
-    :param context:
-    :param string: String to match
-    :param index:  The location of in the current string for pattern searches.
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     :return:  A match with just the nth capture retained.
 
     :Example:
@@ -1778,7 +1969,10 @@ class PatternAnd(CompositePattern):
     tes
     >>> p("testing") is None
     True
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
 
     MATCH = Match(string, index)
@@ -1839,7 +2033,10 @@ class PatternOr(CompositePattern):
     fred
     >>> p("none") is None
     True
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
 
     for pattern in self.patterns:
@@ -1879,7 +2076,10 @@ class PatternNot(CompositePattern):
     True
     >>> p("fred") == ""
     True
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
 
     match = self.patterns[0](string, index, context)
@@ -2042,7 +2242,10 @@ class PatternLookAhead(CompositePattern):
     True
     >>> p("Failed") is None
     True
-    :param context:
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
     """
     match = self.patterns[0].match(string, index, context)
     if isinstance(match, Match): return match.setEnd(index)
@@ -2082,15 +2285,8 @@ class BackCaptureString(object):
   def __init__(self, string):
     self.string           = string
     self.backcaptures     = []
-    self.dbg              = False
     self.startOfLineIndex = [0]
     self.stringSz         = len(string)
-
-  # ----------------------------------------------------------------------------
-
-  def debug(self, TF=None):
-    if TF is None: return self.dbg
-    self.dbg = TF
 
   # ----------------------------------------------------------------------------
 
@@ -2342,17 +2538,29 @@ def matchUntil(pattern, matchAfter=False):
 # Match processing functions
 # ==============================================================================
 
-def join(match, joiner=""):
+def join(separator=""):
   """
-  Join the values in a capture.
+  The join function returns a match handler function that can be used to join
+  captures from a match. The format of the function that is returned is:
 
-  :param match: A match object.
-  :param joiner: The string to use to join the capture values (Empty sting by default)
+    `modified_match = fn(match)`
+
+  This can be used in a pattern as follows:
+
+  >>> p = C(1)**1 / join(",")
+  >>> p.match("123").captures
+  ['1,2,3']
+
+  :param separator: The string to use to join the capture values (Empty sting by default)
   :return: The match object with the joined string as the only capture.
   """
-  joined = joiner.join(match.captures)
-  match.captures = [joined]
-  return match
+  def joinfn(match):
+
+    joined = separator.join(match.captures)
+    match.captures = [joined]
+    return match
+
+  return joinfn
 
 # ==============================================================================
 # ==============================================================================
