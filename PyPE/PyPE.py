@@ -345,57 +345,173 @@ def escapeStr(string):
 
 # ==============================================================================
 
+def ANDfilter(first, second):
+  def AND(**args):
+    return first(**args) and second(**args)
+  return AND
+
+# ==============================================================================
+
+def ORfilter(first, second):
+  def OR(**args):
+    return first(**args) or second(**args)
+  return OR
+
+# ==============================================================================
+
+def registerDbgFilter(filter):
+  DebugOptions.registerFilter(filter)
+  return filter
+
+# ==============================================================================
+
 class DebugOptions(object):
 
-  # This is a debug (dbg) option that indicates that only named items should be
-  # printed in the debug output.
-  NAMED = 'named' # Debug only named Patterns
-  HIDE  = False   # Suppress debug output for a Pattern and its children
-  SHOW  = True    # Show debug info
+  # Register filters that can be used with DebugOptions class.
+  filters = {}
 
   # ----------------------------------------------------------------------------
 
-  def __init__(self, show = True, showOnlySuccess=False, showPatternBefore=True):
+  @staticmethod
+  def registerFilter(filter, name=None):
     """
-    This object stores the debug options associated with a pattern.
+    The beforeMatch and afterMatch function each use a filter to determine if
+    debug information will be displayed.
 
-    :param debugOpt: The debug option to use. The possible values are:
-
-           +----------------+--------------------------------------------------+
-           | *True*         | Enable debugging for all subpatterns that are    |
-           |                | not hidden.                                      |
-           +----------------+--------------------------------------------------+
-           | 'hide', 'h',   | Suppress debugging for all subpatterns (that are |
-           |  or *False*    | not enabled manually).                           |
-           +----------------+--------------------------------------------------+
-           | 'named' or 'n' | Enable debugging for all named Pattern(s).       |
-           +----------------+--------------------------------------------------+
-           | None           | (Default value) use the debug option associated  |
-           |                | a parent pattern.                                |
-           +----------------+--------------------------------------------------+
-
-    :param showOnlySuccess: Show only patterns that are successful.
-
-    :param showPatternBefore: Show a pattern before performing a match.
-
-    :return: When no *debugOpt* parameter is passed in, this returns the debug
-             value for this Pattern. If *debugOpt* is passed in, the Pattern is
-             returned. This is useful for chaining commands.
+    :param filter: A function of the form:
+           `trueOrFalse = filter(**args)`
+           The args are pattern, string, index, context, and possibly match
+    :param name: The name to register the filter under. If no name is passed in
+            the name of the function is used.`
+    :return: DebugOptions object
     """
 
-    self.showOnlySuccess   = showOnlySuccess
-    self.showPatternBefore = showPatternBefore
+    name = name or filter.__name__
+    DebugOptions.filters[name] = filter
 
-    if isinstance(show, basestring): show = show.lower()
-    if isinstance(show, bool):
-      pass
-    elif show in ('hide','h'):
-      show = False
-    elif show in ('named', 'n'):
-      show = "named"
+  # ==============================================================================
+
+  @staticmethod
+  def baseFilters():
+    """
+    Register the Default set of filters
+    """
+
+    @registerDbgFilter
+    def hide(**args): return False
+
+    @registerDbgFilter
+    def show(**args): return True
+
+    @registerDbgFilter
+    def named(pattern=None, **args): return pattern.name is not None
+
+    @registerDbgFilter
+    def show_only_success(**args): return isinstance(args['match'], Match) \
+                                   if 'match' in args else True
+
+    # TODO: How do we reset the index? Also, how to make threadsafe?
+    idx = [-1]
+    @registerDbgFilter
+    def show_index_change(index=None, **args):
+      result = idx[0] != index
+      idx[0] = index
+      return result
+
+  # ----------------------------------------------------------------------------
+
+  @staticmethod
+  def printEnter(pattern, string, index, context):
+    if pattern.name is None: return
+    print "Enter: <{0}> => ({1}) {2}".format(pattern.name, index, repr(pattern))
+
+  # ----------------------------------------------------------------------------
+
+  @staticmethod
+  def printMatch(pattern, string, index, context, match):
+
+    name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
+    print "Pattern: ({0}) {1}".format(index, name)
+    if match is None:
+      print "  Failed"
     else:
-      raise Exception("Illegal Debug Options for Pattern")
-    self.show = show
+      print "  Result: '{0}'".format(escapeStr(str(match)))
+      if isinstance(pattern, Capture):
+        print "  Captures: {0}".format(match.captures)
+      if isinstance(pattern, StackPtn):
+        print "  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack))
+
+  # ----------------------------------------------------------------------------
+
+  defaultBeforeMatchWriter = printEnter
+  defaultAfterMatchWriter  = printMatch
+
+  # ----------------------------------------------------------------------------
+
+  @staticmethod
+  def parseFilter(filter):
+    """
+    This takes a filter function or a filter specification string. A filter
+    specification is a string that indicates a set of registered filters to
+    use combined with and '&' and or '|' logic. Parenthesis can be used to
+    group filter items.
+
+    :param filter: A filter function or a string indicating
+    :return: The constructed filter.
+    """
+    if callable(filter): return filter
+
+    FILTER = C((alpha + '_') * (alpha + digit + '_') ** 0)
+    EXPR = 'EXPR' | Cg(
+      whitespace0 * (V('PRNS') + FILTER) * whitespace0 * C(S('&|')) * \
+      whitespace0 * (V('EXPR') + FILTER + V('PRNS')))
+    PRNS = 'PRNS' | whitespace0 * '(' * (EXPR + FILTER + V('PRNS')) * ')'
+    filterSpec = EXPR + PRNS + FILTER
+    setVs(EXPR, [EXPR, PRNS])
+    setVs(PRNS, [PRNS])
+
+    # --------------------------------------------------------------------------
+    def handleItem(item):
+      if isinstance(item, list): return handleOp(item)
+      return DebugOptions.filters[str(item)]
+    # --------------------------------------------------------------------------
+    def handleOp(op):
+      left = handleItem(op[0])
+      right = handleItem(op[2])
+      if str(op[1]) == '&': return ANDfilter(left, right)
+      if str(op[1]) == '|': return ORfilter(left, right)
+      raise Exception("Unexpected debug filter operation")
+    # --------------------------------------------------------------------------
+
+    filter = handleItem(filterSpec.match(filter))
+    return filter
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, beforeMatchFilter, afterMatchFilter, beforeMatchWriter=None,
+               afterMatchWriter=None):
+    """
+    Set up the filters for this DebugOptions object.
+
+    :param beforeMatchFilter: A filter spec (for parseFilter function) or filter
+           function used by the `beforeMatch` event. See `registerFilter` for
+           the filter function signature.
+    :param afterMatchFilter:  A filter spec (for parseFilter function) or a
+           filter function used by the `afterMatch` event.  See `registerFilter`
+           for the filter function signature.
+    :param beforeMatchWriter: The function to use to handle debug info before a
+           match. Default is `printEnter` function.
+    :param afterMatchWriter: The function to use to handle debug info after a
+           match. Default is `printMatch`.
+    """
+
+    # Set the before and after match Filters
+    self.beforeMatchFilter = self.parseFilter(beforeMatchFilter)
+    self.afterMatchFilter  = self.parseFilter(afterMatchFilter)
+
+    # Functions to write out debug information
+    self.beforeMatchWriter = beforeMatchWriter or self.defaultBeforeMatchWriter
+    self.afterMatchWriter  = afterMatchWriter  or self.defaultAfterMatchWriter
 
   # ----------------------------------------------------------------------------
 
@@ -403,18 +519,15 @@ class DebugOptions(object):
     """
     Called before a match is performed to print debug information
 
-    :param pattern: The pattern that was ging matched.
-    :param string: The string to match against
-    :param index: Location where match starts
-    :param context: The context that is forwarded while matching
+    :param pattern: The pattern being matched.
+    :param string: The string to match against.
+    :param index: Location where match starts.
+    :param context: The context that is forwarded while matching.
     """
-    show = (True if self.showPatternBefore and
-                    self.show != self.HIDE  and
-                    pattern.name is not None
-            else False)
-
-    if show:
-      print "Enter: <{0}> => ({1}) {2}".format(pattern.name, index, repr(pattern))
+    if self.beforeMatchFilter(pattern = pattern, string = string, index = index,
+                              context = context):
+      self.beforeMatchWriter(pattern = pattern, string = string, index = index,
+                             context = context)
 
   # ----------------------------------------------------------------------------
 
@@ -429,24 +542,13 @@ class DebugOptions(object):
     :param match: The pattern match (may be None)
     """
 
-    if self.show == self.HIDE or self.show == self.NAMED and pattern.name is None: return
+    if self.afterMatchFilter(pattern = pattern, string = string, index = index,
+                             context = context, match = match):
+      self.afterMatchWriter(pattern = pattern, string = string, index = index,
+                            context = context, match = match)
 
-    match_failed = not isinstance(match, Match)
-    if self.showOnlySuccess and match_failed: return
-
-    in_and_sequence = isinstance(pattern, PatternAnd) and pattern.is_sub_and
-    if context.parent is not None and context.parent.debug is not None and in_and_sequence: return
-
-    name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
-    print "Pattern: ({0}) {1}".format(index, name)
-    if match_failed:
-      print "  Failed"
-    else:
-      print "  Result: '{0}'".format(escapeStr(str(match)))
-      if isinstance(pattern, Capture):
-        print "  Captures: {0}".format(match.captures)
-      if isinstance(pattern, StackPtn):
-        print "  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack))
+# Set up the base filters
+DebugOptions.baseFilters()
 
 # ==============================================================================
 
@@ -519,22 +621,55 @@ class Pattern(object):
 
   # ----------------------------------------------------------------------------
 
-  def debug(self, *args, **kwargs):
+  def debug(self, debugOpt=None, **args):
     """
-    .. func:ptn.debug([debugOpt)
+    .. func:ptn.debug([debugOptions])
 
     Set or return the debug options for this pattern. For the available options,
     see the DebugOptions class constructor which is called with the parameters
     sent to this function.
+
+    :param debugOpt: This option can be an object that implements the
+           `beforeMatch` and `afterMatch` functions with signtures that match
+           the `DebugOptions` functions of the same name. If this is True or
+           'show', debugging is enabled. If this is False or 'hide', debugging
+           is disabled. If this is 'named', only named patterns are shown. If
+           this is 'show_only_success', only successful matches are shown.
+
+    :param **args: If more control is needed, arguments can be passed in that
+           are forwarded to the DebugOptions constructor. See the constructor
+           for more details.
 
     :return: When no options are passed in, this returns the debug options object
              for this Pattern. If parameters are passed in, a DebugOptions object
              is created and associated with this Pattern.
     """
 
-    if len(args) == 0 and len(kwargs) == 0: return self.dbg
+    if debugOpt is None and len(args) == 0: return self.dbg
 
-    self.dbg = DebugOptions(*args, **kwargs)
+    # Check whether an object with the debug interface is passed in. If so
+    # set the debug to this.
+    if debugOpt is not None:
+      if hasattr(debugOpt, "beforeMatch") and hasattr(debugOpt, "afterMatch"):
+        self.dbg = debugOpt
+        return
+      if debugOpt in (True, 'show'):
+        if "beforeMatch" not in args: args['beforeMatchFilter'] = "show"
+        if "afterMatch" not in args: args['afterMatchFilter'] = "show"
+      elif debugOpt in (False, 'hide'):
+        if "beforeMatch" not in args: args['beforeMatchFilter'] = "hide"
+        if "afterMatch" not in args: args['afterMatchFilter'] = "hide"
+      elif debugOpt in ('named'):
+        if "beforeMatch" not in args: args['beforeMatchFilter'] = "named"
+        if "afterMatch" not in args: args['afterMatchFilter'] = "named"
+      elif debugOpt == 'show_only_success':
+        if "beforeMatch" not in args: args['beforeMatchFilter'] = "named"
+        if "afterMatch" not in args: args['afterMatchFilter'] = "show_only_success"
+      elif debugOpt == "show_index_change":
+        if "beforeMatch" not in args: args['beforeMatchFilter'] = "named"
+        if "afterMatch" not in args: args['afterMatchFilter'] = "show_index_change"
+
+    self.dbg = DebugOptions(**args)
     return self
 
   # ----------------------------------------------------------------------------
@@ -1271,6 +1406,24 @@ class C(Capture):
 
   # ----------------------------------------------------------------------------
 
+  def containsPatterns(self):
+    """
+    Indicate that this does contain patterns.
+    :return: True
+    """
+    return True
+
+  # ----------------------------------------------------------------------------
+
+  def getPatterns(self):
+    """
+    Get the pattern associated with this group capture
+    :return: The contained pattern in a list
+    """
+    return [self.pattern]
+
+  # ----------------------------------------------------------------------------
+
   @ConfigBackCaptureString4match
   def match(self, string, index=0, context=None):
     """
@@ -1322,6 +1475,24 @@ class Cb(AtomicPattern):
     self.capname = name
     self.pattern = P.asPattern(pattern) if pattern is not None else None
     self.captureIndex = captureIndex
+
+  # ----------------------------------------------------------------------------
+
+  def containsPatterns(self):
+    """
+    Indicate that this does contain patterns.
+    :return: True
+    """
+    return self.pattern is not None
+
+  # ----------------------------------------------------------------------------
+
+  def getPatterns(self):
+    """
+    Get the pattern associated with this group capture
+    :return: The contained pattern in a list
+    """
+    return [self.pattern]
 
   # ----------------------------------------------------------------------------
 
@@ -1416,6 +1587,24 @@ class Cg(Capture):
     """
     Pattern.__init__(self)
     self.pattern = pattern
+
+  # ----------------------------------------------------------------------------
+
+  def containsPatterns(self):
+    """
+    Indicate that this does contain patterns.
+    :return: True
+    """
+    return True
+
+  # ----------------------------------------------------------------------------
+
+  def getPatterns(self):
+    """
+    Get the pattern associated with this group capture
+    :return: The contained pattern in a list
+    """
+    return [self.pattern]
 
   # ----------------------------------------------------------------------------
 
@@ -1589,6 +1778,24 @@ class Sc(StackPtn):
     Pattern.__init__(self)
     self.stack = stack
     self.pattern = P.asPattern(pattern)
+
+  # ----------------------------------------------------------------------------
+
+  def containsPatterns(self):
+    """
+    Indicate that this does contain patterns.
+    :return: True
+    """
+    return True
+
+  # ----------------------------------------------------------------------------
+
+  def getPatterns(self):
+    """
+    Get the pattern associated with this group capture
+    :return: The contained pattern in a list
+    """
+    return [self.pattern]
 
   # ----------------------------------------------------------------------------
 
