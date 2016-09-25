@@ -69,13 +69,67 @@ def PythonGrammar():
   ws1 = (P(whitespace) & 'hide')**1
   newline.setName('newline')
 
+  # ----------------------------------------------------------------------------
+
+  def checkIndent(match):
+    """
+    Verify that the indent is greater than the previous indent
+    """
+    if match.context == None: return match
+    indents = match.context.getStack("indent")
+    if indents is None: return
+
+    if len(indents) < 2: return match
+
+    # Check that the indentation is larger than previous indentation
+    if len(indents[-1]) > len(indents[-2]):
+      #TODO: Report an error
+      pass
+
+    # Check that the new contains the previous indentation characters
+    if not indents[-1].startswith(indents[-2]):
+      # TODO: report an error
+      pass
+
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  def dedent(match):
+    """
+    Check for a valid dedent and remove indents from the indent stack
+    """
+    if match.context == None: return match
+    indents = match.context.getStack("indent")
+
+    # TODO: Report an invalid deindent
+    if indents is None or len(indents) == 0: return
+
+    indent = match.getValue()
+    indentSz = len(indent)
+    # TODO: report that the dedented line is actually indented
+    if indentSz > len(indents.peek()): pass
+    indents.pop() # Pop at least one indent from the stack
+
+    while indents.peek() != None:
+      oldIndentSz = len(indents.peek())
+      # TODO: Report an indent size mismatch
+      if oldIndentSz < indentSz: break
+      if oldIndentSz == indentSz:
+        # TODO: Report spaces/tabs mismatch
+        if indent != indents.peek(): break
+        break  # Matches current indent
+      indents.pop()
+
+  # ----------------------------------------------------------------------------
+
   # TODO: Track the indentation and unindent
-  INDENT = 'INDENT' | (ws * newline)**0 * Sc('indent',C(ws))
-  DEDENT = 'DEDENT' | P(ws)
+  INDENT = 'INDENT' | (ws * newline)**0 * Sc('indent',C(ws)) / checkIndent
+  DEDENT = 'DEDENT' | P(ws) / dedent
 
   comment = 'comment' | '#' * matchUntil(newline)
   next_stmt_line = 'next_stmt_line' | (ws * comment**-1 * (newline + -P(1)))**1
-  match_indent = 'match_indent' | (Sm('indent')*(-whitespace) + P(0) & True)
+  match_indent = 'match_indent' | (Sm('indent')*(-whitespace) + P(0))
 
   NAME =  "name" | (alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0
 
@@ -440,7 +494,7 @@ def PythonGrammar():
   setVs(list_for,    [exprlist])
   setVs(factor,      [power])
 
-  funcdef.debug(True, showOnlySuccess=True)
+  funcdef.debug('show_index_change')
   return file_input
 
 pygrammar = PythonGrammar()
@@ -448,8 +502,6 @@ pygrammar = PythonGrammar()
 
 m = pygrammar.match("""
 def test(one, two="none"):
-# test
-    # test
   a = 5 and 2
   print "Stuff"
 
