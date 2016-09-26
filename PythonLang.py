@@ -111,21 +111,13 @@ def PythonGrammar():
     if indentSz > len(indents.peek()): pass
     indents.pop() # Pop at least one indent from the stack
 
-    while indents.peek() != None:
-      oldIndentSz = len(indents.peek())
-      # TODO: Report an indent size mismatch
-      if oldIndentSz < indentSz: break
-      if oldIndentSz == indentSz:
-        # TODO: Report spaces/tabs mismatch
-        if indent != indents.peek(): break
-        break  # Matches current indent
-      indents.pop()
+    return match
 
   # ----------------------------------------------------------------------------
 
   # TODO: Track the indentation and unindent
   INDENT = 'INDENT' | (ws * newline)**0 * Sc('indent',C(ws)) / checkIndent
-  DEDENT = 'DEDENT' | P(ws) / dedent
+  DEDENT = 'DEDENT' | P(0) / dedent
 
   comment = 'comment' | '#' * matchUntil(newline)
   next_stmt_line = 'next_stmt_line' | (ws * comment**-1 * (newline + -P(1)))**1
@@ -316,10 +308,10 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # stmt: simple_stmt | compound_stmt
-  stmt = 'stmt' | compound_stmt + simple_stmt
+  stmt = 'stmt' | ~P(1)*(compound_stmt + simple_stmt)
 
   # ----------------------------------------------------------------------------
-  # Comparison
+  # Test
   # ----------------------------------------------------------------------------
 
   # comp_op: '<'|'>'|'=='|'>='|'<='|'<>'|'!='|'in'|'not' 'in'|'is'|'is' 'not'
@@ -338,19 +330,49 @@ def PythonGrammar():
   # or_test: and_test ('or' and_test)*
   or_test = 'or_test' | and_test * (ws1*'or'*ws1 * and_test)**0
 
+  # lambdef: 'lambda' [varargslist] ':' test
+  lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('test')
+
+  # test: or_test ['if' or_test 'else' test] | lambdef
+  test = 'test' | or_test * (ws1*'if'*ws*or_test*ws1*'else'*ws1*V('test'))**-1 + lambdef
+
+  # ----------------------------------------------------------------------------
+  # Factor
+  # ----------------------------------------------------------------------------
+
+  # sliceop: ':' [test]
+  sliceop = 'sliceop' | ':' *ws* (test)**-1
+
+  # subscript: '.' '.' '.' | test | [test] ':' [test] [sliceop]
+  subscript = 'subscript' | '.' *ws* '.' *ws* '.' + test + (test)**-1 *ws*':'*ws * (test)**-1 * (sliceop)**-1
+
+  # subscriptlist: subscript (',' subscript)* [',']
+  subscriptlist = 'subscriptlist' | subscript * (ws*','*ws*subscript)**0 *ws* P(',')**-1
+
+  # trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
+  trailer = 'trailer' | ws*'(' *ws* (arglist)**-1 *ws* ')' + ws*'[' *ws* subscriptlist *ws* ']' + '.' * NAME
+
+  # factor: ('+'|'-'|'~') factor | power
+  factor = 'factor' | (S('+-~')*ws)**0 * V('power')
+
+  # ----------------------------------------------------------------------------
+  # Atom
+  # ----------------------------------------------------------------------------
+
   # # Backward compatibility cruft to support:
   # # [ x for x in lambda: True, lambda: False if x() ]
   # # even while also allowing:
   # # lambda x: 5 if x else 2
   # # (But not a mix of the two)
   # old_lambdef: 'lambda' [varargslist] ':' old_test
-  old_lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('old_test')
+  old_lambdef = 'lambda' * ws1 * (varargslist) ** -1 * ws * ':' * V('old_test')
 
   # old_test: or_test | old_lambdef
   old_test = 'old_test' | or_test + old_lambdef
 
   # testlist_safe: old_test [(',' old_test)+ [',']]
-  testlist_safe = old_test *ws* ((','*ws*old_test)**1 *ws* P(',')**-1)**-1
+  testlist_safe = old_test * ws * ((',' * ws * old_test) ** 1 * ws * P(
+    ',') ** -1) ** -1
 
   # comp_for: 'for' exprlist 'in' or_test [comp_iter]
   comp_for = 'comp_for' | 'for' *ws1* V('exprlist') *ws1* 'in' *ws1* or_test * V('comp_iter')**-1
@@ -360,20 +382,6 @@ def PythonGrammar():
 
   # comp_iter: comp_for | comp_if
   comp_iter = 'comp_iter' | comp_for + comp_if
-
-  # ----------------------------------------------------------------------------
-  # Test
-  # ----------------------------------------------------------------------------
-
-  # lambdef: 'lambda' [varargslist] ':' test
-  lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('test')
-
-  # test: or_test ['if' or_test 'else' test] | lambdef
-  test = 'test' | or_test * (ws1*'if'*ws*or_test*ws1*'else'*ws1*V('test'))**-1 + lambdef
-
-  # ----------------------------------------------------------------------------
-  # Atom
-  # ----------------------------------------------------------------------------
 
   # dictorsetmaker: ( (test ':' test (comp_for | (',' test ':' test)* [','])) |
   #                   (test (comp_for | (',' test)* [','])) )
@@ -407,7 +415,7 @@ def PythonGrammar():
   #        '{' [dictorsetmaker] '}' |
   #        '`' testlist1 '`' |
   #        NAME | NUMBER | STRING+)
-  atom = 'atom' | ( '(' *ws* (yield_expr + testlist_comp)**-1 +
+  atom = 'atom' | ( '(' *ws* (yield_expr +  testlist_comp)**-1 *ws* ')' +
            '[' *ws* listmaker**-1 *ws* ']' +
            '{' *ws* dictorsetmaker**-1 *ws* '}' +
            '`' * testlist1 * '`' +
@@ -417,23 +425,7 @@ def PythonGrammar():
   # Expression
   # ----------------------------------------------------------------------------
 
-  # sliceop: ':' [test]
-  sliceop = 'sliceop' | ':' *ws* (test)**-1
-
-  # subscript: '.' '.' '.' | test | [test] ':' [test] [sliceop]
-  subscript = 'subscript' | '.'*ws*'.'*ws*'.' + test + (test)**-1 *ws*':'*ws * (test)**-1 * (sliceop)**-1
-
-  # subscriptlist: subscript (',' subscript)* [',']
-  subscriptlist = 'subscriptlist' | subscript * (ws*','*ws*subscript)**0 *ws* P(',')**-1
-
-  # trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
-  trailer = 'trailer' | ws*'(' *ws* (arglist)**-1 *ws* ')' + ws*'[' *ws* subscriptlist *ws* ']' + '.' * NAME
-
-  # factor: ('+'|'-'|'~') factor | power
-  factor = 'factor' | (S('+-~')*ws)**0 * V('power')
-
   # power: atom trailer* ['**' factor]
-
   power = 'power' | atom * trailer**0 * (ws*'**'*ws * factor)**-1
 
   # term: factor (('*'|'/'|'%'|'//') factor)*
@@ -464,41 +456,40 @@ def PythonGrammar():
   # Close grammar
   # ----------------------------------------------------------------------------
 
-  setVs(fpdef,       [fplist])
-  setVs(varargslist, [test])
-  setVs(expr_stmt,   [testlist, yield_expr])
-  setVs(print_stmt,  [test])
-  setVs(del_stmt,    [exprlist])
-  setVs(return_stmt, [testlist])
-  setVs(raise_stmt,  [test])
-  setVs(yield_stmt,  [yield_expr])
-  setVs(exec_stmt,   [test])
-  setVs(assert_stmt, [test])
-  setVs(suite,       [stmt])
-  setVs(if_stmt,     [test])
-  setVs(while_stmt,  [test])
-  setVs(for_stmt,    [exprlist, testlist])
+  setVs(fpdef,         [fplist])
+  setVs(varargslist,   [test])
+  setVs(expr_stmt,     [testlist, yield_expr])
+  setVs(print_stmt,    [test])
+  setVs(del_stmt,      [exprlist])
+  setVs(return_stmt,   [testlist])
+  setVs(raise_stmt,    [test])
+  setVs(yield_stmt,    [yield_expr])
+  setVs(exec_stmt,     [test])
+  setVs(assert_stmt,   [test])
+  setVs(suite,         [stmt])
+  setVs(if_stmt,       [test])
+  setVs(while_stmt,    [test])
+  setVs(for_stmt,      [exprlist, testlist])
   setVs(except_clause, [test])
-  setVs(with_item,   [test, expr])
-  setVs(argument,    [test, comp_for])
-  setVs(arglist,     [test])
-  setVs(funcdef,     [suite])
-  setVs(testlist,    [test])
-  setVs(comparison,  [expr])
-  setVs(old_lambdef, [old_test])
-  setVs(comp_for,    [exprlist, comp_iter])
-  setVs(comp_if,     [comp_iter])
-  setVs(lambdef,     [test])
-  setVs(test,        [test])
-  setVs(list_iter,   [list_for, list_if])
-  setVs(list_for,    [exprlist])
-  setVs(factor,      [power])
+  setVs(with_item,     [test, expr])
+  setVs(argument,      [test, comp_for])
+  setVs(arglist,       [test])
+  setVs(funcdef,       [suite])
+  setVs(testlist,      [test])
+  setVs(comparison,    [expr])
+  setVs(old_lambdef,   [old_test])
+  setVs(comp_for,      [exprlist, comp_iter])
+  setVs(comp_if,       [comp_iter])
+  setVs(lambdef,       [test])
+  setVs(test,          [test])
+  setVs(list_iter,     [list_for, list_if])
+  setVs(list_for,      [exprlist])
+  setVs(factor,        [power])
 
-  funcdef.debug('show_index_change')
   return file_input
 
 pygrammar = PythonGrammar()
-#pygrammar.debug(True)
+#pygrammar.debug("named")
 
 m = pygrammar.match("""
 def test(one, two="none"):
