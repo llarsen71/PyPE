@@ -1817,7 +1817,7 @@ class Sc(StackPtn):
     if match.hasCaptures():
       context.extend(self.stack, match.captures)
       match.captures = []
-      print "{0}: {1}".format(self.stack, context.getStack(self.stack))
+      #print "{0}: {1}".format(self.stack, context.getStack(self.stack))
 
     return match
 
