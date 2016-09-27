@@ -664,6 +664,9 @@ class Pattern(object):
         self.dbg = debugOpt
         return
 
+      optMap = {True:'show', False:'hide'}
+      if debugOpt in optMap: debugOpt = optMap[debugOpt]
+
       # Check if the debugOpt matches one of the registered filters
       if debugOpt in DebugOptions.filters.keys(): args['matchFilter'] = debugOpt
 
