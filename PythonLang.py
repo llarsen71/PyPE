@@ -94,6 +94,7 @@ def PythonGrammar():
     indents = match.context.getStack("indent")
     if indents is None: return
 
+    string = match.string
     if len(indents) < 2: return match
 
     # Check that the indentation is larger than previous indentation
@@ -135,7 +136,7 @@ def PythonGrammar():
   DEDENT = 'DEDENT' | P(0) / dedent
 
   next_stmt_line = 'next_stmt_line' | (ws * comment**-1 * (newline + -P(1)))**1
-  match_indent = 'match_indent' | (Sm('indent')*(-whitespace) + P(0))
+  match_indent = 'match_indent' | Sm('indent')*(-whitespace)
 
   STRING = STRING_()
   NUMBER = NUMBER_()
@@ -173,26 +174,26 @@ def PythonGrammar():
   # # For normal assignments, additional restrictions enforced by the interpreter
   # print_stmt: 'print' ( [ test (',' test)* [','] ] |
   #                       '>>' test [ (',' test)+ [','] ] )
-  print_stmt = 'print_stmt' | 'print' * (ws*(V('test') * (ws*','*ws*V('test'))**0 * (ws*P(','))**-1)**-1 +
+  print_stmt = 'print_stmt' | 'print' * (ws1*(V('test') * (ws*','*ws*V('test'))**0 * (ws*P(','))**-1)**-1 +
                           '>>'*ws*V('test')*((ws*','*ws*V('test')*(P(','))**-1 )**0)**-1)
 
   # del_stmt: 'del' exprlist
-  del_stmt = 'del_stmt' | 'del' *ws* V('exprlist')
+  del_stmt = 'del_stmt' | 'del' *ws1* V('exprlist')
 
   # pass_stmt: 'pass'
-  pass_stmt = 'pass_stmt' | P('pass')
+  pass_stmt = 'pass_stmt' | P('pass')*(ws1 + ~newline + -P(1))
 
   # break_stmt: 'break'
-  break_stmt = 'break_stmt' | P('break')
+  break_stmt = 'break_stmt' | P('break')*(ws1 + ~newline + -P(1))
 
   # continue_stmt: 'continue'
-  continue_stmt = 'continue_stmt' | P('continue')
+  continue_stmt = 'continue_stmt' | P('continue')*(ws1 + ~newline + -P(1))
 
   # return_stmt: 'return' [testlist]
-  return_stmt = 'return_stmt' | 'return' *ws* V('testlist')
+  return_stmt = 'return_stmt' | 'return' *(~newline + ws1* V('testlist'))
 
   # raise_stmt: 'raise' [test [',' test [',' test]]]
-  raise_stmt = 'raise_stmt' | 'raise' * (ws1*V('test') * (ws*','*ws*V('test') *
+  raise_stmt = 'raise_stmt' | 'raise' * ws1 * (V('test') * (ws*','*ws*V('test') *
                                         (ws*','*ws*V('test'))**-1)**-1)**-1
 
   # yield_stmt: yield_expr
@@ -513,7 +514,7 @@ def PythonGrammar():
   return file_input
 
 pygrammar = PythonGrammar()
-pygrammar.debug("named")
+#pygrammar.debug("named")
 
 with open("PythonLang.py") as file:
   code = file.read()
