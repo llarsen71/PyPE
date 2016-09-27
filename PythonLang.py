@@ -9,7 +9,7 @@ from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, alpha, digit, newline, \
 #      P('yield')
 
 # ==============================================================================
-def NUMBER():
+def NUMBER_():
   # ----------------------------------------------------------------------------
   # INTEGER and LONGINTEGER definition
   # ----------------------------------------------------------------------------
@@ -47,27 +47,35 @@ def NUMBER():
   return "number" | integer + longinteger + floatnumber + imagnumber
 
 # ==============================================================================
-def STRING():
+def STRING_():
   escapeseq       = "\\" * P(1)
-  longstringchar  = P(1) - "\\"
-  shortstringchar = P(1) - ("\\" + newline + quote)
+  longstringchar  = P(1) - ("\\" + Cb("quote"))
+  shortstringchar = P(1) - ("\\" + newline + Cb("quote"))
   longstringitem  = longstringchar + escapeseq
   shortstringitem = shortstringchar + escapeseq
 
-  longstring      = ("'''" * longstringitem**0 * "'''" +
-                     '"""' * longstringitem**0 * '"""')  & "hide"
-  shortstring     = Cb("quote",quote) * shortstringitem**0 * Cb("quote")  & "hide"
+  tripplequote    = P('"""') + P("'''")
+  longstring      = 'longstring'  | Cb('quote', tripplequote) * \
+                                    longstringitem**0 * Cb('quote')
+  shortstring     = 'shortstring' | Cb("quote",quote) * \
+                                    shortstringitem**0 * Cb("quote")
 
   stringprefix    =  S("rR") + S("uUbB") * S("rR")**-1
-  stringliteral   =  stringprefix**-1 * (shortstring + longstring)  & "hide"
+  stringliteral   =  stringprefix**-1 * (shortstring + longstring)
 
   return "string" | longstring + shortstring + stringliteral
 
 # ==============================================================================
 def PythonGrammar():
-  ws = (P(whitespace) & 'hide')**0
-  ws1 = (P(whitespace) & 'hide')**1
+  ws0 = whitespace**0
+  ws = ws0 * ('\\' * ws0 * newline * ws0)**0 & 'hide'
+  ws1 = whitespace * ws & 'hide'
   newline.setName('newline')
+
+  # Stack capture and pop values from the 'Group' stack. This stack is used to
+  # track parenthesis and other grouping operators
+  SC = lambda ptn: Sc("Group", C(P.asPattern(ptn)))
+  SP = lambda ptn: P.asPattern(ptn) * Sp("Group")
 
   # ----------------------------------------------------------------------------
 
@@ -123,10 +131,12 @@ def PythonGrammar():
   next_stmt_line = 'next_stmt_line' | (ws * comment**-1 * (newline + -P(1)))**1
   match_indent = 'match_indent' | (Sm('indent')*(-whitespace) + P(0))
 
+  STRING = STRING_()
+  NUMBER = NUMBER_()
   NAME =  "name" | (alpha + '_' & 'hide') * (alpha + digit + '_' & 'hide')**0
 
   # fpdef: NAME | '(' fplist ')'
-  fpdef = 'fpdef' | NAME + '(' *ws* V('fplist') *ws* ')'
+  fpdef = 'fpdef' | NAME + SC('(') *ws* V('fplist') *ws* SP(')')
 
   # fplist: fpdef (',' fpdef)* [',']
   fplist = 'fplist' | fpdef * (ws*',' *ws* fpdef)**0 *ws* P(',')**-1
@@ -167,13 +177,13 @@ def PythonGrammar():
   pass_stmt = 'pass_stmt' | P('pass')
 
   # break_stmt: 'break'
-  break_stmt = P('break')
+  break_stmt = 'break_stmt' | P('break')
 
   # continue_stmt: 'continue'
-  continue_stmt = P('continue')
+  continue_stmt = 'continue_stmt' | P('continue')
 
   # return_stmt: 'return' [testlist]
-  return_stmt = 'return' * V('testlist')
+  return_stmt = 'return_stmt' | 'return' *ws* V('testlist')
 
   # raise_stmt: 'raise' [test [',' test [',' test]]]
   raise_stmt = 'raise_stmt' | 'raise' * (ws1*V('test') * (ws*','*ws*V('test') *
@@ -201,12 +211,12 @@ def PythonGrammar():
   import_as_name = 'import_as_name' | NAME * (ws1*'as'*ws1*NAME)**-1
 
   # import_as_names: import_as_name (',' import_as_name)* [',']
-  import_as_names = 'import_as_names' | import_as_name * (ws*','*import_as_name)**0 * (ws*P(','))**-1
+  import_as_names = 'import_as_names' | import_as_name * (ws*','*ws*import_as_name)**0 * (ws*P(','))**-1
 
   # import_from: ('from' ('.'* dotted_name | '.'+)
   #               'import' ('*' | '(' import_as_names ')' | import_as_names))
   import_from = 'import_from' | 'from' *ws1* (P('.')**0*dotted_name + P('.')**1) *ws* \
-                'import' * (ws*'*' + '('*ws*import_as_name*ws*')' )
+                'import' * (ws*'*' + SC('(')*ws*import_as_names*ws*SP(')') + ws*import_as_names*ws )
 
   # import_stmt: import_name | import_from
   import_stmt = 'import_stmt' | import_name + import_from
@@ -233,7 +243,7 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # suite: simple_stmt | NEWLINE INDENT stmt+ DEDENT
-  suite = 'suite' | next_stmt_line * INDENT * V('stmt') * (match_indent * V('stmt'))**0 * DEDENT + simple_stmt
+  suite = 'suite' | next_stmt_line * INDENT * V('stmt') * (match_indent * V('stmt'))**0 * DEDENT + ws*simple_stmt
 
   # if_stmt: 'if' test ':' suite ('elif' test ':' suite)* ['else' ':' suite]
   if_stmt = 'if_stmt' | 'if'*ws*V('test')*ws*':'*suite
@@ -275,27 +285,24 @@ def PythonGrammar():
   # arglist: (argument ',')* (argument [',']
   #                          |'*' test (',' argument)* [',' '**' test]
   #                          |'**' test)
-  arglist = 'arglist' | (argument*ws*',')**0 * (argument * (ws*',')**-1 +
-                                    ws*'*'*ws*V('test')*(ws*','*ws*argument)**0*(ws*',' * '**' * V('test'))**-1 +
-                                    ws * '**' * V('test'))
+  arglist = 'arglist' | (argument*ws*','*ws)**0 * (argument *ws* (','*ws)**-1 +
+                                    '*'*ws*V('test')*ws*(','*ws*argument*ws)**0*(',' *ws* '**' *ws* V('test'))**-1 +
+                                    '**' * V('test'))*ws
 
   # decorator: '@' dotted_name [ '(' [arglist] ')' ] NEWLINE
   # decorators: decorator+
   decorator  = 'decorator' | '@' *ws* dotted_name *ws* \
-                             ('(' *ws* arglist**-1 *ws* ')')**0 *ws* newline
+                             (SC('(') *ws* arglist**-1 *ws* SP(')'))**0 *ws* newline
   decorators = 'decorators' | decorator**1
 
   # parameters: '(' [varargslist] ')'
-  parameters = 'parameters' | '(' *ws* varargslist**-1 *ws* ')'
+  parameters = 'parameters' | SC('(') *ws* varargslist**-1 *ws* SP(')')
 
   # funcdef: 'def' NAME parameters ':' suite
   funcdef = 'funcdef' | 'def' *ws1* NAME *ws* parameters *ws* ':' * V('suite')
 
-  # testlist: test (',' test)* [',']
-  testlist = 'testlist' | V('test') * (ws*','*ws*V('test'))**0 * (ws*',')**-1
-
   # classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
-  classdef = 'classdef' | 'class' *ws1* NAME * ('('*ws*testlist*ws*')')**-1 * ':' *suite
+  classdef = 'classdef' | 'class' *ws1* NAME * (SC('(') *ws* V('testlist') *ws* SP(')'))**-1 * ':' *suite
 
   # decorated: decorators (classdef | funcdef)
   decorated = 'decorated' | decorators * (classdef + funcdef)
@@ -314,7 +321,7 @@ def PythonGrammar():
   # Test
   # ----------------------------------------------------------------------------
 
-  # comp_op: '<'|'>'|'=='|'>='|'<='|'<>'|'!='|'in'|'not' 'in'|'is'|'is' 'not'
+  # comp_op: '<' | '>' | '==' | '>=' | '<=' | '<>' | '!=' | 'in' | 'not' 'in' | 'is' | 'is' 'not'
   comp_op = 'comp_op' | P('<') + P('>') + P('==') + P('>=') + P('<=') + P('<>') + P('!=') + \
             P('in') + P('not')*ws1*P('in') + P('is') + P('is')*ws1*P('not')
 
@@ -331,10 +338,16 @@ def PythonGrammar():
   or_test = 'or_test' | and_test * (ws1*'or'*ws1 * and_test)**0
 
   # lambdef: 'lambda' [varargslist] ':' test
-  lambdef = 'lambda' *ws1* (varargslist)**-1 *ws*':' * V('test')
+  lambdef = 'lambdef' | 'lambda' *ws1* (varargslist)**-1 *ws*':' *ws* V('test')
 
   # test: or_test ['if' or_test 'else' test] | lambdef
-  test = 'test' | or_test * (ws1*'if'*ws*or_test*ws1*'else'*ws1*V('test'))**-1 + lambdef
+  test = 'test' | lambdef + or_test * (ws1*'if'*ws*or_test*ws1*'else'*ws1*V('test'))**-1
+
+  # testlist: test (',' test)* [',']
+  testlist = 'testlist' | test * (ws*',' *ws* test)**0 * (ws*',')**-1
+
+  # testlist1: test (',' test)*
+  testlist1 = 'testlist1' | test *ws* (',' *ws* test*ws)**0
 
   # ----------------------------------------------------------------------------
   # Factor
@@ -350,9 +363,11 @@ def PythonGrammar():
   subscriptlist = 'subscriptlist' | subscript * (ws*','*ws*subscript)**0 *ws* P(',')**-1
 
   # trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
-  trailer = 'trailer' | ws*'(' *ws* (arglist)**-1 *ws* ')' + ws*'[' *ws* subscriptlist *ws* ']' + '.' * NAME
+  trailer = 'trailer' | ws*SC('(') *ws* (arglist)**-1 *ws* SP(')') + \
+                        ws*SC('[') *ws* subscriptlist *ws* SP(']') + \
+                        '.' * NAME
 
-  # factor: ('+'|'-'|'~') factor | power
+  # factor: ('+' | '-' | '~') factor | power
   factor = 'factor' | (S('+-~')*ws)**0 * V('power')
 
   # ----------------------------------------------------------------------------
@@ -407,19 +422,16 @@ def PythonGrammar():
   # yield_expr: 'yield' [testlist]
   yield_expr = 'yield_expr' | 'yield' *ws1* (testlist)**-1
 
-  # testlist1: test (',' test)*
-  testlist1 = 'testlist1' | test *ws* (',' *ws* test*ws)**0
-
   # atom: ('(' [yield_expr|testlist_comp] ')' |
   #        '[' [listmaker] ']' |
   #        '{' [dictorsetmaker] '}' |
   #        '`' testlist1 '`' |
   #        NAME | NUMBER | STRING+)
-  atom = 'atom' | ( '(' *ws* (yield_expr +  testlist_comp)**-1 *ws* ')' +
-           '[' *ws* listmaker**-1 *ws* ']' +
-           '{' *ws* dictorsetmaker**-1 *ws* '}' +
-           '`' * testlist1 * '`' +
-           NAME + NUMBER() + (STRING()*ws)**1)
+  atom = 'atom' | SC('(') *ws* (yield_expr +  testlist_comp)**-1 *ws* SP(')') + \
+                  SC('[') *ws* listmaker**-1 *ws* SP(']') + \
+                  SC('{') *ws* dictorsetmaker**-1 *ws* SP('}') + \
+                  SC('`') * testlist1 * SP('`') + \
+                  NAME + NUMBER + (STRING*ws)**1
 
   # ----------------------------------------------------------------------------
   # Expression
@@ -428,13 +440,13 @@ def PythonGrammar():
   # power: atom trailer* ['**' factor]
   power = 'power' | atom * trailer**0 * (ws*'**'*ws * factor)**-1
 
-  # term: factor (('*'|'/'|'%'|'//') factor)*
+  # term: factor (('*' | '/' | '%' | '//') factor)*
   term = 'term' | factor *(ws* (P('//') + S('*/%')) *ws* factor)**0
 
-  # arith_expr: term (('+'|'-') term)*
+  # arith_expr: term (('+' | '-') term)*
   arith_expr = 'arith_expr' | term * (ws*S('+-') *ws* term)**0
 
-  # shift_expr: arith_expr (('<<'|'>>') arith_expr)*
+  # shift_expr: arith_expr (('<<' | '>>') arith_expr)*
   shift_expr = 'shift_expr' | arith_expr * (ws*(P('<<') + P('>>')) *ws* arith_expr)**0
 
   # and_expr: shift_expr ('&' shift_expr)*
@@ -448,6 +460,10 @@ def PythonGrammar():
 
   # exprlist: expr (',' expr)* [',']
   exprlist = 'exprlist' | expr * (ws*',' *ws* expr)**0 * P(',')**-1
+
+  # ----------------------------------------------------------------------------
+  # File input
+  # ----------------------------------------------------------------------------
 
   # file_input: (NEWLINE | stmt)* ENDMARKER
   file_input = 'file_input' | (ws*newline + ws*stmt)**0
@@ -475,6 +491,7 @@ def PythonGrammar():
   setVs(argument,      [test, comp_for])
   setVs(arglist,       [test])
   setVs(funcdef,       [suite])
+  setVs(classdef,      [testlist])
   setVs(testlist,      [test])
   setVs(comparison,    [expr])
   setVs(old_lambdef,   [old_test])
@@ -486,20 +503,16 @@ def PythonGrammar():
   setVs(list_for,      [exprlist])
   setVs(factor,        [power])
 
+  #import_from.debug(True)
   return file_input
 
 pygrammar = PythonGrammar()
-#pygrammar.debug("named")
+pygrammar.debug("named")
 
-m = pygrammar.match("""
-def test(one, two="none"):
-  a = 5 and 2
-  print "Stuff"
+with open("PythonLang.py") as file:
+  code = file.read()
 
-  if a:
-    print "Got %s" % a
-more
-""")
+m = pygrammar.match(code)
 
 
 print m
