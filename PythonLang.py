@@ -1,5 +1,8 @@
 from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, alpha, digit, newline, \
-                 quote, V, setVs, Sc, Sp, Sm, matchUntil, whitespace
+                 quote, V, setVs, Sc, Sp, Sm, Ssz, matchUntil, whitespace
+
+import sys
+sys.setrecursionlimit(10000)
 
 # kw = P('and') + P('as') + P('assert') + P('break') + P('class') + P('continue') + \
 #      P('def') + P('del') + P('elif') + P('else') + P('except') + P('exec') + \
@@ -67,8 +70,12 @@ def STRING_():
 
 # ==============================================================================
 def PythonGrammar():
+  comment = 'comment' | '#' * matchUntil(newline)
+
   ws0 = whitespace**0
-  ws = ws0 * ('\\' * ws0 * newline * ws0)**0 & 'hide'
+  line_continuation = '\\' * ws0 * newline * ws0
+  ws = ws0 * (Ssz('Group', 0)*line_continuation**0 +
+             -Ssz('Group', 0)*(line_continuation + comment**-1*newline*ws0)**0) & 'hide'
   ws1 = whitespace * ws & 'hide'
   newline.setName('newline')
 
@@ -127,7 +134,6 @@ def PythonGrammar():
   INDENT = 'INDENT' | (ws * newline)**0 * Sc('indent',C(ws)) / checkIndent
   DEDENT = 'DEDENT' | P(0) / dedent
 
-  comment = 'comment' | '#' * matchUntil(newline)
   next_stmt_line = 'next_stmt_line' | (ws * comment**-1 * (newline + -P(1)))**1
   match_indent = 'match_indent' | (Sm('indent')*(-whitespace) + P(0))
 
