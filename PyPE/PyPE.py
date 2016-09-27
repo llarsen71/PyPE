@@ -340,6 +340,7 @@ def ConfigBackCaptureString4match(fn):
 
 def escapeStr(string):
   for c, v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
+               #("\\",r"\\")]:
     string = string.replace(c, v)
   return string
 
@@ -423,15 +424,20 @@ class DebugOptions(object):
   @staticmethod
   def printEnter(pattern, string, index, context):
     if pattern.name is None: return
-    print "Enter: <{0}> => ({1}) {2}".format(pattern.name, index, repr(pattern))
+    line = string.getLineNumber(index)
+    col = string.getColumnNumber(index)
+    print "Enter: <{0}> => ({1}.{2}) {3}".format(pattern.name, line, col, repr(pattern))
 
   # ----------------------------------------------------------------------------
 
   @staticmethod
   def printMatch(pattern, string, index, context, match):
 
+    line = string.getLineNumber(index)
+    col = string.getColumnNumber(index)
     name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
-    print "Pattern: ({0}) {1}".format(index, name)
+
+    print "Pattern: ({0}.{1}) {2}".format(line, col, name)
     if match is None:
       print "  Failed"
     else:
@@ -459,6 +465,8 @@ class DebugOptions(object):
     :param filter: A filter function or a string indicating
     :return: The constructed filter.
     """
+
+    if filter is None: return DebugOptions.filters['hide']
     if callable(filter): return filter
 
     FILTER = C((alpha + '_') * (alpha + digit + '_') ** 0)
@@ -488,11 +496,15 @@ class DebugOptions(object):
 
   # ----------------------------------------------------------------------------
 
-  def __init__(self, beforeMatchFilter, afterMatchFilter, beforeMatchWriter=None,
-               afterMatchWriter=None):
+  def __init__(self, matchFilter=None,
+               beforeMatchFilter=None, afterMatchFilter=None,
+               beforeMatchWriter=None, afterMatchWriter=None):
     """
     Set up the filters for this DebugOptions object.
 
+    :param matchFilter: Filter to be used before and after match. If this is
+           passed in, the beforeMatchFilter and afterMatchFilter parameters are
+           ignored.
     :param beforeMatchFilter: A filter spec (for parseFilter function) or filter
            function used by the `beforeMatch` event. See `registerFilter` for
            the filter function signature.
@@ -504,10 +516,12 @@ class DebugOptions(object):
     :param afterMatchWriter: The function to use to handle debug info after a
            match. Default is `printMatch`.
     """
-
-    # Set the before and after match Filters
-    self.beforeMatchFilter = self.parseFilter(beforeMatchFilter)
-    self.afterMatchFilter  = self.parseFilter(afterMatchFilter)
+    if matchFilter:
+      self.beforeMatchFilter = self.afterMatchFilter = self.parseFilter(matchFilter)
+    else:
+      # Set the before and after match Filters
+      self.beforeMatchFilter = self.parseFilter(beforeMatchFilter)
+      self.afterMatchFilter  = self.parseFilter(afterMatchFilter)
 
     # Functions to write out debug information
     self.beforeMatchWriter = beforeMatchWriter or self.defaultBeforeMatchWriter
@@ -647,27 +661,19 @@ class Pattern(object):
 
     if debugOpt is None and len(args) == 0: return self.dbg
 
-    # Check whether an object with the debug interface is passed in. If so
-    # set the debug to this.
     if debugOpt is not None:
-      if hasattr(debugOpt, "beforeMatch") and hasattr(debugOpt, "afterMatch"):
+
+      # Check if this is an object that supports the debug interface
+      def isDebugHandlerObject(obj):
+        hasInterfaceFn = lambda fn: hasattr(obj, fn) and callable(getattr(obj, fn))
+        return hasInterfaceFn("beforeMatch") and hasInterfaceFn("afterMatch")
+
+      if isDebugHandlerObject(debugOpt):
         self.dbg = debugOpt
         return
-      if debugOpt in (True, 'show'):
-        if "beforeMatch" not in args: args['beforeMatchFilter'] = "show"
-        if "afterMatch" not in args: args['afterMatchFilter'] = "show"
-      elif debugOpt in (False, 'hide'):
-        if "beforeMatch" not in args: args['beforeMatchFilter'] = "hide"
-        if "afterMatch" not in args: args['afterMatchFilter'] = "hide"
-      elif debugOpt in ('named'):
-        if "beforeMatch" not in args: args['beforeMatchFilter'] = "named"
-        if "afterMatch" not in args: args['afterMatchFilter'] = "named"
-      elif debugOpt == 'show_only_success':
-        if "beforeMatch" not in args: args['beforeMatchFilter'] = "named"
-        if "afterMatch" not in args: args['afterMatchFilter'] = "show_only_success"
-      elif debugOpt == "show_index_change":
-        if "beforeMatch" not in args: args['beforeMatchFilter'] = "named"
-        if "afterMatch" not in args: args['afterMatchFilter'] = "show_index_change"
+
+      # Check if the debugOpt matches one of the registered filters
+      if debugOpt in DebugOptions.filters.keys(): args['matchFilter'] = debugOpt
 
     self.dbg = DebugOptions(**args)
     return self
@@ -1884,7 +1890,7 @@ class Sm(StackPtn):
     """
 
     :param stack: The name of the stack to pop values from.
-    :param pattern: Index of the value to match (-1 by default).
+    :param n: Index of the value to match (-1 by default).
     """
     Pattern.__init__(self)
     self.stack = stack
@@ -1918,6 +1924,57 @@ class Sm(StackPtn):
   def __repr__(self):
     # TODO: Support single quotes in stack name
     return "Sm('{0}', {1})".format(self.stack, "" if self.n == 1 else self.n)
+
+# ==============================================================================
+
+class Ssz(StackPtn):
+  """
+  Get the stack size or martch only if it has a given size
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, stack, n=None):
+    """
+
+    :param stack: The name of the stack get or check the size of.
+    :param n: An optional stack size.
+    """
+    Pattern.__init__(self)
+    self.stack = stack
+    self.n = n
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0, context=None):
+    """
+    Capture the stack size or check that the stack matches a given size.
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+    :return: A match object that consumes no characters, but adds a column
+             capture.
+    """
+
+    stack = context.getStack(self.stack)
+    sz = 0 if stack is None else len(stack)
+    if self.n is None:
+       match = Match(string, index, index).addCapture(sz)
+    elif self.n != sz:
+      match = None
+    else:
+      match = Match(string, index, index)
+
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    # TODO: Support single quotes in stack name
+    if self.n is None: return "Ssz('{0}')".format(self.stack)
+    return "Ssz('{0}', {1})".format(self.stack, self.n)
 
 # ==============================================================================
 # Pattern Operators
@@ -2542,15 +2599,31 @@ class BackCaptureString(object):
 
   # ----------------------------------------------------------------------------
 
+  def getColumnNumber(self, index):
+    """
+    Get the index of the start of the line in the `startOfLineIndex` array.
+
+    :param index: The index in the string.
+    :return: The index for the `startOfLineIndex` array that marks the start
+             of the line containing the given index.
+    """
+
+    line = self.getLineNumber(index)
+    col = index - self.startOfLineIndex[line-1]+1
+    return col
+
+  # ----------------------------------------------------------------------------
+
   def getLineNumber(self, index):
     """
     Get the line number at the given position in the string. The line numbers
     start with 1.
+
     :param index: The position in the string.
     :return: The line number associated with the position.
     """
 
-    if index < 0 or self.stringSz < index :
+    if index < 0 or self.stringSz < index:
       if index < 0:
         raise IndexError("Error getting line number for position. Index cannot "
                          "be less than 0")
@@ -2568,17 +2641,17 @@ class BackCaptureString(object):
 
     # Find start of lines till we get to index
     startOfLine = self.startOfLineIndex[-1]
-    line = (1-newline)**0 * (newline)**-1 * Cp()
+    line = (1 - newline) ** 0 * (newline) ** -1 * Cp()
     while True:
       match = line(self.string, startOfLine)
       startOfLine = match.end
-      if startOfLine == self.startOfLineIndex[-1]: break
       self.startOfLineIndex.append(startOfLine)
       if index < startOfLine:
-        return len(self.startOfLineIndex)-1
+        return len(self.startOfLineIndex) - 1
       if index == startOfLine:
         return len(self.startOfLineIndex)
-    raise IndexError("Unexpected error calculating line number for string position")
+    raise IndexError(
+      "Unexpected error calculating line number for string position")
 
   # ----------------------------------------------------------------------------
 
