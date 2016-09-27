@@ -411,14 +411,6 @@ class DebugOptions(object):
     def show_only_success(**args): return isinstance(args['match'], Match) \
                                    if 'match' in args else True
 
-    # TODO: How do we reset the index? Also, how to make threadsafe?
-    idx = [-1]
-    @registerDbgFilter
-    def show_index_change(index=None, **args):
-      result = idx[0] != index
-      idx[0] = index
-      return result
-
   # ----------------------------------------------------------------------------
 
   @staticmethod
