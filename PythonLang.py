@@ -57,7 +57,7 @@ def STRING_():
                                     shortstringitem**0 * Cb("quote")
 
   stringprefix    =  S("rR") + S("uUbB") * S("rR")**-1
-  stringliteral   =  stringprefix**-1 * (shortstring + longstring)
+  stringliteral   =  stringprefix**-1 * (longstring + shortstring)
 
   return "string" | longstring + shortstring + stringliteral
 
@@ -286,7 +286,7 @@ def PythonGrammar():
          (match_indent*KW('else')*Pw(':')*suite)**-1
 
   # while_stmt: 'while' test ':' suite ['else' ':' suite]
-  suite_else =  suite * (KW('else')*Pw(':')*suite)**-1
+  suite_else =  suite * (match_indent*KW('else')*Pw(':')*suite)**-1
   while_stmt = 'while_stmt' | KW('while') * V('test')*Pw(':') * suite_else
 
   # for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
@@ -336,7 +336,7 @@ def PythonGrammar():
   parameters = 'parameters' | SC('(') * varargslist**-1 * SP(')')
 
   # funcdef: 'def' NAME parameters ':' suite
-  funcdef = 'funcdef' | KW('def') * NAME * parameters * Pw(':') * V('suite')
+  funcdef = 'funcdef' | KW('def') * NAME * parameters * Pw(':') * suite
 
   # classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
   classdef = 'classdef' | KW('class') * NAME * (SC('(') * V('testlist') * SP(')'))**-1 * Pw(':') *suite
@@ -503,7 +503,7 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # file_input: (NEWLINE | stmt)* ENDMARKER
-  file_input = 'file_input' | (ws*newline + stmt)**0
+  file_input = 'file_input' | (ws*newline + match_indent*stmt)**0
 
   # ----------------------------------------------------------------------------
   # Close grammar
@@ -527,7 +527,6 @@ def PythonGrammar():
   setVs(with_item,     [test, expr])
   setVs(argument,      [test, comp_for])
   setVs(arglist,       [test])
-  setVs(funcdef,       [suite])
   setVs(classdef,      [testlist])
   setVs(testlist,      [test])
   setVs(comparison,    [expr])
@@ -546,7 +545,7 @@ def PythonGrammar():
 pygrammar = PythonGrammar()
 #pygrammar.debug("named")
 
-with open("PyPE/PyPE.py") as file:
+with open("PyPE/Tokenizer.py") as file:
   code = file.read()
 
 m = pygrammar.match(code)
