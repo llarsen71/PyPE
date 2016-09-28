@@ -50,14 +50,20 @@ class Stack(object):
 
   # ----------------------------------------------------------------------------
 
-  def __getitem__(self, index):
-    if index < 0: index = len(self) + index
-    if index < 0 or len(self) <= index: raise IndexError("Invalid stack index {0}".format(index))
+  def __getitem__(self, idx):
+    if isinstance(idx, slice):
+      index = lambda i, default: default if i is None else len(self)+i if i < 0 else i
+      start = index(idx.start, 0)
+      stop  = index(idx.stop,  len(self))
+      step  = index(idx.step,  1)
+      return [self[i] for i in range(start, stop, step)]
+    if idx < 0: idx = len(self) + idx
+    if idx < 0 or len(self) <= idx: raise IndexError("Invalid stack index {0}".format(idx))
 
     parentlen = self.__parentlen__()
-    if index < parentlen: return self.parent[index]
-    index = index - parentlen
-    return self.stack[index]
+    if idx < parentlen: return self.parent[idx]
+    idx = idx - parentlen
+    return self.stack[idx]
 
   # ----------------------------------------------------------------------------
 
@@ -83,11 +89,19 @@ class Stack(object):
 
   # ----------------------------------------------------------------------------
 
-  def pop(self):
+  def pop(self, n=None):
     """
-    Pop and item from the stack and return it.
-    :return: The last item added to the stack.
+    Pop one or more items from the stack and return them.
+
+    :param n: The number of items from the stack to pop.
+    :return: The items popped from the stack.
     """
+    if isinstance(n, int):
+      if n <= 0: return []
+      items = [self.pop() for i in xrange(n)]
+      items.reverse()
+      return items
+
     item = self.peek()
     if len(self.stack) > 0: self.stack.pop()
     elif self.__parentlen__() > 0: self.parent_pop += 1
@@ -1614,15 +1628,17 @@ class Cg(Capture):
     """
     Group the contained captures into a single capture.
 
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+
+    :Examples:
+
     >>> p = Cg(C(P(1)) * C(P(1)))
     >>> p("Test").getCapture(0)
     ['T', 'e']
     >>> p("b") is None
     True
-
-    :param string: The string to match
-    :param index: The location in string to start match
-    :param context: Information that is forwarded between matches.
     """
 
     match = self.pattern.match(string, index, context)
@@ -1635,6 +1651,80 @@ class Cg(Capture):
 
   def __repr__(self):
     return "Cg({0})".format(_repr_(self.pattern))
+
+# ==============================================================================
+
+class Cs(Capture):
+  """
+  Capture values from a stack
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, stack, n=1, pop_from_stack=False):
+    """
+    Capture values from a stack.
+
+    :param stack: The name of the stack to capture values from.
+    :param n: The number of values from the stack to add to add as captures. If
+           the value is 'None' all values from the stack are added as captures.
+           (Default 1).
+    :param pop_from_stack: Flag to indicate if the values put in the capture
+           list should be popped from the stack (False by default).
+    """
+    if n < 1 and n is not None: raise ValueError("For Cs(n), n must be a positive integer.")
+
+    Pattern.__init__(self)
+    self.stack          = stack
+    self.n              = n
+    self.pop_from_stack = pop_from_stack
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0, context=None):
+    """
+    Capture values from a stack
+
+    :param string: The string to match against.
+    :param index: The current location in the string.
+    :param context: Information that is forwarded between matches.
+    :return: A match object stack values added as captures.
+
+    :Examples:
+
+    >>> p = Sc('test',Cc('1')*Cc('2')*Cc('3')) * Cs('test')
+    >>> match = p.match("")
+    >>> match.captures
+    ['3']
+    >>> match.context.getStack('test')[0:]
+    ['1', '2', '3']
+
+    >>> p = Sc('test',Cc('1')*Cc('2')*Cc('3')) * Cs('test', 2, pop_from_stack=True)
+    >>> match = p.match("")
+    >>> match.captures
+    ['2', '3']
+    >>> match.context.getStack('test')[0:]
+    ['1']
+    """
+    match = Match(string, index, index)
+
+    stack = context.getStack(self.stack)
+    if stack is None or len(stack) == 0: return match
+
+    n = len(stack) if self.n is None else self.n
+    stack_items = stack.pop(n) if self.pop_from_stack else stack[-n:]
+    match.captures.extend(stack_items)
+
+    return match
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    args = ["'{0}'".format(self.stack)]
+    if self.n != 1: args.append('n={0}'.format(self.n))
+    if self.pop_from_stack: args.append('pop_from_stack={0}'.format(self.pop_from_stack))
+    return "Cs({0})".format(", ".join(args))
 
 # ==============================================================================
 
