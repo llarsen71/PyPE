@@ -1,4 +1,4 @@
-from PyPE import P, S, R, C, Cc, Cb, Cg, SOL, EOL, alpha, digit, newline, \
+from PyPE import P, S, R, C, Cc, Cb, Cg, Cs, SOL, EOL, alpha, digit, newline, \
                  quote, V, setVs, Sc, Sp, Sm, Ssz, matchUntil, whitespace
 
 import sys
@@ -62,8 +62,35 @@ def STRING_():
   return "string" | longstring + shortstring + stringliteral
 
 # ==============================================================================
+
 def PythonGrammar():
+  # Function declaration
+  Fd = lambda ptn: "Function Decl" | Cg(Cc('def')*C(ptn))
+  Cd = lambda ptn: "Class Decl" | Cg(Cc('class')*C(ptn))
+  END = Cc('end')
+  # Variable declaration
+  Vd = lambda ptn: 'Variable Decl' | Cg(Cc('decl')*C(ptn))
+  # Import all from a module
+  Im = lambda ptn: 'Import all' | Cg(Cc('import all')*C(ptn))
+
   newline.setName('newline')
+
+  # ----------------------------------------------------------------------------
+  # Variables that appear in python code are either being declared (set) or used
+  # We want to track the variables that appear and indicate whether they are
+  # being declared or used. A 'var state' stack is created with the value 'var'
+  # which indicates a variable is being used. If an assignment statement occurs,
+  # a 'decl' value is added to the stack that indicates that the value is being
+  # declared. This is popped from the stack when assignment ends.
+
+  init_var_state = Sc('var state', Cc('var'))
+  decl_state     = Sc('var state', Cc('decl'))   # Mark start of assignment (declare variables)
+  #ignore_state   = Sc('var state', Cc('ignore')) # Mark variables that are not really variable (named args to methods)
+  pop_state      = Sp('var state')               # Mark end of assignment
+
+  # Add a variable capture that is a declared variable or a used variable depending
+  # on the 'var state' stack
+  Va = lambda ptn: Cg(Cs('var state') * C(ptn))
 
   # ----------------------------------------------------------------------------
   # Smart Whitepace
@@ -168,7 +195,7 @@ def PythonGrammar():
   match_indent = 'match_indent' | Sm('indent')*(-whitespace)
 
   # fpdef: NAME | '(' fplist ')'
-  fpdef = 'fpdef' | NAME + SC('(') * V('fplist') * SP(')')
+  fpdef = 'fpdef' | Vd(NAME) + SC('(') * V('fplist') * SP(')')
 
   # fplist: fpdef (',' fpdef)* [',']
   fplist = 'fplist' | fpdef * (Pw(',') * fpdef)**0 * Pw(',')**-1
@@ -178,7 +205,7 @@ def PythonGrammar():
   #               fpdef ['=' test] (',' fpdef ['=' test])* [','])
   arg = 'arg' | fpdef * (Pw('=')*V('test'))**-1
   varargslist = 'varargslist' | (('varargslist1' | (arg * Pw(','))**0 *
-                 (Pw('*')*NAME*(Pw(',')*Pw('**')*NAME)**-1 + Pw('**')*NAME)) +
+                 (Pw('*')*Vd(NAME)*(Pw(',')*Pw('**')*Vd(NAME))**-1 + Pw('**')*Vd(NAME))) +
                 ('varargslist2' | arg * (Pw(',')*arg)**0 * Pw(',')**-1)**0)
 
   # ----------------------------------------------------------------------------
@@ -196,8 +223,10 @@ def PythonGrammar():
   # # For normal assignments, additional restrictions enforced by the interpreter
   # expr_stmt: testlist (augassign (yield_expr|testlist) |
   #                      ('=' (yield_expr|testlist))*)
-  expr_stmt = 'expr_stmt' | V('testlist') * (augassign* (V('yield_expr')+V('testlist')) +
-                               (assign*(V('yield_expr')+V('testlist')))**0)
+  capture_assign = decl_state * V('testlist') * pop_state
+  expr_stmt = 'expr_stmt' | (capture_assign * augassign* (V('yield_expr')+V('testlist')) +
+                             capture_assign * (assign*(V('yield_expr')+V('testlist')))**1 +
+                             V('testlist'))
 
   # print_stmt: 'print' ( [ test (',' test)* [','] ] |
   #                       '>>' test [ (',' test)+ [','] ] )
@@ -234,24 +263,25 @@ def PythonGrammar():
   dotted_name = 'dotted_name' | NAME * (Pw(".") * NAME)**0
 
   # dotted_as_name: dotted_name ['as' NAME]
-  dotted_as_name = dotted_name * (KW('as')*NAME)**-1
+  dotted_as_name = 'dotted_as_name' | dotted_name * KW('as') * Vd(NAME) + Vd(dotted_name)
 
   # dotted_as_names: dotted_as_name (',' dotted_as_name)*
-  dotted_as_names = dotted_as_name * (Pw(',') * dotted_as_name)**0
+  dotted_as_names = 'dotted_as_names' | dotted_as_name * (Pw(',') * dotted_as_name)**0
 
   # import_name: 'import' dotted_as_names
   import_name = 'import_name' | KW('import') * dotted_as_names
 
   # import_as_name: NAME ['as' NAME]
-  import_as_name = 'import_as_name' | NAME * (KW('as')*NAME)**-1
+  import_as_name = 'import_as_name' | NAME * KW('as') * Vd(NAME) + Vd(NAME)
 
   # import_as_names: import_as_name (',' import_as_name)* [',']
   import_as_names = 'import_as_names' | import_as_name * (Pw(',')*import_as_name)**0 * Pw(',')**-1
 
-  # import_from: ('from' ('.'* dotted_name | '.'+)
-  #               'import' ('*' | '(' import_as_names ')' | import_as_names))
-  import_from = 'import_from' | KW('from') * (Pw('.')**0*dotted_name + Pw('.')**1) * \
-                KW('import') * (Pw('*') + SC('(')*import_as_names*SP(')') + import_as_names)
+  # import_from: ('from' ('.'* dotted_name | '.'+) 'import' ('*' | '(' import_as_names ')' | import_as_names))
+  import_from = 'import_from' | \
+      KW('from') * Im(Pw('.') ** 0 * dotted_name + Pw('.') ** 1) * KW('import') * Pw('*') \
+      + \
+      KW('from') * (Pw('.')**0*dotted_name + Pw('.')**1) * KW('import') * (SC('(')*import_as_names*SP(')') + import_as_names)
 
   # import_stmt: import_name | import_from
   import_stmt = 'import_stmt' | import_name + import_from
@@ -290,7 +320,8 @@ def PythonGrammar():
   while_stmt = 'while_stmt' | KW('while') * V('test')*Pw(':') * suite_else
 
   # for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
-  for_stmt = 'for_stmt' | KW('for') * V('exprlist') * KW('in') * V('testlist') * Pw(':') * suite_else
+  for_stmt = 'for_stmt' | KW('for') * decl_state * V('exprlist') * pop_state * \
+                          KW('in') * V('testlist') * Pw(':') * suite_else
 
   # # NB compile.c makes sure that the default except clause is last
   # except_clause: 'except' [test [('as' | ',') test]]
@@ -317,7 +348,9 @@ def PythonGrammar():
   # # The reason that keywords are test nodes instead of NAME is that using NAME
   # # results in an ambiguity. ast.c makes sure it's a NAME.
   # argument: test [comp_for] | test '=' test
-  argument = 'argument' | V('test')*Pw('=')*V('test') + V('test')*(V('comp_for'))**-1
+  argument = 'argument' | V('test') * Pw('=') * V('test') + \
+                          V('test') * V('comp_for')  + \
+                          V('test')
 
   # arglist: (argument ',')* (argument [',']
   #                          |'*' test (',' argument)* [',' '**' test]
@@ -336,10 +369,10 @@ def PythonGrammar():
   parameters = 'parameters' | SC('(') * varargslist**-1 * SP(')')
 
   # funcdef: 'def' NAME parameters ':' suite
-  funcdef = 'funcdef' | KW('def') * NAME * parameters * Pw(':') * suite
+  funcdef = 'funcdef' | KW('def') * Fd(NAME) * parameters * Pw(':') * suite * END
 
   # classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
-  classdef = 'classdef' | KW('class') * NAME * (SC('(') * V('testlist') * SP(')'))**-1 * Pw(':') *suite
+  classdef = 'classdef' | KW('class') * Cd(NAME) * (SC('(') * V('testlist') * SP(')'))**-1 * Pw(':') * suite * END
 
   # decorated: decorators (classdef | funcdef)
   decorated = 'decorated' | decorators * (classdef + funcdef)
@@ -468,14 +501,15 @@ def PythonGrammar():
                   SC('[') * listmaker**-1 * SP(']') + \
                   SC('{') * dictorsetmaker**-1 * SP('}') + \
                   SC('`') * testlist1 * SP('`') + \
-                  STRING**1 + NAME + NUMBER
+                  STRING**1 + Va(NAME) + NUMBER
 
   # ----------------------------------------------------------------------------
   # Expression
   # ----------------------------------------------------------------------------
 
   # power: atom trailer* ['**' factor]
-  power = 'power' | atom * trailer**0 * (Pw('**') * factor)**-1
+  dotted_atom = NAME * (Pw('.') * NAME)**1
+  power = 'power' | (Va(dotted_atom) + atom) * trailer**0 * (Pw('**') * factor)**-1
 
   # term: factor (('*' | '/' | '%' | '//') factor)*
   term = 'term' | factor *((Pw('//') + Sw('*/%')) * factor)**0
@@ -503,7 +537,7 @@ def PythonGrammar():
   # ----------------------------------------------------------------------------
 
   # file_input: (NEWLINE | stmt)* ENDMARKER
-  file_input = 'file_input' | (ws*newline + match_indent*stmt)**0
+  file_input = 'file_input' | init_var_state * (ws*newline + match_indent*stmt)**0
 
   # ----------------------------------------------------------------------------
   # Close grammar
@@ -543,7 +577,7 @@ def PythonGrammar():
   return file_input
 
 pygrammar = PythonGrammar()
-#pygrammar.debug("named")
+#pygrammar.debug(True)
 
 with open("PyPE/Tokenizer.py") as file:
   code = file.read()
@@ -551,4 +585,16 @@ with open("PyPE/Tokenizer.py") as file:
 m = pygrammar.match(code)
 
 
-print m
+indent = 0
+for item in m.captures:
+  if item == 'end':
+    indent -= 1
+    continue
+  cmd, val = item
+  def show(string):
+    print "  "*indent + string.strip()
+
+  show(" ".join(item))
+  if cmd in ("class", "def"):
+    indent += 1
+
