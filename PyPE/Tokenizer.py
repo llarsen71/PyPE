@@ -38,6 +38,19 @@ class Grammar(object):
     self.patterns.append( (pattern, new_grammar, end_grammar) )
 
   # ----------------------------------------------------------------------------
+  def debug(self, debugOpt, token=None):
+    """
+    Set the debug option for a pattern in this Grammar.
+
+    :param debugOpt: The debug option to pass to the pattern debug function.
+    :param token: The token to set debug options for. If this is None, the debug
+           option is set for all the tokens.
+    """
+    for pattern, dummy, dummy in self.patterns:
+      if token is not None and token != pattern.name: continue
+      pattern.debug(debugOpt)
+
+  # ----------------------------------------------------------------------------
   def __getitem__(self, item):
     return self.patterns[item]
 
