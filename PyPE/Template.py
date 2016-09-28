@@ -426,9 +426,10 @@ class Template(object):
     T = Tokenizer(root = (self.__pyTagParser__(), self.__textParser__()))
 
     code = ["", self.brk,
-            "def {0}():".format(self.__getFunctionName__(function_name))]
+            "def {0}(**__params__):".format(self.__getFunctionName__(function_name))]
     pcb = PyCodeBlock(code, indent_after=1)
     self.__addCodeBlock__(pcb)
+    self.__addCodeBlock__(PyCodeBlock(["__moduleParams__(__params__)"]))
 
     for token, match in T.getTokens(src):
       if match.hasCaptures():
@@ -474,11 +475,10 @@ class Template(object):
 
     stack1 = stack or Stack()
 
-    module.__moduleParams__(parameters)
     module.__moduleParams__({'write':stack1.write})
 
     fn = getattr(module, function)
-    fn()
+    fn(**parameters)
 
     if stack is None:
       return stack1.toString()
