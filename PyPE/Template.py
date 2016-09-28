@@ -547,22 +547,22 @@ class Stack(object):
 # ==============================================================================
 
 if __name__ == "__main__":
-src = r"""
-    "This is a test"
-    @[ if name == "fred":
-          write(name)
-          write("done")
-    ]@
-    @[: a = "testing"
-        bob = 5
-         q=7
-      ^]@
-    @[^= bob  ]@
+  src = r"""
+      "This is a test"
+      @[ if name == "fred":
+            write(name)
+            write("done")
+      ]@
+      @[: a = "testing"
+          bob = 5
+           q=7
+        ^]@
+      @[^= bob  ]@
 
-    @[^>"this is a test"^]@
-    "Stuff
-  """
-t = Template("Temp", False)
-t.addPythonFunction(src)
-t.addPythonFunction(src)
-print t.render({'name':"fred",'a':"A Value"})
+      @[^>"this is a test"^]@
+      "Stuff
+    """
+  t = Template("Temp", False)
+  t.addPythonFunction(src)
+  t.addPythonFunction(src)
+  print t.render({'name':"fred",'a':"A Value"})
