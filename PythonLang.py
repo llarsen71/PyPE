@@ -63,11 +63,11 @@ def STRING_():
 
 # ==============================================================================
 
-def PythonGrammar():
+def pythonGrammar():
   # Function declaration
   Fd = lambda ptn: "Function Decl" | Cg(Cc('def')*C(ptn))
   Cd = lambda ptn: "Class Decl" | Cg(Cc('class')*C(ptn))
-  END = Cc('end')
+  END = Cg(Cc('end')*Cc(''))
   # Variable declaration
   Vd = lambda ptn: 'Variable Decl' | Cg(Cc('decl')*C(ptn))
   # Import all from a module
@@ -84,9 +84,10 @@ def PythonGrammar():
   # declared. This is popped from the stack when assignment ends.
 
   init_var_state = Sc('var state', Cc('var'))
-  decl_state     = Sc('var state', Cc('decl'))   # Mark start of assignment (declare variables)
-  #ignore_state   = Sc('var state', Cc('ignore')) # Mark variables that are not really variable (named args to methods)
-  pop_state      = Sp('var state')               # Mark end of assignment
+  decl_state     = Sc('var state', Cc('decl'))    # Mark start of assignment (declare variables)
+  cls_parent     = Sc('var state', Cc('parent'))  # Mark start of assignment (declare variables)
+  #ignore_state   = Sc('var state', Cc('ignore'))  # Mark variables that are not really variable (named args to methods)
+  pop_state      = Sp('var state')                # Mark end of assignment
 
   # Add a variable capture that is a declared variable or a used variable depending
   # on the 'var state' stack
@@ -325,7 +326,8 @@ def PythonGrammar():
 
   # # NB compile.c makes sure that the default except clause is last
   # except_clause: 'except' [test [('as' | ',') test]]
-  except_clause = 'except_clause' | KW('except') * (V('test') * ((KW('as') + Pw(','))*V('test'))**-1)**-1
+  except_clause = 'except_clause' | KW('except') * \
+            (V('test') * ((KW('as') + Pw(',')) * decl_state*V('test')*pop_state)**-1)**-1
 
   # try_stmt: ('try' ':' suite
   #            ((except_clause ':' suite)+
@@ -340,7 +342,7 @@ def PythonGrammar():
                           (match_indent * KW('finally') * Pw(':') * suite)**-1)
 
   # with_item: test ['as' expr]
-  with_item = 'with_item' | V('test') * (KW('as')*V('expr'))**-1
+  with_item = 'with_item' | V('test') * (KW('as') * decl_state*V('expr')*pop_state)**-1
 
   # with_stmt: 'with' with_item (',' with_item)*  ':' suite
   with_stmt = 'with_stmt' | KW('with') * with_item *(Pw(',')*with_item)**0 * Pw(':') * suite
@@ -372,7 +374,9 @@ def PythonGrammar():
   funcdef = 'funcdef' | KW('def') * Fd(NAME) * parameters * Pw(':') * suite * END
 
   # classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
-  classdef = 'classdef' | KW('class') * Cd(NAME) * (SC('(') * V('testlist') * SP(')'))**-1 * Pw(':') * suite * END
+  classdef = 'classdef' | KW('class') * Cd(NAME) * \
+                          (SC('(') * cls_parent*V('testlist')*pop_state * SP(')'))**-1 * Pw(':') * \
+                          suite * END
 
   # decorated: decorators (classdef | funcdef)
   decorated = 'decorated' | decorators * (classdef + funcdef)
@@ -536,8 +540,12 @@ def PythonGrammar():
   # File input
   # ----------------------------------------------------------------------------
 
+  # Allow the first statement to be indented. Include the first statement indent
+  # in the indents stack.
+
   # file_input: (NEWLINE | stmt)* ENDMARKER
-  file_input = 'file_input' | init_var_state * (ws*newline + match_indent*stmt)**0
+  file_input = 'file_input' | init_var_state * next_stmt_line**-1 * \
+                              (INDENT * stmt)**-1 * (match_indent*stmt)**0
 
   # ----------------------------------------------------------------------------
   # Close grammar
@@ -576,25 +584,80 @@ def PythonGrammar():
   #varargslist.debug(True)
   return file_input
 
-pygrammar = PythonGrammar()
-#pygrammar.debug(True)
+# ==============================================================================
 
-with open("PyPE/Tokenizer.py") as file:
-  code = file.read()
+def getUndefinedVarsFromSrc(src):
+  """
+  Parse the source code and get a list of the variables that are undefined in
+  the source code.
 
-m = pygrammar.match(code)
+  :param src: A string with the source code to parse.
+  :return: An array of undefined variables.
+  """
+  defined, scope, undefined = ([], [], [])
 
+  # First add the builtins to the list of defined variables
+  defined.extend(dir(__builtins__))
+  scope.append(len(defined)) # Mark the end of this scope
 
-indent = 0
-for item in m.captures:
-  if item == 'end':
-    indent -= 1
-    continue
-  cmd, val = item
+  pygrammar = pythonGrammar()
+  match = pygrammar.match(src)
+
+  # This needs to be more sophisticated to handle class variables where
+  # self.<classvar> is used, and things like static methods are possible.
+  for cmd, val in match.captures:
+    val = val.strip()
+
+    if cmd == 'end':
+      end_of_scope = scope.pop()
+      defined = defined[:end_of_scope]
+      continue
+
+    if cmd in ("class","def"):
+      # Add the class to the current scope and mark start of new scope
+      defined.append(val)
+      scope.append(len(defined))
+      continue
+
+    if cmd == "parent":
+      defined.append(val)
+      scope[-1] = len(defined) # Move the scope forward to include the parent object
+      continue
+
+    if cmd == "decl":
+      defined.append(val)
+      continue
+
+    if cmd == "var" and val not in defined:
+      undefined.append(val)
+
+  return undefined
+
+# ==============================================================================
+
+def printValuesUsedInSrc(src):
+  pygrammar = pythonGrammar()
+  #pygrammar.debug(True)
+
+  match = pygrammar.match(src)
+
   def show(string):
-    print "  "*indent + string.strip()
+    print "  " * indent + string.strip()
 
-  show(" ".join(item))
-  if cmd in ("class", "def"):
-    indent += 1
+  indent = 0
+  for cmd, val in match.captures:
+    if cmd == 'end':
+      indent -= 1
+      continue
 
+    show("{0} {1} ".format(cmd, val))
+    if cmd in ("class", "def"):
+      indent += 1
+
+# ==============================================================================
+
+if __name__ == "__main__":
+  with open("PyPE/Tokenizer.py") as file:
+    code = file.read()
+
+  print getUndefinedVarsFromSrc(code)
