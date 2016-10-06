@@ -660,4 +660,8 @@ if __name__ == "__main__":
   with open("PyPE/Tokenizer.py") as file:
     code = file.read()
 
-  print getUndefinedVarsFromSrc(code)
+  #print getUndefinedVarsFromSrc(code)
+
+  pyg = pythonGrammar()
+
+  print pyg.match(code)

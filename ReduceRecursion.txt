@@ -1,0 +1,4 @@
+Have the + and * operators return a couple of callable statements to do matches. 
+The first item in sequence will run all of these. Pop them onto a stack in reverse
+order and run them. Note that the stack is needed to call match as well as __repr__
+which are both recursive.
