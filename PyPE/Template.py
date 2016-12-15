@@ -17,11 +17,13 @@ class Template(object):
   templateDir = "temp"
 
   # Escape the double quote character (") and slash character in TEXT to be written out.
-  escapeDblQuoteAndEscChr = (C(1 - S('"\\')) *
-                             (P('"') * Cc('\\"') + P('\\')*Cc('\\\\') + P(0)))**0
+  hide = lambda ptn: ptn&'hide'
+  escapeDblQuoteAndEscChr = (P('"') * Cc('\\"') +
+                             P('\\')*Cc('\\\\') +
+                             C(hide(1 - S('"\\'))**0))**0
 
   # ----------------------------------------------------------------------------
-  def __init__(self, filename, readFile=True, base_function="function"):
+  def __init__(self, filename, readFile=True, base_function="function", isCodeGenerated=False):
     """
 
     :param filename: The filename to use for the template. When readFile is true,
@@ -37,12 +39,13 @@ class Template(object):
     if filename is None:
       raise ValueError("The filename must be specified for a Template")
 
-    self.templatename    = basename(filename if filename.endswith("*.py") else filename + ".py")
+    self.templatename    = basename(filename if filename.endswith(".py") else filename + ".py")
     self.base_function   = base_function # Base name to use for generated functions
     self.function_num    = 0
     self.code_blocks     = []
     self.function_names  = []
-    self.isCodeGenerated = False
+    self.isCodeGenerated = isCodeGenerated
+    self.params          = {}
 
     if readFile:
       with open(filename, "rb") as file:
@@ -380,7 +383,7 @@ class Template(object):
     indentLvl = max(len(indent_stack)-1, 0)
     if write_option is not None:
       if indentLvl != 0:
-        # TODO: Report an error. A write command cannot be used with a series of comamnds.
+        # TODO: Report an error. A write command cannot be used with a series of commands.
         pass
       elif write_option == "write":
         if len(code_lines) == 1:
@@ -425,31 +428,38 @@ class Template(object):
   def addPythonFunction(self, src, function_name=None):
     T = Tokenizer(root = (self.__pyTagParser__(), self.__textParser__()))
 
-    code = ["", self.brk,
-            "def {0}(**__params__):".format(self.__getFunctionName__(function_name))]
+    function_name = self.__getFunctionName__(function_name)
+    code = ["", self.brk, "def {0}(context):".format(function_name)]
+
     pcb = PyCodeBlock(code, indent_after=1)
     self.__addCodeBlock__(pcb)
-    self.__addCodeBlock__(PyCodeBlock(["__moduleParams__(__params__)"]))
+    self.__addCodeBlock__(PyCodeBlock(["__moduleParams__(context)"]))
 
     for token, match in T.getTokens(src):
       if match.hasCaptures():
         self.__addCodeBlock__(match.getCapture(0))
 
     self.__addCodeBlock__("set indent to 0")
+    return function_name
 
   # ----------------------------------------------------------------------------
   def __generateCode__(self):
     from os.path import join
 
     header = [self.brk,
-              'def __moduleParams__(params):',
-              '  import sys',
+              'from PyPE.Template import isTemplateFn',
+              '',
+              'def __moduleParams__(context):',
+              '  import sys, types',
               '  module = sys.modules[__name__]',
-              '  for param, value in params.items():',
-              '    setattr(module, param, value)']
+              '  for param, value in context.items():',
+              '    setattr(module, param, value)',
+              '    if isTemplateFn(value) and isinstance(value, types.FunctionType):',
+              '       value.context = context']
     self.code_blocks.insert(0, PyCodeBlock(header))
 
-    with open(join(self.templateDir, self.templatename), "wb") as file:
+    self.templateLoc = join(self.templateDir, self.templatename)
+    with open(self.templateLoc, "wb") as file:
       indent = 0
       for pycodeblock in self.code_blocks:
         if pycodeblock == "set indent to 0":
@@ -464,9 +474,30 @@ class Template(object):
         indent += pycodeblock.indent_after
 
     self.isCodeGenerated = True
+    return self.templateLoc
 
   # ----------------------------------------------------------------------------
-  def render(self, parameters={}, function=None, stack=None):
+  def addTemplateFunctions(self, module):
+    """
+    Add the template functions from the imported module. The template functions
+    use the `@TemplateFn` decorator.
+
+    :param module: A module that contains template functions.
+    """
+
+    for name in dir(module):
+      fn = getattr(module, name)
+      if not isTemplateFn(fn): continue
+      self.params[name] = fn
+
+  # ----------------------------------------------------------------------------
+  def getDefaultParams(self):
+    params = Context()
+    params.update(self.params)
+    return params
+
+  # ----------------------------------------------------------------------------
+  def render(self, context={}, function=None, stack=None):
     function = function or self.function_names[0]
 
     if not self.isCodeGenerated: self.__generateCode__()
@@ -475,10 +506,16 @@ class Template(object):
 
     stack1 = stack or Stack()
 
-    module.__moduleParams__({'write':stack1.write})
+    self.addTemplateFunctions(stack1)
+
+    # Create the context (parameters and functions) for the document from the
+    # default parameters and the context that is passed in.
+    CONTEXT = self.getDefaultParams()
+    CONTEXT.update(context)
+    CONTEXT['__stack__'] = stack1
 
     fn = getattr(module, function)
-    fn(**parameters)
+    fn(CONTEXT)
 
     if stack is None:
       return stack1.toString()
@@ -507,12 +544,42 @@ class PyCodeBlock(object):
     return "\n".join(self.lines_of_code)
 
 # ==============================================================================
+# Template Function
+# ==============================================================================
+
+def TemplateFn(fn):
+  """
+  A decorator to mark a function as a template function (i.e., one that can be
+  called from within a template. When a module is passed to the :class:`Template`
+  function :func:`addTemplateFunctions`, all of the functions that are marked
+  as template functions are make available to the :class:`Template` when it is
+  rendered.
+
+  :param fn: The function to mark as a template function.
+  :return: The original function.
+
+  :Example:
+
+  >>> @TemplateFn
+  ... def hello():
+  ...   print "Hello"
+  """
+  fn.isTemplateFn = True
+  return fn
+
+# ==============================================================================
+
+def isTemplateFn(fn):
+  return callable(fn) and hasattr(fn, 'isTemplateFn') and fn.isTemplateFn == True
+
+# ==============================================================================
 # Stack class
 # ==============================================================================
 
 class Stack(object):
   """
-  Stack that holds the values written from Template
+  :class:`Stack` that holds the values written from a :class:`Template`. The
+   final output is written by calling :func:`toString`.
   """
 
   # ----------------------------------------------------------------------------
@@ -520,49 +587,125 @@ class Stack(object):
     self.stack = []
 
   # ----------------------------------------------------------------------------
+  @TemplateFn
   def write(self, line):
-    self.stack.append(line)
+    """
+    Write values from the template and add them to the :class:`Stack`. If
+    function that returns a string or None may be passed to :func:`write`. This
+    will be called from :func:`toString`.
+
+    :param line: A string or a callable function that takes no parameters and
+           returns a string or None. Note that a function that is called may
+           contain :func:`write` calls. Text that is written to the :class:`Stack`
+           from inside the function is rendered before text that is returned
+           from the function (if any).
+    """
+    if line != None: self.stack.append(line)
+
+  # ----------------------------------------------------------------------------
+  @TemplateFn
+  def writeln(self, line):
+    """
+    Write values to the template followed by a newline.
+    :param line: String or callable function that takes no parameters.
+    """
+    self.write(line)
+    self.write("\n")
 
   # ----------------------------------------------------------------------------
 
   def toString(self):
+    """
+    :return: Text written to the :class:`Stack` when a :class:`Template` is
+             rendered.
+
+    :Example:
+
+    >>> s = Stack()
+    >>> s.write("This is a test\\n")
+    >>> s.write(lambda: "Second line\\n")
+    >>> s.write("Final line")
+    >>> print s.toString()
+    This is a test
+    Second line
+    Final line
+
+    """
     from StringIO import StringIO
+
+    # Make a copy of the stack and clear the stack. This allows callable
+    # functions in the stack to write to a fresh stack, which is then rendered
+    # at the location where the function is called rather than appending
+    # values that are written to the stack from within the function to the
+    # end of the document.
     stack = self.stack
     self.stack = []
 
+    # This will be the final text output.
     output = StringIO()
+
     for line in stack:
-      if callable(line):
+      # The stack should contain either strings or callable functions.
+
+      if not callable(line):
+        # Write strings in the stack to the text file.
+        output.write(line)
+      else:
+        # For callable functions, execute the function and append the results
+        # to the text file.
         value = line()
-        # If any items were added to the new stack, get those values.
+
+        # Get the results from an items written to the stack. Note that the
+        # stack was cleared, so any values are written to a fresh stack. Once
+        # toString is called, the stack is cleared again and is ready for the
+        # next callable function.
         stackstuff = self.toString()
+
+        # Write the stuff from the stack and then any value returned from the
+        # function.
         output.write(stackstuff)
         if value is not None:
           output.write(str(value))
-      else:
-        output.write(line)
 
+    # Return the rendered stack as a string.
     return output.getvalue()
+
+# ==============================================================================
+# Context class
+# ==============================================================================
+
+class Context(dict):
+  def __init__(self):
+    dict.__init__(self)
+
+  def __getattr__(self, item):
+    return self[item]
+
+  def __setattr__(self, item, value):
+    self[item] = value
 
 # ==============================================================================
 
 if __name__ == "__main__":
-  src = r"""
-      "This is a test"
-      @[ if name == "fred":
-            write(name)
-            write("done")
-      ]@
-      @[: a = "testing"
-          bob = 5
-           q=7
-        ^]@
-      @[^= bob  ]@
+  import doctest
+  doctest.testmod()
 
-      @[^>"this is a test"^]@
-      "Stuff
-    """
-  t = Template("Temp", False)
-  t.addPythonFunction(src)
-  t.addPythonFunction(src)
-  print t.render({'name':"fred",'a':"A Value"})
+  #src = r"""
+  #    "This is a test"
+  #    @[ if name == "fred":
+  #          write(name)
+  #          write("done")
+  #    ]@
+  #    @[: a = "testing"
+  #        bob = 5
+  #         q=7
+  #      ^]@
+  #    @[^= bob  ]@
+  #    #
+  #    @[^>"this is a test"^]@
+  #    "Stuff
+  #  """
+  #t = Template("Temp", False)
+  #t.addPythonFunction(src)
+  #t.addPythonFunction(src)
+  #print t.render({'name':"fred",'a':"A Value"})

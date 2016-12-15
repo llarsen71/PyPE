@@ -90,6 +90,7 @@ class Tokenizer(object):
     # grammar stack - indicate which grammar we are in and the end grammar marker
     self.stack = []
     self.grammars = {}
+    self._debug_ = False
 
     for name, grammar in grammars.items():
       self.__addGrammar__(name, grammar)
@@ -116,6 +117,10 @@ class Tokenizer(object):
     self.grammars[name] = Grammar(name, *rules)
 
   # ----------------------------------------------------------------------------
+  def debug(self, enable):
+    self._debug_ = enable
+
+  # ----------------------------------------------------------------------------
   def __setGrammar__(self, name, end_grammar):
     """
     Add a grammar to the top of the grammar stack. The rule at the top of the
@@ -126,6 +131,9 @@ class Tokenizer(object):
     :param end_grammar: The pattern for ending the grammar. Note that this must
            be a named Pattern.
     """
+
+    if self._debug_:
+      print "Entering Grammar: %s" % name
 
     if name not in self.grammars:
       raise Exception("No grammar named '{0}' has been register for Tokenizer".format(name))
@@ -153,6 +161,7 @@ class Tokenizer(object):
     :param index: The location in the string to start (default 0)
     """
     from PyPE import Match
+    if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
 
     while True:
       grammar, end_grammar = [self.stack[-1][item] for item in ('grammar','end grammar')]
@@ -166,6 +175,8 @@ class Tokenizer(object):
         if isinstance(match, Match):
           yield (end_grammar.name, match)
           # Pop a grammar from the stack
+          if self._debug_:
+            print "Exiting Grammar: %s" % self.stack[-1]['name']
           self.stack.pop()
           continue # reset loop
 

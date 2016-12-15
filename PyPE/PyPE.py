@@ -12,12 +12,18 @@ of PEG patterns and to build lexers.
 class Stack(object):
   """
   This implements a stack that wraps a parent stack. Changes to the parent
-  Stack are only make permanent when commit is called.
+  Stack are only make permanent (i.e., comitted to the parent Stack) when
+  'commit' is called.
+
+  This is used for Stack based captures for grammars that require context.
   """
 
   # ----------------------------------------------------------------------------
 
   def __init__(self, parent = None):
+    """
+    :param parent: The parent Stack to push changes to when changes are committed.
+    """
     self.parent = parent
     self.parent_pop = 0   # Record how many values have been popped from the parent.
     self.stack = []
@@ -25,6 +31,12 @@ class Stack(object):
   # ----------------------------------------------------------------------------
 
   def __parentlen__(self):
+    """
+    Get the virtual length of the parent stack (i.e., the length minus the number
+    of items popped from the parent Stack). Note that items popped from the
+    parent Stack are not actually removed from the Stack until 'commit' is
+    called.
+    """
     if not self.hasParent(): return 0
     return len(self.parent) - self.parent_pop
 
@@ -51,13 +63,24 @@ class Stack(object):
   # ----------------------------------------------------------------------------
 
   def __getitem__(self, idx):
+    """
+    Get an item or range of items from the Stack.
+    :param idx: Index of the item from the Stack to retrieve or a slice to get a
+                range of times. Positive or negative indexes as with standard
+                python arrays.
+    :return: The requested item(s).
+    """
     if isinstance(idx, slice):
       index = lambda i, default: default if i is None else len(self)+i if i < 0 else i
       start = index(idx.start, 0)
       stop  = index(idx.stop,  len(self))
       step  = index(idx.step,  1)
       return [self[i] for i in range(start, stop, step)]
-    if idx < 0: idx = len(self) + idx
+
+    if not isinstance(idx, int): raise IndexError("Invalid stack index type")
+
+    # Handle negative index values
+    if idx < 0 and len(self) + idx >= 0: idx = len(self) + idx
     if idx < 0 or len(self) <= idx: raise IndexError("Invalid stack index {0}".format(idx))
 
     parentlen = self.__parentlen__()
@@ -69,7 +92,7 @@ class Stack(object):
 
   def append(self, value):
     """
-    Add a value to the Stack.
+    Append a value to the Stack.
     :param value: The value to add to the Stack
     :return: The Stack object
     """
@@ -91,7 +114,7 @@ class Stack(object):
 
   def pop(self, n=None):
     """
-    Pop one or more items from the stack and return them.
+    Pop(remove) one or more items from the stack and return them.
 
     :param n: The number of items from the stack to pop.
     :return: The items popped from the stack.
@@ -132,7 +155,10 @@ class Stack(object):
 
   def commit(self):
     """
-    Commit the changes to the parent stack
+    Commit the changes to the parent stack. Clear all changes from this Stack.
+    Note that this may pop items from the parent Stack if more items have
+    been popped than are on the current Stack.
+
     :return: The parent Stack
     """
     if not self.hasParent(): return
@@ -154,7 +180,7 @@ class Stack(object):
 
 class Context(object):
   """
-  Store context for a match. This includes any stacks used by the match routine.
+  Store context for a match. This includes any Stacks used by the match routine.
   """
 
   # ----------------------------------------------------------------------------
@@ -555,7 +581,7 @@ class DebugOptions(object):
     """
     Called after a match is performed to print debug information.
 
-    :param pattern: The pattern that was ging matched.
+    :param pattern: The pattern that was being matched.
     :param string: The string to match against
     :param index: Location where match starts
     :param context: The context that is forwarded while matching
@@ -650,11 +676,12 @@ class Pattern(object):
     sent to this function.
 
     :param debugOpt: This option can be an object that implements the
-           `beforeMatch` and `afterMatch` functions with signtures that match
+           `beforeMatch` and `afterMatch` functions with signatures that match
            the `DebugOptions` functions of the same name. If this is True or
            'show', debugging is enabled. If this is False or 'hide', debugging
            is disabled. If this is 'named', only named patterns are shown. If
-           this is 'show_only_success', only successful matches are shown.
+           this is 'show_only_success', only successful matches are shown. If
+           this is a function, it is used as a `DebugOptions` `afterMatch` filter.
 
     :param **args: If more control is needed, arguments can be passed in that
            are forwarded to the DebugOptions constructor. See the constructor
@@ -676,6 +703,9 @@ class Pattern(object):
 
       if isDebugHandlerObject(debugOpt):
         self.dbg = debugOpt
+        return
+      elif callable(debugOpt):
+        self.dbg = DebugOptions(afterMatchFilter=debugOpt)
         return
 
       optMap = {True:'show', False:'hide'}
@@ -1209,6 +1239,51 @@ class P(AtomicPattern):
 
   def __repr__(self):
     return self.repr
+
+# ==============================================================================
+
+class I(AtomicPattern):
+  """
+  Match case insensitive string.
+  """
+
+  # ----------------------------------------------------------------------------
+
+  def __init__(self, string):
+    Pattern.__init__(self)
+    self.orig   = string
+    self.string = string.lower()
+    self.size   = len(string)
+
+  # ----------------------------------------------------------------------------
+
+  @ConfigBackCaptureString4match
+  def match(self, string, index=0, context=None):
+    """
+    Match case insensitive string.
+
+    >>> p = I("AcE")
+    >>> p("Ace")
+    Ace
+    >>> p("ACE")
+    ACE
+    >>> p("ace")
+    ace
+
+    :param string: The string to match
+    :param index: The location in string to start match
+    :param context: Information that is forwarded between matches.
+    """
+    if len(string) - index < self.size: return None
+    if string[index:index + self.size].lower() == self.string:
+      return Match(string, index, index + self.size)
+    return None
+
+  # ----------------------------------------------------------------------------
+
+  def __repr__(self):
+    # TODO: Handle single quote in set
+    return "I('%s')" % escapeStr(self.orig)
 
 # ==============================================================================
 
@@ -2637,6 +2712,8 @@ class BackCaptureString(object):
     self.backcaptures     = []
     self.startOfLineIndex = [0]
     self.stringSz         = len(string)
+    # Pattern to find start of lines
+    #self.line = (1 - newline) ** 0 * (newline) ** -1 * Cp()
 
   # ----------------------------------------------------------------------------
 
@@ -2724,13 +2801,29 @@ class BackCaptureString(object):
       for i, startOfLine in enumerate(self.startOfLineIndex):
         if index < startOfLine: return i
 
+    def nextnewline(idx):
+      NOTFOUND = -1
+      dat = {'idx':idx,'\r':idx,'\n':idx}
+      def getnext(string):
+        r, n, idx = (dat[i] for i in ('\r','\n','idx'))
+        if r != NOTFOUND and r <= idx: r = string.find('\r', r+1); dat['\r'] = r
+        if n != NOTFOUND and n <= idx: n = string.find('\n', n+1); dat['\n'] = n
+        if n == NOTFOUND and r == NOTFOUND: return len(string)
+        dat['idx'] = n+1 if n != NOTFOUND and (n < r or n == r+1 or r == NOTFOUND) else r+1
+        return dat['idx']
+
+      return getnext
+
     # Find start of lines till we get to index
     startOfLine = self.startOfLineIndex[-1]
-    line = (1 - newline) ** 0 * (newline) ** -1 * Cp()
+    nextnl = nextnewline(startOfLine)
     while True:
-      match = line(self.string, startOfLine)
-      startOfLine = match.end
-      self.startOfLineIndex.append(startOfLine)
+      startOfLine = nextnl(self.string)
+
+      # This if is just a precaution to make sure that we don't append indexes
+      # less than the ones on the list.
+      if startOfLine > self.startOfLineIndex[-1]:
+        self.startOfLineIndex.append(startOfLine)
       if index < startOfLine:
         return len(self.startOfLineIndex) - 1
       if index == startOfLine:
