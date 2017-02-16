@@ -1,12 +1,3 @@
-"""
-This module is a pure python parsing expression grammar (PEG) library loosely
-designed to mimic the Lua LPEG library. Features are added to ease debugging
-of PEG patterns and to build lexers.
-
-.. autoclass:: Pattern
-   :members:
-"""
-
 # ==============================================================================
 
 class Stack(object):
@@ -80,13 +71,40 @@ class Stack(object):
     if not isinstance(idx, int): raise IndexError("Invalid stack index type")
 
     # Handle negative index values
-    if idx < 0 and len(self) + idx >= 0: idx = len(self) + idx
-    if idx < 0 or len(self) <= idx: raise IndexError("Invalid stack index {0}".format(idx))
+    idx = self._adjustIndex(idx)
+    if not self.isValidIndex(idx): raise IndexError("Invalid stack index {0}".format(idx))
 
     parentlen = self.__parentlen__()
     if idx < parentlen: return self.parent[idx]
     idx = idx - parentlen
     return self.stack[idx]
+
+  # ----------------------------------------------------------------------------
+
+  def _adjustIndex(self, idx):
+    """
+    Convert negative index to a valid positive index if possible.
+
+    :param idx: The index to adjust
+    :return: A valid positive index or the original index
+    """
+    if idx >= 0: return idx
+
+    # Try to convert this to a positive index.
+    idx2 = len(self) + idx
+    return idx if idx2 < 0 else idx2
+
+  # ----------------------------------------------------------------------------
+
+  def isValidIndex(self, idx):
+    """
+    Check whether the given index is a valid stack index.
+
+    :param idx: The index to check
+    :return: True if the index is value, otherwise False.
+    """
+    idx = self._adjustIndex(idx)
+    return 0 <= idx and idx < len(self)
 
   # ----------------------------------------------------------------------------
 
@@ -207,6 +225,7 @@ class Context(object):
   def hasParent(self):
     """
     Check whether a parent is specified for this stack object.
+
     :return: Boolean indicating whether this Stack object has a parent.
     """
     return self.parent is not None
@@ -216,6 +235,7 @@ class Context(object):
   def getStack(self, stack, wrapStack=False):
     """
     Get the requested stack.
+
     :param stack: The name of the stack.
     :param wrapStack: If the stack is only in the parent object, create a new
            stack wrapper in this object if wrapStack is True.
@@ -234,6 +254,7 @@ class Context(object):
   def append(self, stack, value):
     """
     Append the given value to the stack.
+
     :param stack: The stack to append to
     :param values: The value to append
     :return: The Context object
@@ -246,7 +267,8 @@ class Context(object):
 
   def extend(self, stack, values):
     """
-    Extend the stack with the given values
+    Extend the stack with the given values.
+
     :param stack: The stack to append to
     :param values: A list of values to append
     :return: The Context object
@@ -261,6 +283,7 @@ class Context(object):
   def peek(self, stack):
     """
     Return the last value added to the stack without removing it.
+
     :param stack: The stack to peek at.
     :return: The last value added to the stack.
     """
@@ -272,6 +295,7 @@ class Context(object):
   def pop(self, stack):
     """
     Pop the last value added to the stack off the stack and return it.
+
     :param stack: The stack to work with.
     :return: The last value added to the stack.
     """
@@ -282,7 +306,8 @@ class Context(object):
 
   def commit(self):
     """
-    Commit the changes in the context to the parent context
+    Commit the changes in the context to the parent context.
+
     :return: The parent Context
     """
     if not self.hasParent(): return
@@ -304,8 +329,6 @@ class Context(object):
 
 def ConfigBackCaptureString4match(fn):
   """
-  ..function:: ConfigBackCaptureString4match(fn)
-
   This decorates the :func:`match` functions in the Pattern subclasses. The
   wrapper function does the following:
 
@@ -342,7 +365,7 @@ def ConfigBackCaptureString4match(fn):
       debug = context.debug = pattern.debug()
 
     # Convert negative index to positive index
-    index = pattern.positiveIndex(string, index)
+    index = pattern._positiveIndex(string, index)
 
     if debug: debug.beforeMatch(pattern, string, index, context)
 
@@ -379,6 +402,13 @@ def ConfigBackCaptureString4match(fn):
 # ==============================================================================
 
 def escapeStr(string):
+  """
+  Convert \r, \n, and \t to text representations and replace quote marks with
+  \' and \".
+
+  :param string: The string to modify
+  :return: The escaped string.
+  """
   for c, v in [("\r",r"\r"),("\n",r"\n"),("\t",r"\t"),("'",r"\'"),('"',r'\"')]:
                #("\\",r"\\")]:
     string = string.replace(c, v)
@@ -494,13 +524,14 @@ class DebugOptions(object):
     use combined with and '&' and or '|' logic. Parenthesis can be used to
     group filter items.
 
-    :param filter: A filter function or a string indicating
+    :param filter: A filter function.
     :return: The constructed filter.
     """
 
     if filter is None: return DebugOptions.filters['hide']
     if callable(filter): return filter
 
+    # TODO: This logic is incomplete. No value is returned and filter is not used.
     FILTER = C((alpha + '_') * (alpha + digit + '_') ** 0)
     EXPR = 'EXPR' | Cg(
       whitespace0 * (V('PRNS') + FILTER) * whitespace0 * C(S('&|')) * \
@@ -600,61 +631,7 @@ DebugOptions.baseFilters()
 
 class Pattern(object):
   """
-  .. class:: Pattern
-
-  This is the base class for all Pattern objects. The most important function
-  for patterns is *ptn.match(string[, index])*, which checks a string starting
-  at the given index to see if it matches the pattern. A :class:`Match` object
-  is returned if a match is found, or None if the pattern did not match the
-  string at the given index. Each subclass of Pattern implements different
-  patterns to search for and must implement a *match* function that is decorated
-  by :func:`ConfigBackCaptureString4match`. This *match* function can be called
-  indirectly by using *ptn(string[, index])*.
-
-  A :class:`Match` object contains the original string and stores the start and
-  end index of the match. The location after the end of the matched string is
-  typically used as the starting point for subsequent searches. Some patterns
-  may succeed without consuming any values of the string. Some care must be
-  taken to ensure that expressions consume input so that infinite loops do not
-  occur.
-
-  Any pattern can be 'named' by calling 'setName' for the pattern or by using
-  the 'set name' operator (shown later). This is primarily used for debugging
-  or when building a :class:`Tokenizer`, since all token patterns must have a
-  name specified.
-
-  Debug mode can be set for any pattern by calling the function *debug* with
-  *True* (to debug all subpatterns) or *"named"* (to debug only showing patterns
-  that are named).
-
-  The Pattern class defines the set of operators supported by all Pattern
-  objects. The patterns are exercised by calling *ptn.match(string,index)* which
-  tries to match the *ptn* in the given string starting at the specified index.
-  Some patterns contain other patterns. Below the contained patterns will be
-  referenced as *ptn1* or *ptn2*. The supported operators are:
-
-  ========  ====================================================================
-  ``*``     This is used to indicate a sequence of patterns that must come in
-            order. The can be referred to as the *and* or *followed by*
-            operator. If *ptn1* and *ptn2* are two Pattern objects, then
-            *ptn1 ``*`` ptn2* matches *ptn1* followed by *ptn2*. If either
-            pattern fails, then the combination fails.
-  ``+``     This is an ordered choice operator. The expression *ptn1 + ptn2*
-            matches *ptn1* starting at *index*. If this succeeds, the
-            :class:`Match` is returned. Otherwise, it tries to match *ptn2* and
-            returns the :class:`Match` if the pattern succeeds, or None if it
-            fails.
-  ``-``     This is a *not* operator. It matches anything that does not match
-            the given pattern. No string input is consumed for this operation.
-            This is commonly written in an expression like (P(1)-P("]")), which
-            is any character except for "]".
-  ``~``     This is a look ahead operator. It matches the pattern, but consumes
-            no input. For example, *~P("test")* checks a string for "test", but
-            does not consume this text.
-  ``|``     This operator is used to set the name of a pattern. For example,
-            *"whitespace" | S(" \t")* sets the name of this pattern to
-            "whitespace".
-  ========  ====================================================================
+  Abstract base class for all parsing expression patterns.
   """
   precedence = 100
 
@@ -669,11 +646,27 @@ class Pattern(object):
 
   def debug(self, debugOpt=None, **args):
     """
-    .. func:ptn.debug([debugOptions])
+    Set or return the debug options for this pattern. The basic options that can
+    be set are:
 
-    Set or return the debug options for this pattern. For the available options,
-    see the DebugOptions class constructor which is called with the parameters
+    * True or 'show' to show parsing debug information for the current pattern
+      and all contained patterns.
+    * False or 'hide' to suppress debug information for the current pattern and
+      all contained patterns.
+    * 'named' to show parsing debug information for any named patterns contained
+      within the current pattern.
+
+    Other options may be added. For the available options, see the
+    :class:`DebugOptions` class constructor which is called with the parameters
     sent to this function.
+
+    When the debug option is set to True, pattern results are printed to the
+    console by default. The output source can be modified via a custom
+    :class:`DebugOptions` object.
+
+    When the debug option is set to 'show', 'hide', or 'named', the option
+    applies to any contained patterns that do not have some other other
+    explicitly set.
 
     :param debugOpt: This option can be an object that implements the
            `beforeMatch` and `afterMatch` functions with signatures that match
@@ -681,7 +674,8 @@ class Pattern(object):
            'show', debugging is enabled. If this is False or 'hide', debugging
            is disabled. If this is 'named', only named patterns are shown. If
            this is 'show_only_success', only successful matches are shown. If
-           this is a function, it is used as a `DebugOptions` `afterMatch` filter.
+           this is a function, it is used as a `DebugOptions` `afterMatch`
+           filter.
 
     :param **args: If more control is needed, arguments can be passed in that
            are forwarded to the DebugOptions constructor. See the constructor
@@ -690,6 +684,12 @@ class Pattern(object):
     :return: When no options are passed in, this returns the debug options object
              for this Pattern. If parameters are passed in, a DebugOptions object
              is created and associated with this Pattern.
+
+    The debug option can be set using::
+
+      p = P(1).debug(True)
+      p = P(1) & 'show'  # Same as True
+      p = 'hide' & P(1)  # Same as False
     """
 
     if debugOpt is None and len(args) == 0: return self.dbg
@@ -703,10 +703,10 @@ class Pattern(object):
 
       if isDebugHandlerObject(debugOpt):
         self.dbg = debugOpt
-        return
+        return self
       elif callable(debugOpt):
         self.dbg = DebugOptions(afterMatchFilter=debugOpt)
-        return
+        return self
 
       optMap = {True:'show', False:'hide'}
       if debugOpt in optMap: debugOpt = optMap[debugOpt]
@@ -721,24 +721,40 @@ class Pattern(object):
 
   def setName(self, name):
     """
-    .. func:ptn.setName(name)
-
     Set the name for a pattern object. When debugging, the name is printed in
     the debugging output in place of the Pattern specification. It is also used
     by the :class:`Tokenizer` class.
 
     :param name: The name for the Pattern.
     :return: The Pattern object. Allows chaining of commands.
+
+    >>> p = P(1).setName('test 1')
+    >>> p.name
+    'test 1'
+    >>> p = 'test 2' | P(1)
+    >>> p.name
+    'test 2'
+    >>> p = P(1) | 'test 3'
+    >>> p.name
+    'test 3'
     """
     self.name = name
     return self
 
   # ----------------------------------------------------------------------------
 
-  def containsPatterns(self):
+  def _containsPatterns(self):
     """
-    Indicate whether this is a container of other patterns
+    Indicate whether this is a container of other patterns.
+
     :return: True if this contains other Patterns, or False if not.
+
+    >>> notAcontainer = P(1)
+    >>> isAcontainer  = P(1) + P(1)
+    >>> notAcontainer._containsPatterns()
+    False
+    >>> isAcontainer._containsPatterns()
+    True
     """
     return False
 
@@ -746,9 +762,9 @@ class Pattern(object):
 
   def match(self, string, index=0, context=None):
     """
-    .. func:ptn.match(string[, index])
-
-    Match the *ptn* against the *string* starting at the given *index*.
+    Match the `Pattern` against the *string* starting at the given *index*. Note
+    that :class:`Pattern` implements the `__call__` method which forwards calls
+    to this function.
 
     :param string: A string to match.
     :param index:  The location in the string to look for the given pattern.
@@ -756,18 +772,34 @@ class Pattern(object):
            forward during match operations.
     :return: A :class:`Match` object if the pattern succeeds, or None if the
              pattern fails.
+
+    >>> p = P('t')   # Match the 't' character
+    >>> p.match('test')
+    t
+    >>> p('test')  # Equivalent to call above
+    t
     """
     return None
 
   # ----------------------------------------------------------------------------
 
   @staticmethod
-  def positiveIndex(string, index, msg="Invalid index"):
+  def _positiveIndex(string, index, msg="Invalid index"):
     """
     Get the string index as a positive value. A negative index is calculated
     from the end of the string. If the index is outside the string bounds, an
     Exception is raised if msg is set. Otherwise the index at start or end of
     the string is returned.
+
+    :param string: A string to match.
+    :param index:  The location in the string to look for the given pattern.
+    :param msg:    Message included in a ``ValueError`` exception if the index
+                   is invalid
+
+    >>> Pattern._positiveIndex("testing", -3)
+    4
+    >>> Pattern._positiveIndex("testing", 3)
+    3
     """
     sz = len(string)
     if index >= 0:
@@ -780,9 +812,9 @@ class Pattern(object):
 
   # ----------------------------------------------------------------------------
 
-  def addPrn(self, toWrap):
+  def _addPrn(self, toWrap):
     """
-    Add parenthesis to the 'toWrap' item if the precedence is higher than the
+    Add parenthesis to the ``toWrap`` item if the precedence is higher than the
     current object.
     """
     if toWrap.name is not None:
@@ -801,11 +833,11 @@ class Pattern(object):
 
   def __ror__(self, name):
     """
-    ``ptn | "<name>"``
+    ``"<name>"` | ptn`
 
-    Used to set the name of a *Pattern*.
+    Used to set the name of a :class:`Pattern` object.
 
-    :returns: The original Pattern.
+    :returns: The original pattern.
     """
     return self.__or__(name)
 
@@ -813,12 +845,14 @@ class Pattern(object):
 
   def __or__(self, name):
     """
-    ``"<name>" | ptn``
-
-    Used to set the name of a *Pattern*.
+    Sets the name of a :class:`Pattern` object.
 
     :param name: The name to use for this pattern
-    :returns: The original Pattern.
+    :returns: The original pattern.
+
+    >>> p = 'test' | P(1)
+    >>> p.name
+    'test'
     """
     self.setName(name)
     return self
@@ -827,9 +861,14 @@ class Pattern(object):
 
   def __rand__(self, debug_opt):
     """
-    Set debug option for parameter
+    Set debug option for the pattern.
+
     :param debug_opt: See
     :return: Pattern with debug option set
+
+    Hide the pattern object::
+
+      p = False & P(1)
     """
     return self.__and__(debug_opt)
 
@@ -837,8 +876,14 @@ class Pattern(object):
 
   def __and__(self, debugOpt):
     """
+    Set debug option for the pattern.
+
     :param debugOpt: Set debug options for the pattern.
     :return: The pattern with debug option set.
+
+    Hide the pattern object::
+
+      p = P(1) & 'hide'
     """
     self.debug(debugOpt)
     return self
@@ -864,11 +909,13 @@ class Pattern(object):
 
   def __mul__(self, other):
     """
-    ``ptn * ptn1``
-
-    Match *ptn* followed by *ptn1*.
+    Match patterns in order.
 
     :returns: A :class:`PattternAnd` object.
+
+    >>> p = P('t') * P('e')
+    >>> p('test')
+    te
     """
     return PatternAnd(self, other)
 
@@ -876,11 +923,17 @@ class Pattern(object):
 
   def __rmul__(self, other):
     """
-    ``ptn1 * ptn``
-
-    Match *ptn1* followed by *ptn*.
+    Match patterns in order. Called when the first object in list is not a
+    :class:`Pattern` object. The first object can be an integer or string and
+    will be used to construct a :class:`P` pattern object.
 
     :returns: A :class:`PattternAnd` object.
+
+    >>> p = 1*P("est")
+    >>> p('test')
+    test
+    >>> p('pest')
+    pest
     """
     return PatternAnd(other, self)
 
@@ -888,11 +941,15 @@ class Pattern(object):
 
   def __add__(self, other):
     """
-    ``ptn + ptn1``
-
-    Matches *ptn* or (if this fails) *ptn1*.
+    Matches the first pattern, or if that fails the second pattern.
 
     :returns: A :class:`PatternOr` object.
+
+    >>> p = P('t') + P('p')
+    >>> p('pop')
+    p
+    >>> p('top')
+    t
     """
     return PatternOr(self, other)
 
@@ -900,11 +957,15 @@ class Pattern(object):
 
   def __radd__(self, other):
     """
-    ``ptn1 + ptn``
-
     Matches *ptn1* or (if this fails) *ptn*.
 
     :returns: A :class:`PatternOr` object.
+
+    >>> p = 'cat' + P('dog')
+    >>> p('cat')
+    cat
+    >>> p('dog')
+    dog
     """
     return PatternOr(other, self)
 
@@ -912,12 +973,16 @@ class Pattern(object):
 
   def __sub__(self, other):
     """
-    ``ptn - ptn1``
-
-    Matches *ptn* as long as *ptn1* is not a match. This allows cases to be
-    excluded from the *ptn* match.
+    Matches first pattern if second pattern does not match. This allows cases to
+    be excluded from the *ptn* match.
 
     :returns: A pattern object.
+
+    >>> p = P(3)-P('t')
+    >>> p('pop')
+    pop
+    >>> p('top') is None
+    True
     """
     return PatternAnd(PatternNot(other), self)
 
@@ -925,10 +990,8 @@ class Pattern(object):
 
   def __rsub__(self, other):
     """
-    ``ptn - ptn1``
-
-    Matches *ptn* as long as *ptn1* is not a match. This allows cases to be
-    excluded from the *ptn* match.
+    Matches first pattern if second pattern does not match. This allows cases to
+    be excluded from the *ptn* match.
 
     :returns: A pattern object.
     """
@@ -938,12 +1001,14 @@ class Pattern(object):
 
   def __neg__(self):
     """
-    ``-ptn``
-
-    The match succeeds as long as *ptn* does not succeed. No string input is
-    consumed in the resulting :class:`Match`.
+    The match succeeds as long as the pattern does not succeed. No string input
+    is consumed in the resulting :class:`Match`.
 
     :returns: A PatternNot object.
+
+    >>> p = -P('Bob')
+    >>> p('Bob') is None
+    True
     """
     return PatternNot(self)
 
@@ -951,12 +1016,21 @@ class Pattern(object):
 
   def __pow__(self, n):
     """
-    ``ptn**n``
-
-    If *n* is positive, match at least *n* copies of *ptn*. If *n* is negative,
-    match at most *n* copies of the *ptn*.
+    If power ``n`` is positive, match at least ``n`` copies of the pattern. If
+    ``n`` is negative, match at most ``n`` copies of the ``ptn``. If ``n`` is
+    an integer in an array, matches exactly ``n`` occurrences.
 
     :returns: A PatternRepeat object.
+
+    >>> p = P('t')**2
+    >>> p('ttt')
+    ttt
+    >>> p = P('t')**-2
+    >>> p('t')
+    t
+    >>> p = P('t')**[2]
+    >>> p('ttt')
+    tt
     """
     return PatternRepeat(self, n)
 
@@ -964,12 +1038,14 @@ class Pattern(object):
 
   def __invert__(self):
     """
-    ``~ptn``
-
-    A look ahead operation to whether the string matches *ptn*. This consumes no
+    A look ahead operation to whether the string matches ``ptn``. This consumes no
     input.
 
     :returns: A PatternLookAhead object.
+
+    >>> p = ~P('test')
+    >>> len(p('test')) == 0
+    True
     """
     if isinstance(self, PatternLookAhead): return self
     return PatternLookAhead(self)
@@ -978,9 +1054,7 @@ class Pattern(object):
 
   def __call__(self, string, index=0, context=None):
     """
-    .. func: ptn(string[, index])
-
-    Shorthand for calling ``ptn.match(string[, index]).
+    Shorthand for calling :func:`match(string[, index])`.
 
     :param string: A string to match.
     :param index:  The location in the string to look for the given pattern.
@@ -1333,7 +1407,10 @@ class S(AtomicPattern):
 
 class R(AtomicPattern):
   """
-  Match characters in a given range.
+  Match characters in any of the given ranges. Each range is comprised of two
+  characters where the ascii value of a character must be within the range of
+  the two characters to be a match. Any number of ranges can be specified within
+  the range object.
   """
 
   # ----------------------------------------------------------------------------
@@ -1496,7 +1573,7 @@ class C(Capture):
 
   # ----------------------------------------------------------------------------
 
-  def containsPatterns(self):
+  def _containsPatterns(self):
     """
     Indicate that this does contain patterns.
     :return: True
@@ -1568,7 +1645,7 @@ class Cb(AtomicPattern):
 
   # ----------------------------------------------------------------------------
 
-  def containsPatterns(self):
+  def _containsPatterns(self):
     """
     Indicate that this does contain patterns.
     :return: True
@@ -1601,9 +1678,9 @@ class Cb(AtomicPattern):
     >>> p.match("cat dog") == None
     True
     >>> p = Cb("quote", S("\\"'")) * C((1-Cb("quote"))**0) * Cb("quote")
-    >>> p.match("'Matched quoted string'").captures[0]
+    >>> p.match("'Matched quoted string' but not extra stuff").captures[0]
     'Matched quoted string'
-    >>> p.match('"Quoted String"').captures[0]
+    >>> p.match('"Quoted String" without extra stuff').captures[0]
     'Quoted String'
     """
     if self.pattern is None:
@@ -1653,7 +1730,7 @@ class Cc(Capture):
     :param index: The location in string to start match
     :param context: Information that is forwarded between matches.
     """
-    return Match(string, index, index).addCapture(self.value)
+    return Match(string, index, index)._addCapture(self.value)
 
   # ----------------------------------------------------------------------------
 
@@ -1680,7 +1757,7 @@ class Cg(Capture):
 
   # ----------------------------------------------------------------------------
 
-  def containsPatterns(self):
+  def _containsPatterns(self):
     """
     Indicate that this does contain patterns.
     :return: True
@@ -1828,12 +1905,12 @@ class Cl(Capture):
     :Example:
 
     >>> p = Cl()
-    >>> p.match("\\n\\n\\n\\n\\n\\n\\n\\n",3).getCapture(0)
+    >>> p("\\n\\n\\n\\n\\n\\n\\n\\n",3).getCapture(0)
     4
     """
 
     line = string.getLineNumber(index)
-    return Match(string, index, index).addCapture(line)
+    return Match(string, index, index)._addCapture(line)
 
   # ----------------------------------------------------------------------------
 
@@ -1866,8 +1943,10 @@ class Cp(Capture):
     >>> p = Cp()
     >>> p("test",3).getCapture(0)
     3
+    >>> p("test",1).getCapture(0)
+    1
     """
-    return Match(string, index, index).addCapture(index)
+    return Match(string, index, index)._addCapture(index)
 
   # ----------------------------------------------------------------------------
 
@@ -1906,13 +1985,13 @@ class Col(Capture):
     5
     """
     match = Match(string, index, index)
-    if index == 0: return match.addCapture(0)
+    if index == 0: return match._addCapture(0)
 
     # Look backwards until the end of a line is found.
     for i in xrange(index-1, -1, -1):
       if string[i] not in ('\r','\n'): continue
-      return match.addCapture(index-1-i)
-    return match.addCapture(index)
+      return match._addCapture(index - 1 - i)
+    return match._addCapture(index)
 
   # ----------------------------------------------------------------------------
 
@@ -1947,7 +2026,7 @@ class Sc(StackPtn):
 
   # ----------------------------------------------------------------------------
 
-  def containsPatterns(self):
+  def _containsPatterns(self):
     """
     Indicate that this does contain patterns.
     :return: True
@@ -1975,6 +2054,13 @@ class Sc(StackPtn):
     :param context: Information that is forwarded between matches.
     :return: A match object that consumes no characters, but adds a column
              capture.
+
+    :Example:
+
+    >>> p = Sc('test',Cc('one')*Cc('two'))
+    >>> match = p.match("")
+    >>> match.context.getStack('test')[0:]
+    ['one', 'two']
     """
 
     match = self.pattern.match(string, index, context)
@@ -2041,20 +2127,28 @@ class Sp(StackPtn):
 
 class Sm(StackPtn):
   """
-  Match value on Stack
+  Match a value in the Stack with one in the string passed to match, or check
+  for a specific string on the match stack. Checking for a specific string on
+  the stack at a given location is useful for controling the parsing logic
+  based on state stored on the stack.
   """
 
   # ----------------------------------------------------------------------------
 
-  def __init__(self, stack, n=-1):
+  def __init__(self, stack, n=-1, expected=None):
     """
 
     :param stack: The name of the stack to pop values from.
     :param n: Index of the value to match (-1 by default).
+    :param expected: If this is passed in, the stack is checked to see
+           if the value on the stack matches the expected value. If this is
+           None, the string passed to match is compared to see if it matches
+           the value on the stack at index n.
     """
     Pattern.__init__(self)
-    self.stack = stack
-    self.n = n
+    self.stack    = stack
+    self.n        = n
+    self.expected = expected
 
   # ----------------------------------------------------------------------------
 
@@ -2063,21 +2157,46 @@ class Sm(StackPtn):
     """
     Match value on the stack.
 
-    :param string: The string to match
-    :param index: The location in string to start match
+    :param string: The string to match.
+    :param index: The location in string to start match.
     :param context: Information that is forwarded between matches.
     :return: A match object that consumes no characters, but adds a column
              capture.
+
+    :Example:
+
+    >>> p = Sc("my_stack",Cc("test")*Cc("ing"))*Sm("my_stack",0)*Sm("my_stack")
+    >>> p("testing")
+    testing
+    >>> p("tester") == None
+    True
+
+    >>> p = Sc("items",Cc("one")*Cc("two"))*Sm("items",0,"one")*Sm("items",1,"two")
+    >>> match = p('')
+    >>> isinstance(match, Match)
+    True
+    >>> match.context.
     """
 
     stack = context.getStack(self.stack)
-    if stack is not None:
-      top_of_stack = stack.peek()
-      if isinstance(top_of_stack, basestring):
-        match = P(top_of_stack).match(string, index, context)
-        return match
-    match = Match(string, index, index)
-    return match
+
+    if stack is None and self.expected is not None: return None
+    if not stack.isValidIndex(self.n): return None
+
+    stack_item = stack[self.n]
+
+    # Match the stack item against the expected value
+    if self.expected:
+      if self.expected == stack_item:
+        return Match(string, index, index)
+      return None
+
+    # Match the item on the stack against the string
+    if isinstance(stack_item, basestring):
+      match = P(stack_item).match(string, index, context)
+      return match
+
+    return None
 
   # ----------------------------------------------------------------------------
 
@@ -2089,7 +2208,7 @@ class Sm(StackPtn):
 
 class Ssz(StackPtn):
   """
-  Get the stack size or martch only if it has a given size
+  Get the stack size or match only if it has a given size
   """
 
   # ----------------------------------------------------------------------------
@@ -2121,7 +2240,7 @@ class Ssz(StackPtn):
     stack = context.getStack(self.stack)
     sz = 0 if stack is None else len(stack)
     if self.n is None:
-       match = Match(string, index, index).addCapture(sz)
+       match = Match(string, index, index)._addCapture(sz)
     elif self.n != sz:
       match = None
     else:
@@ -2150,7 +2269,7 @@ class CompositePattern(Pattern):
 
   # ----------------------------------------------------------------------------
 
-  def containsPatterns(self):
+  def _containsPatterns(self):
     return True
 
   # ----------------------------------------------------------------------------
@@ -2217,7 +2336,7 @@ def setVs(pattern, Vs, replace=False):
     return pattern
 
   # If this does not contain patterns return
-  if not pattern.containsPatterns(): return pattern
+  if not pattern._containsPatterns(): return pattern
 
   # Set the Vs for all contained patterns
   patterns = pattern.getPatterns()
@@ -2257,7 +2376,7 @@ class PatternFnWrap(CompositePattern):
 
     :Example:
 
-    >>> def fn(match): return match.addCapture("test")
+    >>> def fn(match): return match._addCapture("test")
     >>> p = P(3) / fn
     >>> p("Cat").captures
     ['test']
@@ -2329,10 +2448,10 @@ class PatternCaptureN(CompositePattern):
 
     newmatch = Match(string, index, match.end)
     try:
-      newmatch.addCapture(match.captures[self.n])
+      newmatch._addCapture(match.captures[self.n])
     except IndexError:
       if self.default is not None:
-        newmatch.addCapture(self.default)
+        newmatch._addCapture(self.default)
 
     return newmatch
 
@@ -2405,7 +2524,7 @@ class PatternAnd(CompositePattern):
     for pattern in self.patterns:
       match = pattern.match(string, index, context)
       if not isinstance(match, Match): return None
-      MATCH.addSubmatch(match)
+      MATCH._addSubmatch(match)
       index = match.end
     MATCH.end = index
     return MATCH
@@ -2417,9 +2536,9 @@ class PatternAnd(CompositePattern):
     if self.is_not_ptn:
       # Get the pattern contained by PatternNot since we will add the '-' manually
       notPtn = self.patterns[0].getPatterns()[0]
-      return "%s - %s" % (self.addPrn(self.patterns[1]), self.addPrn(notPtn))
+      return "%s - %s" % (self._addPrn(self.patterns[1]), self._addPrn(notPtn))
     else:
-      return "{0}*{1}".format(self.addPrn(self.patterns[0]), self.addPrn(self.patterns[1]))
+      return "{0}*{1}".format(self._addPrn(self.patterns[0]), self._addPrn(self.patterns[1]))
 
 # ==============================================================================
 
@@ -2472,7 +2591,7 @@ class PatternOr(CompositePattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "{0} + {1}".format(self.addPrn(self.patterns[0]), self.addPrn(self.patterns[1]))
+    return "{0} + {1}".format(self._addPrn(self.patterns[0]), self._addPrn(self.patterns[1]))
 
 # ==============================================================================
 
@@ -2514,7 +2633,7 @@ class PatternNot(CompositePattern):
   # ----------------------------------------------------------------------------
 
   def __repr__(self):
-    return "-%s" % self.addPrn(self.patterns[0])
+    return "-%s" % self._addPrn(self.patterns[0])
 
 # ==============================================================================
 
@@ -2578,8 +2697,8 @@ class PatternRepeat(CompositePattern):
       match = self.patterns[0].match(string, index, context)
       if not isinstance(match, Match): return None
       index = match.end
-      MATCH.addSubmatch(match)
-      MATCH.setEnd(index)
+      MATCH._addSubmatch(match)
+      MATCH._setEnd(index)
     return MATCH
 
   # ----------------------------------------------------------------------------
@@ -2601,12 +2720,12 @@ class PatternRepeat(CompositePattern):
       match = self.patterns[0].match(string, index, context)
 
       if not isinstance(match, Match):
-        return MATCH.setEnd(index) if cnt >= self.n else None
+        return MATCH._setEnd(index) if cnt >= self.n else None
 
-      MATCH.addSubmatch(match)
+      MATCH._addSubmatch(match)
 
       # No progress, so it matches infinite times
-      if match.end == index: return MATCH.setEnd(index)
+      if match.end == index: return MATCH._setEnd(index)
 
       cnt += 1
       index = match.end
@@ -2625,10 +2744,10 @@ class PatternRepeat(CompositePattern):
     MATCH = Match(string, index)
     for i in range(self.n):
       match = self.patterns[0].match(string, index, context)
-      if not isinstance(match, Match): return MATCH.setEnd(index)
-      MATCH.addSubmatch(match)
+      if not isinstance(match, Match): return MATCH._setEnd(index)
+      MATCH._addSubmatch(match)
       index = match.end
-    return MATCH.setEnd(index)
+    return MATCH._setEnd(index)
 
   # ----------------------------------------------------------------------------
 
@@ -2636,7 +2755,7 @@ class PatternRepeat(CompositePattern):
     n = self.n
     if self.matcher == self.match_at_most_n: n = -n
     if self.matcher == self.match_n: n = "[{0}]".format(n)
-    return "{0}**{1}".format(self.addPrn(self.patterns[0]), n)
+    return "{0}**{1}".format(self._addPrn(self.patterns[0]), n)
 
 # ==============================================================================
 
@@ -2663,7 +2782,7 @@ class PatternLookAhead(CompositePattern):
     >>> p = ~P("test")
     >>> p("testing") == ""
     True
-    >>> p("This is a test",10) == ""
+    >>> p("This is a test", 10) == ""
     True
     >>> p("Failed") is None
     True
@@ -2673,7 +2792,7 @@ class PatternLookAhead(CompositePattern):
     :param context: Information that is forwarded between matches.
     """
     match = self.patterns[0].match(string, index, context)
-    if isinstance(match, Match): return match.setEnd(index)
+    if isinstance(match, Match): return match._setEnd(index)
     return None
 
   # ----------------------------------------------------------------------------
@@ -2685,7 +2804,7 @@ class PatternLookAhead(CompositePattern):
 # General patterns
 # ==============================================================================
 
-alpha       = R("AZ", "az")
+alpha       = R("az", "AZ")
 digit       = R("09")
 quote       = S("\"'")
 whitespace  = S(" \t")
@@ -2802,12 +2921,12 @@ class BackCaptureString(object):
         if index < startOfLine: return i
 
     def nextnewline(idx):
-      NOTFOUND = -1
-      dat = {'idx':idx,'\r':idx,'\n':idx}
+      NOTFOUND = -2
+      dat = {'idx':idx,'\r':idx-1,'\n':idx-1}
       def getnext(string):
         r, n, idx = (dat[i] for i in ('\r','\n','idx'))
-        if r != NOTFOUND and r <= idx: r = string.find('\r', r+1); dat['\r'] = r
-        if n != NOTFOUND and n <= idx: n = string.find('\n', n+1); dat['\n'] = n
+        if r != NOTFOUND and r <= idx: r = string.find('\r', r+1); dat['\r'] = r == -1 and NOTFOUND or r
+        if n != NOTFOUND and n <= idx: n = string.find('\n', n+1); dat['\n'] = n == -1 and NOTFOUND or n
         if n == NOTFOUND and r == NOTFOUND: return len(string)
         dat['idx'] = n+1 if n != NOTFOUND and (n < r or n == r+1 or r == NOTFOUND) else r+1
         return dat['idx']
@@ -2859,6 +2978,10 @@ class BackCaptureString(object):
 # ==============================================================================
 
 class Match(object):
+  """
+  The ``Match`` object tracks the text that was matched by a PEG pattern, and
+  provides access to any match captures.
+  """
 
   # ----------------------------------------------------------------------------
 
@@ -2871,9 +2994,9 @@ class Match(object):
 
   # ----------------------------------------------------------------------------
 
-  def setEnd(self, end):
+  def _setEnd(self, end):
     """
-    Set the value of end and return the match
+    Set the index of end of the match and return he current match object.
     """
     self.end = end
     return self
@@ -2882,14 +3005,14 @@ class Match(object):
 
   def getValue(self, default=None):
     """
-    Get the value that was mached.
+    Get the string that was matched by the PEG pattern.
     """
     start, end = (self.start, self.end)
     return default if self.end is None else self.string[start:end]
 
   # ----------------------------------------------------------------------------
 
-  def addCapture(self, capture):
+  def _addCapture(self, capture):
     """
     Add a capture or a submatch.
     """
@@ -2898,7 +3021,7 @@ class Match(object):
 
   # ----------------------------------------------------------------------------
 
-  def setCaptures(self, captures):
+  def _setCaptures(self, captures):
     """
     Set the captures for this match.
 
@@ -2914,8 +3037,10 @@ class Match(object):
 
   # ----------------------------------------------------------------------------
 
-  def addSubmatch(self, match):
+  def _addSubmatch(self, match):
     """
+    Extend the captures in the current match object with captures from a
+    contained PEG pattern.
     """
     self.captures.extend(match.captures)
     return self
@@ -2923,14 +3048,28 @@ class Match(object):
   # ----------------------------------------------------------------------------
 
   def hasCaptures(self):
+    """
+    :return: Return true if this Match object contains any captures.
+    """
     return len(self.captures) > 0
 
   # ----------------------------------------------------------------------------
 
   def getCapture(self, index):
     """
+    Get the capture at the specified index. If the index does not exist, throw
+    an IndexError. Note that the number of captures for a Match object named
+    ``match`` is given by ``len(match)``. Note that array syntax can be used
+    with the Match object as a shorthand for calling this method. For example,
+    ``match[1]`` is equivalent to ``match.getCapture(1)``.
+
+    :param index: The index of the capture with the first capture being index
+           0. A negative index is used to access values relative to the end of
+           the array, with index -1 being the last capture value.
+    :return: The requested capture value.
     """
-    if not self.hasCaptures() or index >= len(self.captures):
+    # TODO: Handles slices?
+    if not self.hasCaptures() or -index < -len(self.captures) or len(self.captures) <= index:
       raise IndexError("Invalid capture index for Match")
     return self.captures[index]
 

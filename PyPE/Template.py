@@ -82,11 +82,11 @@ class Template(object):
     text = match.captures[1]
     escaped_text = "".join(self.escapeDblQuoteAndEscChr(text).captures)
     if escaped_text == "":
-      return match.setCaptures([])
+      return match._setCaptures([])
 
     # Add command to write the text to the file.
     pycode = PyCodeBlock(['write("""{0}""")'.format(escaped_text)])
-    return match.setCaptures(pycode)
+    return match._setCaptures(pycode)
 
   # ----------------------------------------------------------------------------
   def __pyTagParser__(self):
@@ -407,7 +407,7 @@ class Template(object):
     pycode = PyCodeBlock(code_lines,
                          unindent_before = state['unindentLvl'],
                          indent_after    = indentLvl)
-    return match.setCaptures([pycode])
+    return match._setCaptures([pycode])
 
   # ----------------------------------------------------------------------------
   def __getFunctionName__(self, function_name=None):
