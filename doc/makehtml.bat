@@ -1,1 +1,3 @@
-make.bat html
+call make.bat clean
+call make.bat html
+pause

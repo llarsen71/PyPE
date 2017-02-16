@@ -279,4 +279,3 @@ if "%1" == "dummy" (
 )
 
 :end
-pause
