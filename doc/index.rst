@@ -3,8 +3,9 @@ PyPE - Python Parsing Expressions
 #################################
 
 PyPE is a python pattern matching library for searching text and extracting
-data. PyPE is useful for interpreting text with a formal structure and
-converting it into data structures that can be used in a program. Examples of
+data from the text. While PyPE can be used to match text patterns in any text
+file, it is particularly useful for interpreting structured text and converting 
+the text into data structures that can be used in a program. Examples of
 text with structure are html or xml documents, comma separated value or tab
 delimited files, or source code files. The code used to interpret structured
 text and convert it to data structures is referred to as a parser. PyPE is
@@ -20,7 +21,7 @@ recursive grammars such as programming languages. While PEGs are more powerful
 than regular expressions, they are also often easier to write.
 
 Parsing expressions use a declarative programming style, where the structure
-of a text input if defined and the information to capture is specified without
+of a text input is defined and the information to capture is specified without
 indicating how the text input will be processed. Once the syntax of the text
 input is described, the PEG parser can be passed a string and will return the
 data extracted from the string in a data structure that can be used in the
