@@ -1,0 +1,1195 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>PyPE - Python Parsing Expressions Library &#8212; PyPE 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="PyPE - Python Parsing Expressions" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="index.html" title="PyPE - Python Parsing Expressions"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPE 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="pype-python-parsing-expressions-library">
+<span id="pype-intro"></span><h1>PyPE - Python Parsing Expressions Library<a class="headerlink" href="#pype-python-parsing-expressions-library" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-pattern-base-class">
+<h2>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Pattern</span></code> Base Class<a class="headerlink" href="#the-pattern-base-class" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#PyPE.PyPE.Pattern" title="PyPE.PyPE.Pattern"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pattern</span></code></a> is an abstract base class for all pattern
+objects. The most important function for patterns is
+<a class="reference internal" href="#PyPE.PyPE.Pattern.match" title="PyPE.PyPE.Pattern.match"><code class="xref py py-func docutils literal notranslate"><span class="pre">match(string[,</span> <span class="pre">index])</span></code></a>, which checks
+a string starting at the given index to see if it matches the pattern. A
+<a class="reference internal" href="#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object is returned if a match is found, or
+<code class="docutils literal notranslate"><span class="pre">None</span></code> if the pattern did not match the string at the given index. Each
+subclass of <a class="reference internal" href="#PyPE.PyPE.Pattern" title="PyPE.PyPE.Pattern"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pattern</span></code></a> implements different search
+patterns. Note that for convenience the pattern object can be called as if it
+is a function, and the call is forwarded to <code class="xref py py-func docutils literal notranslate"><span class="pre">match()</span></code>. Therefore, if
+<code class="docutils literal notranslate"><span class="pre">ptn</span></code> is a pattern, the following are equivalent:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">ptn</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;This is a test&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">ptn</span><span class="p">(</span><span class="s2">&quot;This is a test&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A <a class="reference internal" href="#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object allows you to get the string that
+was matched and any captures. It also includes a <code class="docutils literal notranslate"><span class="pre">context</span></code> value that
+provides access to any <code class="xref py py-class docutils literal notranslate"><span class="pre">Stack</span></code> objects that were created. Some patterns
+may succeed without consuming any values from the string. To avoid infinite loops
+in a parsing expression, some care must be taken to ensure that no recursive
+expressions occur that consume no text. For reference, this is referred to as “left recursion”
+in PEG literature, and grammars can be rewritten to remove “left recursion”.
+Information on this can be found via an internet search.</p>
+<p>Any pattern can be ‘named’ by calling <a class="reference internal" href="#PyPE.PyPE.Pattern.setName" title="PyPE.PyPE.Pattern.setName"><code class="xref py py-func docutils literal notranslate"><span class="pre">setName</span></code></a>
+for the pattern or by using the ‘set name’ operator (shown later). This is
+primarily used for debugging purposes or when building a <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code>,
+since all token patterns must have a name specified.</p>
+<p>Debug mode can be set for any pattern by calling the function
+<a class="reference internal" href="#PyPE.PyPE.Pattern.debug" title="PyPE.PyPE.Pattern.debug"><code class="xref py py-func docutils literal notranslate"><span class="pre">debug</span></code></a> with <code class="docutils literal notranslate"><span class="pre">True</span></code> (to debug all subpatterns),
+<code class="docutils literal notranslate"><span class="pre">False</span></code> (to supress debug message for a pattern and subpatterns]), and
+<code class="docutils literal notranslate"><span class="pre">&quot;named&quot;</span></code> (to show only named patterns in the debug output).</p>
+<div class="section" id="pattern">
+<span id="id1"></span><h3>Pattern<a class="headerlink" href="#pattern" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.PyPE.Pattern">
+<em class="property">class </em><code class="descclassname">PyPE.PyPE.</code><code class="descname">Pattern</code><a class="headerlink" href="#PyPE.PyPE.Pattern" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class for all parsing expression patterns.</p>
+<dl class="method">
+<dt id="PyPE.PyPE.Pattern.debug">
+<code class="descname">debug</code><span class="sig-paren">(</span><em>debugOpt=None</em>, <em>**args</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Pattern.debug" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set or return the debug options for this pattern. The basic options that can
+be set are:</p>
+<ul class="simple">
+<li>True or ‘show’ to show parsing debug information for the current pattern
+and all contained patterns.</li>
+<li>False or ‘hide’ to suppress debug information for the current pattern and
+all contained patterns.</li>
+<li>‘named’ to show parsing debug information for any named patterns contained
+within the current pattern.</li>
+</ul>
+<p>Other options may be added. For the available options, see the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DebugOptions</span></code> class constructor which is called with the parameters
+sent to this function.</p>
+<p>When the debug option is set to True, pattern results are printed to the
+console by default. The output source can be modified via a custom
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DebugOptions</span></code> object.</p>
+<p>When the debug option is set to ‘show’, ‘hide’, or ‘named’, the option
+applies to any contained patterns that do not have some other other
+explicitly set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>debugOpt</strong> – This option can be an object that implements the
+<cite>beforeMatch</cite> and <cite>afterMatch</cite> functions with signatures that match
+the <cite>DebugOptions</cite> functions of the same name. If this is True or
+‘show’, debugging is enabled. If this is False or ‘hide’, debugging
+is disabled. If this is ‘named’, only named patterns are shown. If
+this is ‘show_only_success’, only successful matches are shown. If
+this is a function, it is used as a <cite>DebugOptions</cite> <cite>afterMatch</cite>
+filter.</li>
+<li><strong>**args</strong> – <p>If more control is needed, arguments can be passed in that
+are forwarded to the DebugOptions constructor. See the constructor
+for more details.</p>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">When no options are passed in, this returns the debug options object
+for this Pattern. If parameters are passed in, a DebugOptions object
+is created and associated with this Pattern.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The debug option can be set using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="s1">&#39;show&#39;</span>  <span class="c1"># Same as True</span>
+<span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;hide&#39;</span> <span class="o">&amp;</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Same as False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.PyPE.Pattern.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Pattern.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match the <cite>Pattern</cite> against the <em>string</em> starting at the given <em>index</em>. Note
+that <a class="reference internal" href="#PyPE.PyPE.Pattern" title="PyPE.PyPE.Pattern"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pattern</span></code></a> implements the <cite>__call__</cite> method which forwards calls
+to this function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – A string to match.</li>
+<li><strong>index</strong> – The location in the string to look for the given pattern.</li>
+<li><strong>context</strong> – Store stack information and information that is passed
+forward during match operations.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A <a class="reference internal" href="#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object if the pattern succeeds, or None if the
+pattern fails.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">)</span>   <span class="c1"># Match the &#39;t&#39; character</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+<span class="go">t</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>  <span class="c1"># Equivalent to call above</span>
+<span class="go">t</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.PyPE.Pattern.setName">
+<code class="descname">setName</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Pattern.setName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the name for a pattern object. When debugging, the name is printed in
+the debugging output in place of the Pattern specification. It is also used
+by the <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – The name for the Pattern.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The Pattern object. Allows chaining of commands.</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">setName</span><span class="p">(</span><span class="s1">&#39;test 1&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">name</span>
+<span class="go">&#39;test 1&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;test 2&#39;</span> <span class="o">|</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">name</span>
+<span class="go">&#39;test 2&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">|</span> <span class="s1">&#39;test 3&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">name</span>
+<span class="go">&#39;test 3&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="pattern-operators">
+<h2>Pattern Operators<a class="headerlink" href="#pattern-operators" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="p-pattern">
+<span id="p"></span><h3>P (Pattern)<a class="headerlink" href="#p-pattern" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.P">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">P</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Pattern class matches a literal string or a specific number characters or
+checks against a user defined matcher function or matches against another
+Pattern.</p>
+<dl class="staticmethod">
+<dt id="PyPE.P.asPattern">
+<em class="property">static </em><code class="descname">asPattern</code><span class="sig-paren">(</span><em>pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.asPattern" title="Permalink to this definition">¶</a></dt>
+<dd><p>If item is a pattern, return the pattern. Otherwise return P(pattern)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="PyPE.P.isValidValue">
+<em class="property">static </em><code class="descname">isValidValue</code><span class="sig-paren">(</span><em>value</em>, <em>msg='Invalid arg for P(arg)'</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.isValidValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verify that P(arg) is a valid arg. Raise an exception if not.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match the given pattern
+:param context:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match_TF">
+<code class="descname">match_TF</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match_TF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return False if the value is False, or the ‘index’ value if not past end of
+string.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match_fn">
+<code class="descname">match_fn</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call the function with signature:</p>
+<blockquote>
+<div><cite>match = fn(string, index, context)</cite></div></blockquote>
+<p>The function can return one of the following:</p>
+<ul class="simple">
+<li>A match object</li>
+<li>An integer between <cite>index</cite> and the length of the string. This results in a
+match object ending at the given integer.</li>
+<li>True results in a match object beginning and ending at the current index</li>
+<li>False or any value not matching the above results in a match value of None.</li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="k">lambda</span> <span class="nb">str</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">:</span> <span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="go">te</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="k">lambda</span> <span class="nb">str</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">:</span> <span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match_n">
+<code class="descname">match_n</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match_n" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matches exactly n characters.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="go">a</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;ab&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;abc&quot;</span><span class="p">)</span>
+<span class="go">abc</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;abc&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match_neg">
+<code class="descname">match_neg</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match_neg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matches less than n characters only (end of string).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;ab&quot;</span><span class="p">)</span>
+<span class="go">ab</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;abc&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match_ptn">
+<code class="descname">match_ptn</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match_ptn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matches the pattern passed in.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;ab&quot;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;abba&quot;</span><span class="p">)</span>
+<span class="go">ab</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;abba&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.P.match_str">
+<code class="descname">match_str</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.P.match_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matches an exact string.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;testing&quot;</span><span class="p">)</span>
+<span class="go">test</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;A test&quot;</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">test</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;Failed&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="i-ignore-case">
+<h3>I (Ignore Case)<a class="headerlink" href="#i-ignore-case" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.I">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">I</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.I" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match case insensitive string.</p>
+<dl class="method">
+<dt id="PyPE.I.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.I.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match case insensitive string.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">I</span><span class="p">(</span><span class="s2">&quot;AcE&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;Ace&quot;</span><span class="p">)</span>
+<span class="go">Ace</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;ACE&quot;</span><span class="p">)</span>
+<span class="go">ACE</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;ace&quot;</span><span class="p">)</span>
+<span class="go">ace</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="s-set">
+<h3>S (Set)<a class="headerlink" href="#s-set" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.S">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">S</code><span class="sig-paren">(</span><em>set</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.S" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match any of a given set of characters.</p>
+<dl class="method">
+<dt id="PyPE.S.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.S.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match character in the given set.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="s2">&quot;ace&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="go">a</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;abc&quot;</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">c</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="r-range">
+<h3>R (Range)<a class="headerlink" href="#r-range" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.R">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">R</code><span class="sig-paren">(</span><em>*ranges</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.R" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match characters in any of the given ranges. Each range is comprised of two
+characters where the ascii value of a character must be within the range of
+the two characters to be a match. Any number of ranges can be specified within
+the range object.</p>
+<dl class="method">
+<dt id="PyPE.R.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.R.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matches any character in the given set of ranges.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s2">&quot;AZ&quot;</span><span class="p">,</span><span class="s2">&quot;az&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="go">a</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;Q&quot;</span><span class="p">)</span>
+<span class="go">Q</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="sol-start-of-line">
+<h3>SOL (Start of Line)<a class="headerlink" href="#sol-start-of-line" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.SOL">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">SOL</code><a class="headerlink" href="#PyPE.SOL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if his is the Start of Line (SOL).</p>
+<dl class="method">
+<dt id="PyPE.SOL.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.SOL.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match the start of a line.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>context</strong> – </li>
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The index to start at</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A match object. No characters are consumed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">SOL</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;test</span><span class="se">\n</span><span class="s2">123</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;test</span><span class="se">\n</span><span class="s2">123</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;test</span><span class="se">\n</span><span class="s2">123</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;test</span><span class="se">\n</span><span class="s2">123</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;test</span><span class="se">\n</span><span class="s2">123</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">9</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="eol-end-of-line">
+<h3>EOL (End of Line)<a class="headerlink" href="#eol-end-of-line" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.EOL">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">EOL</code><a class="headerlink" href="#PyPE.EOL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect whether the current position is at the end of a line.</p>
+<dl class="method">
+<dt id="PyPE.EOL.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.EOL.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect whether the current position is at the end of a line.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>context</strong> – </li>
+<li><strong>string</strong> – The string to compare against</li>
+<li><strong>index</strong> – The location to check.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A match object that consumes no input.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">EOL</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;   </span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;   </span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;   </span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="capture-operators">
+<h2>Capture Operators<a class="headerlink" href="#capture-operators" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="c-capture">
+<h3>C (Capture)<a class="headerlink" href="#c-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.C">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">C</code><span class="sig-paren">(</span><em>pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.C" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture a pattern</p>
+<dl class="method">
+<dt id="PyPE.C.getPatterns">
+<code class="descname">getPatterns</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.C.getPatterns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the pattern associated with this group capture
+:return: The contained pattern in a list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.C.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.C.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a Pattern match to the list of Captures.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">C</span><span class="p">(</span><span class="n">P</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span><span class="o">*</span><span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span><span class="p">(</span><span class="s2">&quot;abcd&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">&#39;abc&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">&#39;ab&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cb-backcapture">
+<h3>Cb (Backcapture)<a class="headerlink" href="#cb-backcapture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Cb">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Cb</code><span class="sig-paren">(</span><em>name</em>, <em>pattern=None</em>, <em>captureIndex=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Backcapture</p>
+<dl class="method">
+<dt id="PyPE.Cb.getPatterns">
+<code class="descname">getPatterns</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cb.getPatterns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the pattern associated with this group capture
+:return: The contained pattern in a list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.Cb.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cb.match" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Cb</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;cat&quot;</span><span class="p">)</span><span class="o">+</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;dog&quot;</span><span class="p">))</span> <span class="o">*</span> <span class="n">P</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="o">*</span> <span class="n">Cb</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;dog dog&quot;</span><span class="p">)</span>
+<span class="go">dog dog</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;cat cat&quot;</span><span class="p">)</span>
+<span class="go">cat cat</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;cat dog&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="kc">None</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Cb</span><span class="p">(</span><span class="s2">&quot;quote&quot;</span><span class="p">,</span> <span class="n">S</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\&quot;</span><span class="s2">&#39;&quot;</span><span class="p">))</span> <span class="o">*</span> <span class="n">C</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">Cb</span><span class="p">(</span><span class="s2">&quot;quote&quot;</span><span class="p">))</span><span class="o">**</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">Cb</span><span class="p">(</span><span class="s2">&quot;quote&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;&#39;Matched quoted string&#39; but not extra stuff&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">&#39;Matched quoted string&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;&quot;Quoted String&quot; without extra stuff&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">&#39;Quoted String&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cc-contstant-capture">
+<h3>Cc (Contstant Capture)<a class="headerlink" href="#cc-contstant-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Cc">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Cc</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture a constant value.</p>
+<dl class="method">
+<dt id="PyPE.Cc.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cc.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the specified value.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Cc</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">&#39;test&#39;</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cg-group-capture">
+<h3>Cg (Group Capture)<a class="headerlink" href="#cg-group-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Cg">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Cg</code><span class="sig-paren">(</span><em>pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Group and contained Captures into a single capture. If there are no captures,
+the single capture will be an empty array.</p>
+<dl class="method">
+<dt id="PyPE.Cg.getPatterns">
+<code class="descname">getPatterns</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cg.getPatterns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the pattern associated with this group capture
+:return: The contained pattern in a list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.Cg.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cg.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Group the contained captures into a single capture.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Examples:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Cg</span><span class="p">(</span><span class="n">C</span><span class="p">(</span><span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">C</span><span class="p">(</span><span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;Test&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">[&#39;T&#39;, &#39;e&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cs-stack-capture">
+<h3>Cs (Stack Capture)<a class="headerlink" href="#cs-stack-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Cs">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Cs</code><span class="sig-paren">(</span><em>stack</em>, <em>n=1</em>, <em>pop_from_stack=False</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture values from a stack</p>
+<dl class="method">
+<dt id="PyPE.Cs.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cs.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture values from a stack</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match against.</li>
+<li><strong>index</strong> – The current location in the string.</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A match object stack values added as captures.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Examples:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;2&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;3&#39;</span><span class="p">))</span> <span class="o">*</span> <span class="n">Cs</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">captures</span>
+<span class="go">[&#39;3&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getStack</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">:]</span>
+<span class="go">[&#39;1&#39;, &#39;2&#39;, &#39;3&#39;]</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;2&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;3&#39;</span><span class="p">))</span> <span class="o">*</span> <span class="n">Cs</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">pop_from_stack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">captures</span>
+<span class="go">[&#39;2&#39;, &#39;3&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getStack</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">:]</span>
+<span class="go">[&#39;1&#39;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cl-line-number-capture">
+<h3>Cl (Line number Capture)<a class="headerlink" href="#cl-line-number-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Cl">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Cl</code><a class="headerlink" href="#PyPE.Cl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the current line number.</p>
+<dl class="method">
+<dt id="PyPE.Cl.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cl.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the line number at the given index.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match against</li>
+<li><strong>index</strong> – The index for which to get the line number</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A match object with the line number added to the captures</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Example:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Cl</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n\n\n\n\n\n\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cp-position-capture">
+<h3>Cp (Position Capture)<a class="headerlink" href="#cp-position-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Cp">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Cp</code><a class="headerlink" href="#PyPE.Cp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the current position.</p>
+<dl class="method">
+<dt id="PyPE.Cp.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Cp.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the current position in the string (index value).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Cp</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="col-column-capture">
+<h3>Col (Column Capture)<a class="headerlink" href="#col-column-capture" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Col">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Col</code><a class="headerlink" href="#PyPE.Col" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the column (distance since last newline).</p>
+<dl class="method">
+<dt id="PyPE.Col.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Col.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the column for the current index (distance past last newline)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A match object that consumes no characters, but adds a column
+capture.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Col</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#        0  123  456789</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#                012345</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  </span><span class="se">\n</span><span class="s2">  Test&quot;</span><span class="p">,</span><span class="mi">9</span><span class="p">)</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">5</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="stack-operators">
+<h2>Stack Operators<a class="headerlink" href="#stack-operators" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="sc-capture-to-stack">
+<h3>Sc (Capture to Stack)<a class="headerlink" href="#sc-capture-to-stack" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Sc">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Sc</code><span class="sig-paren">(</span><em>stack</em>, <em>pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Sc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move captures to the specified stack in the context.</p>
+<dl class="method">
+<dt id="PyPE.Sc.getPatterns">
+<code class="descname">getPatterns</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Sc.getPatterns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the pattern associated with this group capture
+:return: The contained pattern in a list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.Sc.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Sc.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the captured values to the specified stack.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A match object that consumes no characters, but adds a column
+capture.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Example:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;one&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;two&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getStack</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">:]</span>
+<span class="go">[&#39;one&#39;, &#39;two&#39;]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="sm-stack-match">
+<h3>Sm (Stack Match)<a class="headerlink" href="#sm-stack-match" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Sm">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Sm</code><span class="sig-paren">(</span><em>stack</em>, <em>n=-1</em>, <em>expected=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Sm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match a value in the Stack with one in the string passed to match, or check
+for a specific string on the match stack. Checking for a specific string on
+the stack at a given location is useful for controling the parsing logic
+based on state stored on the stack.</p>
+<dl class="method">
+<dt id="PyPE.Sm.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Sm.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Match value on the stack.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match.</li>
+<li><strong>index</strong> – The location in string to start match.</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A match object that consumes no characters, but adds a column
+capture.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Example:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s2">&quot;my_stack&quot;</span><span class="p">,</span><span class="n">Cc</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s2">&quot;ing&quot;</span><span class="p">))</span><span class="o">*</span><span class="n">Sm</span><span class="p">(</span><span class="s2">&quot;my_stack&quot;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">Sm</span><span class="p">(</span><span class="s2">&quot;my_stack&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;testing&quot;</span><span class="p">)</span>
+<span class="go">testing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;tester&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">,</span><span class="n">Cc</span><span class="p">(</span><span class="s2">&quot;one&quot;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s2">&quot;two&quot;</span><span class="p">))</span><span class="o">*</span><span class="n">Sm</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="s2">&quot;one&quot;</span><span class="p">)</span><span class="o">*</span><span class="n">Sm</span><span class="p">(</span><span class="s2">&quot;items&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;two&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">match</span><span class="p">,</span> <span class="n">Match</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span><span class="o">.</span><span class="n">context</span><span class="o">.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="ssz-stack-size">
+<h3>Ssz (Stack Size)<a class="headerlink" href="#ssz-stack-size" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.Ssz">
+<em class="property">class </em><code class="descclassname">PyPE.</code><code class="descname">Ssz</code><span class="sig-paren">(</span><em>stack</em>, <em>n=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Ssz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the stack size or match only if it has a given size</p>
+<dl class="method">
+<dt id="PyPE.Ssz.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em>, <em>index=0</em>, <em>context=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.Ssz.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture the stack size or check that the stack matches a given size.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> – The string to match</li>
+<li><strong>index</strong> – The location in string to start match</li>
+<li><strong>context</strong> – Information that is forwarded between matches.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A match object that consumes no characters, but adds a column
+capture.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="match-objects">
+<span id="match"></span><h2>Match Objects<a class="headerlink" href="#match-objects" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id4">
+<h3>Match<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="PyPE.PyPE.Match">
+<em class="property">class </em><code class="descclassname">PyPE.PyPE.</code><code class="descname">Match</code><span class="sig-paren">(</span><em>string</em>, <em>start</em>, <em>end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Match" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">Match</span></code> object tracks the text that was matched by a PEG pattern, and
+provides access to any match captures.</p>
+<dl class="method">
+<dt id="PyPE.PyPE.Match.getCapture">
+<code class="descname">getCapture</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Match.getCapture" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the capture at the specified index. If the index does not exist, throw
+an IndexError. Note that the number of captures for a Match object named
+<code class="docutils literal notranslate"><span class="pre">match</span></code> is given by <code class="docutils literal notranslate"><span class="pre">len(match)</span></code>. Note that array syntax can be used
+with the Match object as a shorthand for calling this method. For example,
+<code class="docutils literal notranslate"><span class="pre">match[1]</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">match.getCapture(1)</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> – The index of the capture with the first capture being index
+0. A negative index is used to access values relative to the end of
+the array, with index -1 being the last capture value.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The requested capture value.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.PyPE.Match.getValue">
+<code class="descname">getValue</code><span class="sig-paren">(</span><em>default=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Match.getValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the string that was matched by the PEG pattern.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyPE.PyPE.Match.hasCaptures">
+<code class="descname">hasCaptures</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Match.hasCaptures" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Return true if this Match object contains any captures.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">PyPE - Python Parsing Expressions Library</a><ul>
+<li><a class="reference internal" href="#the-pattern-base-class">The <code class="docutils literal notranslate"><span class="pre">Pattern</span></code> Base Class</a><ul>
+<li><a class="reference internal" href="#pattern">Pattern</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pattern-operators">Pattern Operators</a><ul>
+<li><a class="reference internal" href="#p-pattern">P (Pattern)</a></li>
+<li><a class="reference internal" href="#i-ignore-case">I (Ignore Case)</a></li>
+<li><a class="reference internal" href="#s-set">S (Set)</a></li>
+<li><a class="reference internal" href="#r-range">R (Range)</a></li>
+<li><a class="reference internal" href="#sol-start-of-line">SOL (Start of Line)</a></li>
+<li><a class="reference internal" href="#eol-end-of-line">EOL (End of Line)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#capture-operators">Capture Operators</a><ul>
+<li><a class="reference internal" href="#c-capture">C (Capture)</a></li>
+<li><a class="reference internal" href="#cb-backcapture">Cb (Backcapture)</a></li>
+<li><a class="reference internal" href="#cc-contstant-capture">Cc (Contstant Capture)</a></li>
+<li><a class="reference internal" href="#cg-group-capture">Cg (Group Capture)</a></li>
+<li><a class="reference internal" href="#cs-stack-capture">Cs (Stack Capture)</a></li>
+<li><a class="reference internal" href="#cl-line-number-capture">Cl (Line number Capture)</a></li>
+<li><a class="reference internal" href="#cp-position-capture">Cp (Position Capture)</a></li>
+<li><a class="reference internal" href="#col-column-capture">Col (Column Capture)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#stack-operators">Stack Operators</a><ul>
+<li><a class="reference internal" href="#sc-capture-to-stack">Sc (Capture to Stack)</a></li>
+<li><a class="reference internal" href="#sm-stack-match">Sm (Stack Match)</a></li>
+<li><a class="reference internal" href="#ssz-stack-size">Ssz (Stack Size)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#match-objects">Match Objects</a><ul>
+<li><a class="reference internal" href="#id4">Match</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">PyPE - Python Parsing Expressions</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/PyPE.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="index.html" title="PyPE - Python Parsing Expressions"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPE 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, Lance Larsen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
+    </div>
+  </body>
+</html>
