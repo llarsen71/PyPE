@@ -1818,7 +1818,7 @@ class Cs(Capture):
     Capture values from a stack.
 
     :param stack: The name of the stack to capture values from.
-    :param n: The number of values from the stack to add to add as captures. If
+    :param n: The number of values from the stack to add as captures. If
            the value is 'None' all values from the stack are added as captures.
            (Default 1).
     :param pop_from_stack: Flag to indicate if the values put in the capture
@@ -2175,7 +2175,6 @@ class Sm(StackPtn):
     >>> match = p('')
     >>> isinstance(match, Match)
     True
-    >>> match.context.
     """
 
     stack = context.getStack(self.stack)

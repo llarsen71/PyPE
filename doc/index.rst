@@ -301,7 +301,7 @@ a stack.
 |                       | to the stack.                                        |
 +-----------------------+------------------------------------------------------+
 | Ssz(name[,n])         | Stack size - If n is not specified, capture the stack|
-|                       | size the the capture array. If n is specified, the   |
+|                       | size to the capture array. If n is specified, the    |
 |                       | match is only successful if the stack size is n.     |
 +-----------------------+------------------------------------------------------+
 
