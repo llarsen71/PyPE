@@ -1,6 +1,6 @@
-from PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
+from .PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
      newline, matchUntil, SOL
-from Tokenizer import Tokenizer
+from .Tokenizer import Tokenizer
 
 whitespace.debug(False)
 

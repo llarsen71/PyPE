@@ -3,7 +3,7 @@
 class Stack(object):
   """
   This implements a stack that wraps a parent stack. Changes to the parent
-  Stack are only make permanent (i.e., comitted to the parent Stack) when
+  Stack are only made permanent (i.e., comitted to the parent Stack) when
   'commit' is called.
 
   This is used for Stack based captures for grammars that require context.
@@ -134,7 +134,7 @@ class Stack(object):
     """
     Pop(remove) one or more items from the stack and return them.
 
-    :param n: The number of items from the stack to pop.
+    :param n: The number of items from the stack to pop. 'all' for all items on stack.
     :return: The items popped from the stack.
     """
     if isinstance(n, int):
@@ -142,6 +142,9 @@ class Stack(object):
       items = [self.pop() for i in xrange(n)]
       items.reverse()
       return items
+
+    if n == "all":
+      return self.pop(len(self))
 
     item = self.peek()
     if len(self.stack) > 0: self.stack.pop()
@@ -292,15 +295,16 @@ class Context(object):
 
   # ----------------------------------------------------------------------------
 
-  def pop(self, stack):
+  def pop(self, stack, n = None):
     """
     Pop the last value added to the stack off the stack and return it.
 
     :param stack: The stack to work with.
+    :param n: The number of items to pop from the stack. 'all' for all items.
     :return: The last value added to the stack.
     """
     thestack = self.getStack(stack, wrapStack=True)
-    return thestack.pop()
+    return thestack.pop(n)
 
   # ----------------------------------------------------------------------------
 
