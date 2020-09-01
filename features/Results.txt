@@ -1,0 +1,459 @@
+Feature: Basic pattern match operations should be defined in order to make it # features/PatternMatch.feature:1
+  relatively easy to construct basic matching patterns.
+  Scenario Outline: Match a simple pattern. -- @1.1   # features/PatternMatch.feature:16
+    Given p = P('Blue') [match literal string]        # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',0) is called   # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 0                       # features/steps/PatternMatch.py:42
+    And match.end should be 4                         # features/steps/PatternMatch.py:48
+    And str(match) should be 'Blue'                   # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('Blue')             # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.2   # features/PatternMatch.feature:17
+    Given p = P('fly') [match literal string]         # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',5) is called   # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 5                       # features/steps/PatternMatch.py:42
+    And match.end should be 8                         # features/steps/PatternMatch.py:48
+    And str(match) should be 'fly'                    # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('fly')              # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.3   # features/PatternMatch.feature:18
+    Given p = P(4) [match 4 characters]               # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',12) is called  # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 12                      # features/steps/PatternMatch.py:42
+    And match.end should be 16                        # features/steps/PatternMatch.py:48
+    And str(match) should be 'monk'                   # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P(4)                  # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.4   # features/PatternMatch.feature:19
+    Given p = P(-5) [match less than 5 characters]    # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',15) is called  # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 15                      # features/steps/PatternMatch.py:42
+    And match.end should be 19                        # features/steps/PatternMatch.py:48
+    And str(match) should be 'keys'                   # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P(-5)                 # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.5   # features/PatternMatch.feature:20
+    Given p = P(True) [always match]                  # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',3) is called   # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 3                       # features/steps/PatternMatch.py:42
+    And match.end should be 3                         # features/steps/PatternMatch.py:48
+    And str(match) should be ''                       # features/steps/PatternMatch.py:60
+    And repr(pattern) should be P(True)               # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.6   # features/PatternMatch.feature:21
+    Given p = R('az') [match range a to z]            # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',12) is called  # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 12                      # features/steps/PatternMatch.py:42
+    And match.end should be 13                        # features/steps/PatternMatch.py:48
+    And str(match) should be 'm'                      # features/steps/PatternMatch.py:54
+    And repr(pattern) should be R('az')               # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.7   # features/PatternMatch.feature:22
+    Given p = S('Bs') [match character in set]        # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',0) is called   # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 0                       # features/steps/PatternMatch.py:42
+    And match.end should be 1                         # features/steps/PatternMatch.py:48
+    And str(match) should be 'B'                      # features/steps/PatternMatch.py:54
+    And repr(pattern) should be S('Bs')               # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a simple pattern. -- @1.8   # features/PatternMatch.feature:23
+    Given p = S('Bs') [match character in set]        # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',-1) is called  # features/steps/PatternMatch.py:17
+    Then the result is a match                        # features/steps/PatternMatch.py:27
+    And match.start should be 18                      # features/steps/PatternMatch.py:42
+    And match.end should be 19                        # features/steps/PatternMatch.py:48
+    And str(match) should be 's'                      # features/steps/PatternMatch.py:54
+    And repr(pattern) should be S('Bs')               # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Fail a simple pattern -- @1.1        # features/PatternMatch.feature:34
+    Given p = P('Blue') [match string]                   # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',2) is called      # features/steps/PatternMatch.py:17
+    Then the result fails because Blue starts at 0 not 2 # features/steps/PatternMatch.py:32
+    And the result should be None                        # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a simple pattern -- @1.2                # features/PatternMatch.feature:35
+    Given p = P(4) [match 4 characters]                          # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',18) is called             # features/steps/PatternMatch.py:17
+    Then the result fails because less than 4 chars remain at 18 # features/steps/PatternMatch.py:32
+    And the result should be None                                # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a simple pattern -- @1.3          # features/PatternMatch.feature:36
+    Given p = P(-5) [match less than 5 characters]         # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',-6) is called       # features/steps/PatternMatch.py:17
+    Then the result fails because more than 4 chars remain # features/steps/PatternMatch.py:32
+    And the result should be None                          # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a simple pattern -- @1.4               # features/PatternMatch.feature:37
+    Given p = R('az') [match range]                             # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',0) is called             # features/steps/PatternMatch.py:17
+    Then the result fails because B (index 0) is not lower case # features/steps/PatternMatch.py:32
+    And the result should be None                               # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a simple pattern -- @1.5           # features/PatternMatch.feature:38
+    Given p = S('Bs') [match character in set]              # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',2) is called         # features/steps/PatternMatch.py:17
+    Then the result fails because u (index 2) not in set Bs # features/steps/PatternMatch.py:32
+    And the result should be None                           # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a simple pattern -- @1.6   # features/PatternMatch.feature:39
+    Given p = P(False) [always fails]               # features/steps/PatternMatch.py:10
+    When p.match('Blue flying monkeys',0) is called # features/steps/PatternMatch.py:17
+    Then the result fails because set to fail       # features/steps/PatternMatch.py:32
+    And the result should be None                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Match start of line (SOL) or end of line (EOL) -- @1.1   # features/PatternMatch.feature:53
+    Given p = SOL() [Start Of Line]                                          # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\r',0) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                               # features/steps/PatternMatch.py:27
+    And match.start should be 0                                              # features/steps/PatternMatch.py:42
+    And match.end should be 0                                                # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                              # features/steps/PatternMatch.py:60
+    And repr(pattern) should be SOL()                                        # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match start of line (SOL) or end of line (EOL) -- @1.2   # features/PatternMatch.feature:54
+    Given p = SOL() [Start Of Line]                                          # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\r',2) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                               # features/steps/PatternMatch.py:27
+    And match.start should be 2                                              # features/steps/PatternMatch.py:42
+    And match.end should be 2                                                # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                              # features/steps/PatternMatch.py:60
+    And repr(pattern) should be SOL()                                        # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match start of line (SOL) or end of line (EOL) -- @1.3   # features/PatternMatch.feature:55
+    Given p = SOL() [Start Of Line]                                          # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\r',6) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                               # features/steps/PatternMatch.py:27
+    And match.start should be 6                                              # features/steps/PatternMatch.py:42
+    And match.end should be 6                                                # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                              # features/steps/PatternMatch.py:60
+    And repr(pattern) should be SOL()                                        # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match start of line (SOL) or end of line (EOL) -- @1.4   # features/PatternMatch.feature:56
+    Given p = EOL() [End of Line]                                            # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n',1) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                               # features/steps/PatternMatch.py:27
+    And match.start should be 1                                              # features/steps/PatternMatch.py:42
+    And match.end should be 1                                                # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                              # features/steps/PatternMatch.py:60
+    And repr(pattern) should be EOL()                                        # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match start of line (SOL) or end of line (EOL) -- @1.5   # features/PatternMatch.feature:57
+    Given p = EOL() [End of Line]                                            # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n',3) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                               # features/steps/PatternMatch.py:27
+    And match.start should be 3                                              # features/steps/PatternMatch.py:42
+    And match.end should be 3                                                # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                              # features/steps/PatternMatch.py:60
+    And repr(pattern) should be EOL()                                        # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match start of line (SOL) or end of line (EOL) -- @1.6   # features/PatternMatch.feature:58
+    Given p = EOL() [End of Line]                                            # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n',6) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                               # features/steps/PatternMatch.py:27
+    And match.start should be 6                                              # features/steps/PatternMatch.py:42
+    And match.end should be 6                                                # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                              # features/steps/PatternMatch.py:60
+    And repr(pattern) should be EOL()                                        # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Fail start of line (SOL) or end of line (EOL) pattern -- @1.1   # features/PatternMatch.feature:69
+    Given p = SOL() [Start Of Line]                                                 # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n',1) is called                                           # features/steps/PatternMatch.py:17
+    Then the result fails because index not at start of line                        # features/steps/PatternMatch.py:32
+    And the result should be None                                                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail start of line (SOL) or end of line (EOL) pattern -- @1.2   # features/PatternMatch.feature:70
+    Given p = SOL() [Start Of Line]                                                 # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n4',7) is called                                          # features/steps/PatternMatch.py:17
+    Then the result fails because index not at start of line                        # features/steps/PatternMatch.py:32
+    And the result should be None                                                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail start of line (SOL) or end of line (EOL) pattern -- @1.3   # features/PatternMatch.feature:71
+    Given p = EOL() [End Of Line]                                                   # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n',0) is called                                           # features/steps/PatternMatch.py:17
+    Then the result fails because index not at end of line                          # features/steps/PatternMatch.py:32
+    And the result should be None                                                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail start of line (SOL) or end of line (EOL) pattern -- @1.4   # features/PatternMatch.feature:72
+    Given p = EOL() [End Of Line]                                                   # features/steps/PatternMatch.py:10
+    When p.match('1\n2\n3\n4',6) is called                                          # features/steps/PatternMatch.py:17
+    Then the result fails because index not at end of line                          # features/steps/PatternMatch.py:32
+    And the result should be None                                                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Match pattern1, or if that fails, match pattern2. -- @1.1   # features/PatternMatch.feature:87
+    Given p = P('peanut') + P('butter') ['peanut' or 'butter']                  # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',0) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                                  # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                 # features/steps/PatternMatch.py:42
+    And match.end should be 6                                                   # features/steps/PatternMatch.py:48
+    And str(match) should be 'peanut'                                           # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('peanut') + P('butter')                       # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match pattern1, or if that fails, match pattern2. -- @1.2   # features/PatternMatch.feature:88
+    Given p = P('peanut') + P('butter') ['peanut' or 'butter']                  # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',6) is called                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                                  # features/steps/PatternMatch.py:27
+    And match.start should be 6                                                 # features/steps/PatternMatch.py:42
+    And match.end should be 12                                                  # features/steps/PatternMatch.py:48
+    And str(match) should be 'butter'                                           # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('peanut') + P('butter')                       # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Fail pattern1 or pattern2 case. -- @1.1      # features/PatternMatch.feature:100
+    Given p = P('peanut') + P('butter') ['peanut' or 'butter']   # features/steps/PatternMatch.py:10
+    When p.match('cheese cracker',0) is called                   # features/steps/PatternMatch.py:17
+    Then the result fails because string is not peanut or butter # features/steps/PatternMatch.py:32
+    And the result should be None                                # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Match pattern1 if it does not match pattern2. -- @1.1   # features/PatternMatch.feature:115
+    Given p = P(6) - P('tea') [p1 if not p2]                                # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',0) is called                                # features/steps/PatternMatch.py:17
+    Then the result is a match                                              # features/steps/PatternMatch.py:27
+    And match.start should be 0                                             # features/steps/PatternMatch.py:42
+    And match.end should be 6                                               # features/steps/PatternMatch.py:48
+    And str(match) should be 'peanut'                                       # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P(6) - P('tea')                             # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match pattern1 if it does not match pattern2. -- @1.2   # features/PatternMatch.feature:116
+    Given p = P(6) - P('batt') [p1 if not p2]                               # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',6) is called                                # features/steps/PatternMatch.py:17
+    Then the result is a match                                              # features/steps/PatternMatch.py:27
+    And match.start should be 6                                             # features/steps/PatternMatch.py:42
+    And match.end should be 12                                              # features/steps/PatternMatch.py:48
+    And str(match) should be 'butter'                                       # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P(6) - P('batt')                            # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Fail a match pattern1 if it does not match pattern2 case. -- @1.1   # features/PatternMatch.feature:128
+    Given p = P(6) - P('p') [p1 if not p2]                                              # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',0) is called                                            # features/steps/PatternMatch.py:17
+    Then the result fails because 'p' at 0 is not allowed                               # features/steps/PatternMatch.py:32
+    And the result should be None                                                       # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a match pattern1 if it does not match pattern2 case. -- @1.2   # features/PatternMatch.feature:129
+    Given p = P(6) - P('but') [p1 if not p2]                                            # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',6) is called                                            # features/steps/PatternMatch.py:17
+    Then the result fails because 'but' at 6 is not allowed                             # features/steps/PatternMatch.py:32
+    And the result should be None                                                       # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a match pattern1 if it does not match pattern2 case. -- @1.3   # features/PatternMatch.feature:130
+    Given p = P('a') - P('q') [p1 if not p2]                                            # features/steps/PatternMatch.py:10
+    When p.match('peanutbutter',0) is called                                            # features/steps/PatternMatch.py:17
+    Then the result fails because Pattern P('a') fails                                  # features/steps/PatternMatch.py:32
+    And the result should be None                                                       # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Match if not pattern. -- @1.1   # features/PatternMatch.feature:145
+    Given p = -P('Will') [not Will]                 # features/steps/PatternMatch.py:10
+    When p.match('Halt',0) is called                # features/steps/PatternMatch.py:17
+    Then the result is a match                      # features/steps/PatternMatch.py:27
+    And match.start should be 0                     # features/steps/PatternMatch.py:42
+    And match.end should be 0                       # features/steps/PatternMatch.py:48
+    And str(match) should be ''                     # features/steps/PatternMatch.py:60
+    And repr(pattern) should be -P('Will')          # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match if not pattern. -- @1.2   # features/PatternMatch.feature:146
+    Given p = -P('Will') [not Will]                 # features/steps/PatternMatch.py:10
+    When p.match('Erak',0) is called                # features/steps/PatternMatch.py:17
+    Then the result is a match                      # features/steps/PatternMatch.py:27
+    And match.start should be 0                     # features/steps/PatternMatch.py:42
+    And match.end should be 0                       # features/steps/PatternMatch.py:48
+    And str(match) should be ''                     # features/steps/PatternMatch.py:60
+    And repr(pattern) should be -P('Will')          # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Fail a -pattern case. -- @1.1         # features/PatternMatch.feature:158
+    Given p = -P('Will') [not Will]                       # features/steps/PatternMatch.py:10
+    When p.match('Will',0) is called                      # features/steps/PatternMatch.py:17
+    Then the result fails because string starts with Will # features/steps/PatternMatch.py:32
+    And the result should be None                         # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a -pattern case. -- @1.2         # features/PatternMatch.feature:159
+    Given p = -P('Will') [not Will]                       # features/steps/PatternMatch.py:10
+    When p.match('Willow',0) is called                    # features/steps/PatternMatch.py:17
+    Then the result fails because string starts with Will # features/steps/PatternMatch.py:32
+    And the result should be None                         # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.1   # features/PatternMatch.feature:174
+    Given p = P('a')**0 [0 or more a(s)]                                               # features/steps/PatternMatch.py:10
+    When p.match('b',0) is called                                                      # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 0                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                                        # features/steps/PatternMatch.py:60
+    And repr(pattern) should be P('a')**0                                              # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.2   # features/PatternMatch.feature:175
+    Given p = P('a')**0 [0 or more a(s)]                                               # features/steps/PatternMatch.py:10
+    When p.match('aab',0) is called                                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 2                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'aa'                                                      # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**0                                              # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.3   # features/PatternMatch.feature:176
+    Given p = P('a')**3 [3 or more a(s)]                                               # features/steps/PatternMatch.py:10
+    When p.match('aaab',0) is called                                                   # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 3                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'aaa'                                                     # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**3                                              # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.4   # features/PatternMatch.feature:177
+    Given p = P('a')**3 [3 or more a(s)]                                               # features/steps/PatternMatch.py:10
+    When p.match('aaaaab',0) is called                                                 # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 5                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'aaaaa'                                                   # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**3                                              # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.5   # features/PatternMatch.feature:178
+    Given p = P('a')**[3] [exactly 3 a(s)]                                             # features/steps/PatternMatch.py:10
+    When p.match('aaaa',0) is called                                                   # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 3                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'aaa'                                                     # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**[3]                                            # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.6   # features/PatternMatch.feature:179
+    Given p = P('a')**-1 [1 or less a(s)]                                              # features/steps/PatternMatch.py:10
+    When p.match('b',0) is called                                                      # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 0                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be ''                                                        # features/steps/PatternMatch.py:60
+    And repr(pattern) should be P('a')**-1                                             # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.7   # features/PatternMatch.feature:180
+    Given p = P('a')**-1 [1 or less a(s)]                                              # features/steps/PatternMatch.py:10
+    When p.match('ab',0) is called                                                     # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 1                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'a'                                                       # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**-1                                             # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.8   # features/PatternMatch.feature:181
+    Given p = P('a')**-1 [1 or less a(s)]                                              # features/steps/PatternMatch.py:10
+    When p.match('aab',0) is called                                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 1                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'a'                                                       # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**-1                                             # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.9   # features/PatternMatch.feature:182
+    Given p = P('a')**-2 [2 or less a(s)]                                              # features/steps/PatternMatch.py:10
+    When p.match('aab',0) is called                                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                                         # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                        # features/steps/PatternMatch.py:42
+    And match.end should be 2                                                          # features/steps/PatternMatch.py:48
+    And str(match) should be 'aa'                                                      # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**-2                                             # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Match a pattern repeating n or more times (pattern^n) or -- @1.10   # features/PatternMatch.feature:183
+    Given p = P('a')**-2 [2 or less a(s)]                                               # features/steps/PatternMatch.py:10
+    When p.match('aaab',0) is called                                                    # features/steps/PatternMatch.py:17
+    Then the result is a match                                                          # features/steps/PatternMatch.py:27
+    And match.start should be 0                                                         # features/steps/PatternMatch.py:42
+    And match.end should be 2                                                           # features/steps/PatternMatch.py:48
+    And str(match) should be 'aa'                                                       # features/steps/PatternMatch.py:54
+    And repr(pattern) should be P('a')**-2                                              # features/steps/PatternMatch.py:65
+
+  Scenario Outline: Fail a pattern repeating n or more times (pattern^n). -- @1.1   # features/PatternMatch.feature:194
+    Given p = P('a')**3 [3 or more a(s)]                                            # features/steps/PatternMatch.py:10
+    When p.match('aab',0) is called                                                 # features/steps/PatternMatch.py:17
+    Then the result fails because has less than 3 a(s)                              # features/steps/PatternMatch.py:32
+    And the result should be None                                                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Fail a pattern repeating n or more times (pattern^n). -- @1.2   # features/PatternMatch.feature:195
+    Given p = P('a')**[3] [exactly 3 a(s)]                                          # features/steps/PatternMatch.py:10
+    When p.match('aab',0) is called                                                 # features/steps/PatternMatch.py:17
+    Then the result fails because has less than 3 a(s)                              # features/steps/PatternMatch.py:32
+    And the result should be None                                                   # features/steps/PatternMatch.py:37
+
+  Scenario Outline: Captures are applied. -- @1.1   # features/PatternMatch.feature:206
+    Given p = Cc('Test') [Constant Capture 'Test']  # features/steps/PatternMatch.py:10
+    When p.match('any',0) is called                 # features/steps/PatternMatch.py:17
+    Then the result is a match                      # features/steps/PatternMatch.py:27
+    And captures should be ['Test']                 # features/steps/PatternMatch.py:70
+
+  Scenario Outline: Captures are applied. -- @1.2   # features/PatternMatch.feature:207
+    Given p = 3*C(3)*C(2) [Basic Captures]          # features/steps/PatternMatch.py:10
+    When p.match('123456789',0) is called           # features/steps/PatternMatch.py:17
+    Then the result is a match                      # features/steps/PatternMatch.py:27
+    And captures should be ['456','78']             # features/steps/PatternMatch.py:70
+
+  Scenario Outline: Captures are applied. -- @1.3   # features/PatternMatch.feature:208
+    Given p = 3*Cp()*3*Cp() [Position Captures]     # features/steps/PatternMatch.py:10
+    When p.match('123456789',0) is called           # features/steps/PatternMatch.py:17
+    Then the result is a match                      # features/steps/PatternMatch.py:27
+    And captures should be [3,6]                    # features/steps/PatternMatch.py:70
+
+  Scenario Outline: Captures are applied. -- @1.4    # features/PatternMatch.feature:209
+    Given p = (Cg(C(2)*C(2)))**1 [Capture Group]     # features/steps/PatternMatch.py:10
+    When p.match('12ab34cd5',0) is called            # features/steps/PatternMatch.py:17
+    Then the result is a match                       # features/steps/PatternMatch.py:27
+    And captures should be [['12','ab'],['34','cd']] # features/steps/PatternMatch.py:70
+
+Feature: The Tokenizer is used to parse a file using one or more grammars. # features/Tokenizer.feature:1
+  The following patterns are defined
+  ws           = whitespace0
+  rest_of_line = (1 - newline)**0 * newline
+  Scenario: Parse lines starting with fortran comment marker. Use '!' for pipe '|'  # features/Tokenizer.feature:6
+    Given a Tokenizer T initialized with table                                      # features/steps/Tokenizer.py:12
+      | pattern                         |
+      | 'comment' ! ws*'#'*rest_of_line |
+      | 'line'    ! rest_of_line        |
+    When Tokenizer T.getTokens(text) is called with                                 # features/steps/Tokenizer.py:45
+      """
+      First line
+      # Comment line
+      Third line
+      # Last line
+      """
+    Then the tokens are                                                             # features/steps/Tokenizer.py:52
+      | name    | value             |
+      | line    | First line\\n     |
+      | comment | # Comment line\\n |
+      | line    | Third line\\n     |
+      | comment | # Last line\\n    |
+
+  Scenario: Parse lines starting with fortran comment marker. Use '!' for pipe '|'  # features/Tokenizer.feature:27
+    Given a Tokenizer T initialized with table                                      # features/steps/Tokenizer.py:12
+      | grammar | pattern                           | new grammar | end pattern         |
+      | root    | 'line'   ! rest_of_line - S('#*') |             |                     |
+      | root    | '+cmnt#' ! ~S('#*')               | CMNT#       | '-cmnt#' ! -S('#*') |
+      | CMNT#   | 'cmnt#'  ! S('#') * rest_of_line  |             |                     |
+      | CMNT#   | '+cmnt*' ! ~S('*')                | CMNT*       | '-cmnt*' ! -P('*')  |
+      | CMNT*   | 'cmnt*'  ! S('*') * rest_of_line  |             |                     |
+    When Tokenizer T.getTokens(text) is called with                                 # features/steps/Tokenizer.py:45
+      """
+      First line
+      * comment
+      # test
+      # next
+      Last line
+      """
+    Then the tokens are                                                             # features/steps/Tokenizer.py:52
+      | name   | value         | grammar |
+      | line   | First line\\n | root    |
+      | +cmnt# |               | root    |
+      | +cmnt* |               | CMNT#   |
+      | cmnt*  | * comment\\n  | CMNT*   |
+      | -cmnt* |               | CMNT*   |
+      | cmnt#  | # test\\n     | CMNT#   |
+      | cmnt#  | # next\\n     | CMNT#   |
+      | -cmnt# |               | CMNT#   |
+      | line   | Last line\\n  | root    |
+
+2 features passed, 0 failed, 0 skipped
+54 scenarios passed, 0 failed, 0 skipped
+304 steps passed, 0 failed, 0 skipped, 0 undefined
+Took 0m0.432s
