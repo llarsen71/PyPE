@@ -31,6 +31,6 @@ Python use a different syntax than Lua and not all of the operations of LPEG
 are included, and some additional features that are not part of LPEG are added. 
 For example, support for debugging a grammar is built into PyPE.
 
-*Documentation for PyPE can be found at: [https://llarsen.bitbucket.io/PyPE/](https://llarsen.bitbucket.io/PyPE/)*
+**Documentation for PyPE can be found at: [https://llarsen.bitbucket.io/PyPE/](https://llarsen.bitbucket.io/PyPE/)**
 
 
