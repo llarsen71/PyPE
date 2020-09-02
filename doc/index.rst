@@ -130,7 +130,7 @@ matches the pattern by calling the pattern's match function::
 
   >>> match = digit.match('56a7')
   >>> print(match)
-  5
+  '5'
 
 The :func:`match <PyPE.PyPE.Pattern.match>` function accepts a string and an
 optional location in the string to look for a match (with the default being
@@ -145,7 +145,7 @@ The pattern can be extended to read one or more digits as follows::
   >>> digits = R('09')**1
   >>> match = digits('56a7')
   >>> print(match)
-  56
+  '56'
 
 The following is an example of a pattern that finds any one of three different
 ways of representing a new line in a text file::
@@ -169,10 +169,10 @@ Patterns can be combined to make more complex expressions::
   >>> anything_but_newline = 1-newline  # Match anything with the exeption of newline
   >>> to_end_of_line = anything_but_newline**0 * newline**-1
   >>> print(to_end_of_line.match("123\n456")) # Note newline is included in match
-  123
+  '123'
 
   >>> print(to_end_of_line.match("123\n456", 4)) # Matches end of string with no newline
-  456
+  '456'
 
 The ``to_end_of_line`` pattern can be read as 'Match zero or more of anything
 but newline, followed by at most one newline'.
@@ -198,7 +198,7 @@ of the match, and any Pattern ``captures`` (discussed more below)::
   >>> digit = R('09')**1  # Read one or more digits
   >>> match = digit("01234abc", 1)
   >>> print(match)
-  1234
+  '1234'
   >>> print(match.start)
   1
   >>> print(match.end)
@@ -266,7 +266,7 @@ such as c and fortran can be written as::
 
   >>> var_name = alpha * (alpha + digit + '_')**0
   >>> print(var_name('my_var1 = 5'))
-  my_var1
+  'my_var1'
 
 .. _capture-ops:
 
@@ -381,7 +381,7 @@ examples that use a stack will typically be more involved::
   >>> stack = Sc('my_stack', Cc('one')*Cc('two'))         # Stack named my_stack with items ['one','two']
   >>> p = stack * Sm('my_stack',0) * ',' * Sm('my_stack') # Look for stack item 0 ('one') -> ',' -> 1 ('two')
   >>> print(p("one,two,three"))
-  one,two
+  'one,two'
 
 .. _utility-functions:
 
@@ -409,7 +409,6 @@ Utility Functions
 |                           | the captures in a match using the specified      |
 |                           | separator. The resulting match has one capture.  |
 +---------------------------+--------------------------------------------------+
-
 
 
 ==================
