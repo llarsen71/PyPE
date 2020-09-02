@@ -222,7 +222,7 @@ This can be done with the pattern::
 Note that a capture is necessary to retrieve the digits since the ``find``
 pattern will match the portion of the string that is not digits as well
 (since this is part of the pattern). However, the capture allows us to
-retrieve the ``digits`` potion of th4e pattern. If it is also important to
+retrieve the ``digits`` potion of the pattern. If it is also important to
 know the position of the pattern, a position capture ``Cp()`` can be added::
 
   >>> digits = R('09')**1

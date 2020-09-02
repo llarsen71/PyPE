@@ -264,7 +264,7 @@ This can be done with the pattern:</p>
 <p>Note that a capture is necessary to retrieve the digits since the <code class="docutils literal notranslate"><span class="pre">find</span></code>
 pattern will match the portion of the string that is not digits as well
 (since this is part of the pattern). However, the capture allows us to
-retrieve the <code class="docutils literal notranslate"><span class="pre">digits</span></code> potion of th4e pattern. If it is also important to
+retrieve the <code class="docutils literal notranslate"><span class="pre">digits</span></code> potion of the pattern. If it is also important to
 know the position of the pattern, a position capture <code class="docutils literal notranslate"><span class="pre">Cp()</span></code> can be added:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digits</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">find</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">digits</span><span class="p">)</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">C</span><span class="p">(</span><span class="n">Cp</span><span class="p">()</span><span class="o">*</span><span class="n">digits</span><span class="p">)</span>
