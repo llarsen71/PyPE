@@ -65,6 +65,7 @@ The syntax has been preserved where possible, although some of the operators
 in Python use a different syntax than Lua and not all of the operations of LPEG
 are included, and some additional features that are not part of LPEG are added.
 For example, support for debugging a grammar is built into PyPE.</p>
+<p>The PyPE repository can be found at: <a class="reference external" href="https://bitbucket.org/llarsen/pype/">https://bitbucket.org/llarsen/pype/</a></p>
 <div class="section" id="pype-library-summary">
 <h2>PyPE Library Summary<a class="headerlink" href="#pype-library-summary" title="Permalink to this headline">¶</a></h2>
 <p>The PyPE library can be divided into a few major categories:</p>
@@ -198,18 +199,29 @@ ways of representing a new line in a text file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>Note that this is an order search, meaning that if <code class="docutils literal notranslate"><span class="pre">newline.match(string)</span></code> is
+called, the <code class="docutils literal notranslate"><span class="pre">newline</span></code> pattern checks if the string starts with the first expression
+<code class="docutils literal notranslate"><span class="pre">P('\r\n')</span></code>, and if this fails to match, the <code class="docutils literal notranslate"><span class="pre">newline</span></code> pattern checks if the
+string starts with the second pattern <code class="docutils literal notranslate"><span class="pre">P('\r')</span></code>. If this fails to match, the third
+pattern <code class="docutils literal notranslate"><span class="pre">P('\n')</span></code> is tested. If any of the three patterns succeeds, then the matched
+characters are returned. However, if all patterns fail, the returned result is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>Note that the ordering of the pattern matters. For example, the following pattern will never
+return the result <code class="docutils literal notranslate"><span class="pre">\r\n</span></code> because <code class="docutils literal notranslate"><span class="pre">\r</span></code> will always be matched first.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Patterns can be combined to make more complex expressions:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anything_but_newline</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">newline</span>  <span class="c1"># Match anything with the exeption of newline</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">to_end_of_line</span> <span class="o">=</span> <span class="n">anything_but_newline</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">newline</span><span class="o">**-</span><span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123</span><span class="se">\n</span><span class="s2">456&quot;</span><span class="p">))</span> <span class="c1"># Note newline is included in match</span>
 <span class="go">123</span>
 
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123</span><span class="se">\n</span><span class="s2">456&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span> <span class="c1"># Note no newline included in match</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123</span><span class="se">\n</span><span class="s2">456&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span> <span class="c1"># Matches end of string with no newline</span>
 <span class="go">456</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">to_end_of_line</span></code> pattern can be read as ‘Match zero or more of anything
-with the exception of newline followed by at most one newline’.</p>
+but newline, followed by at most one newline’.</p>
 </div>
 <div class="section" id="predefined-patterns">
 <span id="id1"></span><h3>Predefined Patterns<a class="headerlink" href="#predefined-patterns" title="Permalink to this headline">¶</a></h3>
@@ -394,7 +406,7 @@ to the stack.</td>
 </tr>
 <tr class="row-odd"><td>Ssz(name[,n])</td>
 <td>Stack size - If n is not specified, capture the stack
-size the the capture array. If n is specified, the
+size to the capture array. If n is specified, the
 match is only successful if the stack size is n.</td>
 </tr>
 </tbody>

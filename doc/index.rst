@@ -33,6 +33,8 @@ in Python use a different syntax than Lua and not all of the operations of LPEG
 are included, and some additional features that are not part of LPEG are added.
 For example, support for debugging a grammar is built into PyPE.
 
+The PyPE repository can be found at: https://bitbucket.org/llarsen/pype/
+
 ====================
 PyPE Library Summary
 ====================
@@ -150,6 +152,18 @@ ways of representing a new line in a text file::
 
   >>> newline = P('\r\n') + P('\r') + P('\n')
 
+Note that this is an order search, meaning that if ``newline.match(string)`` is
+called, the ``newline`` pattern checks if the string starts with the first expression 
+``P('\r\n')``, and if this fails to match, the ``newline`` pattern checks if the
+string starts with the second pattern ``P('\r')``. If this fails to match, the third 
+pattern ``P('\n')`` is tested. If any of the three patterns succeeds, then the matched
+characters are returned. However, if all patterns fail, the returned result is ``None``.
+
+Note that the ordering of the pattern matters. For example, the following pattern will never
+return the result ``\r\n`` because ``\r`` will always be matched first.
+
+  >>> newline = P('\r') + P('\r\n') + P('\n')
+
 Patterns can be combined to make more complex expressions::
 
   >>> anything_but_newline = 1-newline  # Match anything with the exeption of newline
@@ -157,11 +171,11 @@ Patterns can be combined to make more complex expressions::
   >>> print(to_end_of_line.match("123\n456")) # Note newline is included in match
   123
 
-  >>> print(to_end_of_line.match("123\n456", 4)) # Note no newline included in match
+  >>> print(to_end_of_line.match("123\n456", 4)) # Matches end of string with no newline
   456
 
 The ``to_end_of_line`` pattern can be read as 'Match zero or more of anything
-with the exception of newline followed by at most one newline'.
+but newline, followed by at most one newline'.
 
 .. _predefined-patterns:
 
