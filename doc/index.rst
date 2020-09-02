@@ -215,9 +215,9 @@ This can be done with the pattern::
   >>> find = not_digits * C(digits)  # Find anything but digits followed by captured digits
   >>> match = find("abc 12345 xq")
   >>> print(match)
-  abc 12345
+  'abc 12345'
   >>> print(match.getCapture(0))
-  12345
+  '12345'
 
 Note that a capture is necessary to retrieve the digits since the ``find``
 pattern will match the portion of the string that is not digits as well
@@ -231,7 +231,7 @@ know the position of the pattern, a position capture ``Cp()`` can be added::
   >>> print(match.getCapture(0))      # Print the position at start of capture
   4
   >>> print(match.getCapture(1))      # Print the captured digits 
-  12345
+  '12345'
 
 .. _predefined-patterns:
 

@@ -256,9 +256,9 @@ This can be done with the pattern:</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">find</span> <span class="o">=</span> <span class="n">not_digits</span> <span class="o">*</span> <span class="n">C</span><span class="p">(</span><span class="n">digits</span><span class="p">)</span>  <span class="c1"># Find anything but digits followed by captured digits</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="s2">&quot;abc 12345 xq&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
-<span class="go">abc 12345</span>
+<span class="go">&#39;abc 12345&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-<span class="go">12345</span>
+<span class="go">&#39;12345&#39;</span>
 </pre></div>
 </div>
 <p>Note that a capture is necessary to retrieve the digits since the <code class="docutils literal notranslate"><span class="pre">find</span></code>
@@ -272,7 +272,7 @@ know the position of the pattern, a position capture <code class="docutils liter
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>      <span class="c1"># Print the position at start of capture</span>
 <span class="go">4</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>      <span class="c1"># Print the captured digits</span>
-<span class="go">12345</span>
+<span class="go">&#39;12345&#39;</span>
 </pre></div>
 </div>
 </div>
