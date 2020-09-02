@@ -125,8 +125,8 @@ a digit::
 
   >>> digit = R('09')  # Read characters in the range 0-9
 
-This pattern matches only a single digit. This pattern than then be applied to a
-string::
+This pattern matches only a single digit. A string can be checked to see if it
+matches the pattern by calling the pattern's match function::
 
   >>> match = digit.match('56a7')
   >>> print(match)
@@ -176,6 +176,36 @@ Patterns can be combined to make more complex expressions::
 
 The ``to_end_of_line`` pattern can be read as 'Match zero or more of anything
 but newline, followed by at most one newline'.
+
+.. _match-object:
+
+The Match object
+================
+
+As noted above, the :func:`match(string, index=0) <PyPE.PyPE.Pattern.match>` function 
+for a pattern is passed a string and an optional index, with the default index of zero
+indicating the start of the string. The match function ONLY tests whether the pattern 
+is matched at the location indicated by the index. It does not perform a search to find 
+a location where the pattern is matched. 
+
+If the pattern matches the string at the given 
+location, a :class:`Match <PyPE.PyPE.Match>` object is returned. Otherwise ``None`` is 
+returned. Note that when printing a :class:`Match <PyPE.PyPE.Match>` object, the string 
+that was matched by the pattern is printed, which is why the pattern examples above 
+print the string that was matched. The :class:`Match <PyPE.PyPE.Match>` object also 
+includes the ``start`` and ``end`` location of the match, and any Pattern ``captures`` 
+(discussed more below)::
+
+  >>> digit = R('09')**1  # Read one or more digits
+  >>> match = digit("01234abc", 1)
+  >>> print(match)
+  1234
+  >>> print(match.start)
+  1
+  >>> print(match.end)
+  4
+  >>> print(math.captures)  # No captures defined for this pattern
+  []
 
 .. _predefined-patterns:
 
@@ -322,7 +352,8 @@ a stack.
 A simple trivial example of using the stack capability is shown below. Useful
 examples that use a stack will typically be more involved::
 
-  >>> p = Sc('my_stack', Cc('one')*Cc('two)) * Sm('my_stack',0) * ',' * Sm('my_stack')
+  >>> stack = Sc('my_stack', Cc('one')*Cc('two'))         # Stack named my_stack with items ['one','two']
+  >>> p = stack * Sm('my_stack',0) * ',' * Sm('my_stack') # Look for stack item 0 ('one') -> ',' -> 1 ('two')
   >>> print(p("one,two,three"))
   one,two
 

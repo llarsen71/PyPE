@@ -172,6 +172,12 @@ Ssz (Stack Size)
 Match Objects
 -------------
 
+A ``Match`` object is returned when the :func:`match(string, index) <PyPE.PyPE.Pattern.match>`
+function for a pattern is called with a string, and the string matches the
+pattern at the given index. The ``Match`` object indicates the portion of the
+string that was matched, the start and end location of the match, and contains
+any captures from the pattern.
+
 Match
 =====
 

@@ -681,7 +681,7 @@ class Pattern(object):
            this is a function, it is used as a `DebugOptions` `afterMatch`
            filter.
 
-    :param **args: If more control is needed, arguments can be passed in that
+    :param \*\*args: If more control is needed, arguments can be passed in that
            are forwarded to the DebugOptions constructor. See the constructor
            for more details.
 
@@ -691,9 +691,9 @@ class Pattern(object):
 
     The debug option can be set using::
 
-      p = P(1).debug(True)
-      p = P(1) & 'show'  # Same as True
-      p = 'hide' & P(1)  # Same as False
+      >>> p = P(1).debug(True)
+      >>> p = P(1) & 'show'  # Same as True
+      >>> p = 'hide' & P(1)  # Same as False
     """
 
     if debugOpt is None and len(args) == 0: return self.dbg
@@ -2984,6 +2984,13 @@ class Match(object):
   """
   The ``Match`` object tracks the text that was matched by a PEG pattern, and
   provides access to any match captures.
+
+  :ivar string: The original string that was matched.
+  :ivar start: The location in the string where the pattern match starts.
+  :ivar end: The location in the string where the pattern match ends.
+  :ivar captures: The Pattern captures. Note that the ``match.getCapture(n)`` method
+        is available to access captures, or simply ``match[n]``. ``len(match)``
+        indicates the number of captures.
   """
 
   # ----------------------------------------------------------------------------

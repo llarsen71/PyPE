@@ -172,8 +172,8 @@ a digit:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digit</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span>  <span class="c1"># Read characters in the range 0-9</span>
 </pre></div>
 </div>
-<p>This pattern matches only a single digit. This pattern than then be applied to a
-string:</p>
+<p>This pattern matches only a single digit. A string can be checked to see if it
+matches the pattern by calling the pattern’s match function:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">digit</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;56a7&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
 <span class="go">5</span>
@@ -222,6 +222,33 @@ return the result <code class="docutils literal notranslate"><span class="pre">\
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">to_end_of_line</span></code> pattern can be read as ‘Match zero or more of anything
 but newline, followed by at most one newline’.</p>
+</div>
+<div class="section" id="the-match-object">
+<span id="match-object"></span><h3>The Match object<a class="headerlink" href="#the-match-object" title="Permalink to this headline">¶</a></h3>
+<p>As noted above, the <a class="reference internal" href="PyPE.html#PyPE.PyPE.Pattern.match" title="PyPE.PyPE.Pattern.match"><code class="xref py py-func docutils literal notranslate"><span class="pre">match(string,</span> <span class="pre">index=0)</span></code></a> function
+for a pattern is passed a string and an optional index, with the default index of zero
+indicating the start of the string. The match function ONLY tests whether the pattern
+is matched at the location indicated by the index. It does not perform a search to find
+a location where the pattern is matched.</p>
+<p>If the pattern matches the string at the given
+location, a <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object is returned. Otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is
+returned. Note that when printing a <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object, the string
+that was matched by the pattern is printed, which is why the pattern examples above
+print the string that was matched. The <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object also
+includes the <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">end</span></code> location of the match, and any Pattern <code class="docutils literal notranslate"><span class="pre">captures</span></code>
+(discussed more below):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digit</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>  <span class="c1"># Read one or more digits</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">digit</span><span class="p">(</span><span class="s2">&quot;01234abc&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
+<span class="go">1234</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+<span class="go">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
+<span class="go">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">captures</span><span class="p">)</span>  <span class="c1"># No captures defined for this pattern</span>
+<span class="go">[]</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="predefined-patterns">
 <span id="id1"></span><h3>Predefined Patterns<a class="headerlink" href="#predefined-patterns" title="Permalink to this headline">¶</a></h3>
@@ -413,7 +440,8 @@ match is only successful if the stack size is n.</td>
 </table>
 <p>A simple trivial example of using the stack capability is shown below. Useful
 examples that use a stack will typically be more involved:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s1">&#39;my_stack&#39;</span><span class="p">,</span> <span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;one&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;two)) * Sm(&#39;</span><span class="n">my_stack</span><span class="s1">&#39;,0) * &#39;</span><span class="p">,</span><span class="s1">&#39; * Sm(&#39;</span><span class="n">my_stack</span><span class="s1">&#39;)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">stack</span> <span class="o">=</span> <span class="n">Sc</span><span class="p">(</span><span class="s1">&#39;my_stack&#39;</span><span class="p">,</span> <span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;one&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">Cc</span><span class="p">(</span><span class="s1">&#39;two&#39;</span><span class="p">))</span>         <span class="c1"># Stack named my_stack with items [&#39;one&#39;,&#39;two&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">stack</span> <span class="o">*</span> <span class="n">Sm</span><span class="p">(</span><span class="s1">&#39;my_stack&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="s1">&#39;,&#39;</span> <span class="o">*</span> <span class="n">Sm</span><span class="p">(</span><span class="s1">&#39;my_stack&#39;</span><span class="p">)</span> <span class="c1"># Look for stack item 0 (&#39;one&#39;) -&gt; &#39;,&#39; -&gt; 1 (&#39;two&#39;)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="p">(</span><span class="s2">&quot;one,two,three&quot;</span><span class="p">))</span>
 <span class="go">one,two</span>
 </pre></div>
@@ -491,6 +519,7 @@ separator. The resulting match has one capture.</td>
 <li><a class="reference internal" href="#">PyPE - Python Parsing Expressions</a><ul>
 <li><a class="reference internal" href="#pype-library-summary">PyPE Library Summary</a><ul>
 <li><a class="reference internal" href="#pattern-operators">Pattern Operators</a></li>
+<li><a class="reference internal" href="#the-match-object">The Match object</a></li>
 <li><a class="reference internal" href="#predefined-patterns">Predefined Patterns</a></li>
 <li><a class="reference internal" href="#capture-operators">Capture Operators</a></li>
 <li><a class="reference internal" href="#stack-operators">Stack Operators</a></li>

@@ -111,10 +111,9 @@ is disabled. If this is ‘named’, only named patterns are shown. If
 this is ‘show_only_success’, only successful matches are shown. If
 this is a function, it is used as a <cite>DebugOptions</cite> <cite>afterMatch</cite>
 filter.</li>
-<li><strong>**args</strong> – <p>If more control is needed, arguments can be passed in that
+<li><strong>**args</strong> – If more control is needed, arguments can be passed in that
 are forwarded to the DebugOptions constructor. See the constructor
-for more details.</p>
-</li>
+for more details.</li>
 </ul>
 </td>
 </tr>
@@ -126,9 +125,9 @@ is created and associated with this Pattern.</p>
 </tbody>
 </table>
 <p>The debug option can be set using:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="s1">&#39;show&#39;</span>  <span class="c1"># Same as True</span>
-<span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;hide&#39;</span> <span class="o">&amp;</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Same as False</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="s1">&#39;show&#39;</span>  <span class="c1"># Same as True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="s1">&#39;hide&#39;</span> <span class="o">&amp;</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Same as False</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1047,13 +1046,34 @@ capture.</p>
 </div>
 <div class="section" id="match-objects">
 <span id="match"></span><h2>Match Objects<a class="headerlink" href="#match-objects" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="id4">
-<h3>Match<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<p>A <code class="docutils literal notranslate"><span class="pre">Match</span></code> object is returned when the <a class="reference internal" href="#PyPE.PyPE.Pattern.match" title="PyPE.PyPE.Pattern.match"><code class="xref py py-func docutils literal notranslate"><span class="pre">match(string,</span> <span class="pre">index)</span></code></a>
+function for a pattern is called with a string, and the string matches the
+pattern at the given index. The <code class="docutils literal notranslate"><span class="pre">Match</span></code> object indicates the portion of the
+string that was matched, the start and end location of the match, and contains
+any captures from the pattern.</p>
+<div class="section" id="id2">
+<h3>Match<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="PyPE.PyPE.Match">
 <em class="property">class </em><code class="descclassname">PyPE.PyPE.</code><code class="descname">Match</code><span class="sig-paren">(</span><em>string</em>, <em>start</em>, <em>end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Match" title="Permalink to this definition">¶</a></dt>
 <dd><p>The <code class="docutils literal notranslate"><span class="pre">Match</span></code> object tracks the text that was matched by a PEG pattern, and
 provides access to any match captures.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> – The original string that was matched.</li>
+<li><strong>start</strong> – The location in the string where the pattern match starts.</li>
+<li><strong>end</strong> – The location in the string where the pattern match ends.</li>
+<li><strong>captures</strong> – The Pattern captures. Note that the <code class="docutils literal notranslate"><span class="pre">match.getCapture(n)</span></code> method
+is available to access captures, or simply <code class="docutils literal notranslate"><span class="pre">match[n]</span></code>. <code class="docutils literal notranslate"><span class="pre">len(match)</span></code>
+indicates the number of captures.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="PyPE.PyPE.Match.getCapture">
 <code class="descname">getCapture</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#PyPE.PyPE.Match.getCapture" title="Permalink to this definition">¶</a></dt>
@@ -1141,7 +1161,7 @@ the array, with index -1 being the last capture value.</td>
 </ul>
 </li>
 <li><a class="reference internal" href="#match-objects">Match Objects</a><ul>
-<li><a class="reference internal" href="#id4">Match</a></li>
+<li><a class="reference internal" href="#id2">Match</a></li>
 </ul>
 </li>
 </ul>
