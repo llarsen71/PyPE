@@ -185,16 +185,15 @@ The Match object
 As noted above, the :func:`match(string, index=0) <PyPE.PyPE.Pattern.match>` function 
 for a pattern is passed a string and an optional index, with the default index of zero
 indicating the start of the string. The match function ONLY tests whether the pattern 
-is matched at the location indicated by the index. It does not perform a search to find 
-a location where the pattern is matched. 
+is matched at the location indicated by the index. It does not perform a search ahead 
+to find a location where the pattern is matched. 
 
-If the pattern matches the string at the given 
-location, a :class:`Match <PyPE.PyPE.Match>` object is returned. Otherwise ``None`` is 
-returned. Note that when printing a :class:`Match <PyPE.PyPE.Match>` object, the string 
-that was matched by the pattern is printed, which is why the pattern examples above 
-print the string that was matched. The :class:`Match <PyPE.PyPE.Match>` object also 
-includes the ``start`` and ``end`` location of the match, and any Pattern ``captures`` 
-(discussed more below)::
+If the pattern matches the string at the given location, a :class:`Match <PyPE.PyPE.Match>` 
+object is returned. Otherwise ``None`` is returned. Note that when printing a 
+:class:`Match <PyPE.PyPE.Match>` object, the string that was matched by the pattern is 
+printed, which is why the pattern examples above print the string that was matched. The 
+:class:`Match <PyPE.PyPE.Match>` object also includes the ``start`` and ``end`` location 
+of the match, and any Pattern ``captures`` (discussed more below)::
 
   >>> digit = R('09')**1  # Read one or more digits
   >>> match = digit("01234abc", 1)
@@ -206,6 +205,33 @@ includes the ``start`` and ``end`` location of the match, and any Pattern ``capt
   4
   >>> print(math.captures)  # No captures defined for this pattern
   []
+
+Note that it is easy to create a pattern that does search a string for the given pattern.
+For example, suppose that you would like to find the next occurence of a sequence of digits. 
+This can be done with the pattern::
+
+  >>> digits = R('09')**1            # Pattern for a sequence of 1 or more digits
+  >>> not_digits = (1-digits)**0     # Look for anything but digits (0 or more characters)
+  >>> find = not_digits * C(digits)  # Find anything but digits followed by captured digits
+  >>> match = find("abc 12345 xq")
+  >>> print(match)
+  abc 12345
+  >>> print(match.getCapture(0))
+  12345
+
+Note that a capture is necessary to retrieve the digits since the ``find``
+pattern will match the portion of the string that is not digits as well
+(since this is part of the pattern). However, the capture allows us to
+retrieve the ``digits`` potion of th4e pattern. If it is also important to
+know the position of the pattern, a position capture ``Cp()`` can be added::
+
+  >>> digits = R('09')**1
+  >>> find = (1-digits)**0 * C(Cp()*digits)
+  >>> match = find("abc 12345 xq")
+  >>> print(match.getCapture(0))      # Print the position at start of capture
+  4
+  >>> print(match.getCapture(1))      # Print the captured digits 
+  12345
 
 .. _predefined-patterns:
 

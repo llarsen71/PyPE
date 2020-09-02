@@ -228,15 +228,14 @@ but newline, followed by at most one newline’.</p>
 <p>As noted above, the <a class="reference internal" href="PyPE.html#PyPE.PyPE.Pattern.match" title="PyPE.PyPE.Pattern.match"><code class="xref py py-func docutils literal notranslate"><span class="pre">match(string,</span> <span class="pre">index=0)</span></code></a> function
 for a pattern is passed a string and an optional index, with the default index of zero
 indicating the start of the string. The match function ONLY tests whether the pattern
-is matched at the location indicated by the index. It does not perform a search to find
-a location where the pattern is matched.</p>
-<p>If the pattern matches the string at the given
-location, a <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object is returned. Otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is
-returned. Note that when printing a <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object, the string
-that was matched by the pattern is printed, which is why the pattern examples above
-print the string that was matched. The <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object also
-includes the <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">end</span></code> location of the match, and any Pattern <code class="docutils literal notranslate"><span class="pre">captures</span></code>
-(discussed more below):</p>
+is matched at the location indicated by the index. It does not perform a search ahead
+to find a location where the pattern is matched.</p>
+<p>If the pattern matches the string at the given location, a <a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a>
+object is returned. Otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code> is returned. Note that when printing a
+<a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object, the string that was matched by the pattern is
+printed, which is why the pattern examples above print the string that was matched. The
+<a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object also includes the <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">end</span></code> location
+of the match, and any Pattern <code class="docutils literal notranslate"><span class="pre">captures</span></code> (discussed more below):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digit</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>  <span class="c1"># Read one or more digits</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">digit</span><span class="p">(</span><span class="s2">&quot;01234abc&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
@@ -247,6 +246,33 @@ includes the <code class="docutils literal notranslate"><span class="pre">start<
 <span class="go">4</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">captures</span><span class="p">)</span>  <span class="c1"># No captures defined for this pattern</span>
 <span class="go">[]</span>
+</pre></div>
+</div>
+<p>Note that it is easy to create a pattern that does search a string for the given pattern.
+For example, suppose that you would like to find the next occurence of a sequence of digits.
+This can be done with the pattern:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digits</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>            <span class="c1"># Pattern for a sequence of 1 or more digits</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">not_digits</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">digits</span><span class="p">)</span><span class="o">**</span><span class="mi">0</span>     <span class="c1"># Look for anything but digits (0 or more characters)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">find</span> <span class="o">=</span> <span class="n">not_digits</span> <span class="o">*</span> <span class="n">C</span><span class="p">(</span><span class="n">digits</span><span class="p">)</span>  <span class="c1"># Find anything but digits followed by captured digits</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="s2">&quot;abc 12345 xq&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
+<span class="go">abc 12345</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+<span class="go">12345</span>
+</pre></div>
+</div>
+<p>Note that a capture is necessary to retrieve the digits since the <code class="docutils literal notranslate"><span class="pre">find</span></code>
+pattern will match the portion of the string that is not digits as well
+(since this is part of the pattern). However, the capture allows us to
+retrieve the <code class="docutils literal notranslate"><span class="pre">digits</span></code> potion of th4e pattern. If it is also important to
+know the position of the pattern, a position capture <code class="docutils literal notranslate"><span class="pre">Cp()</span></code> can be added:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digits</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">find</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">digits</span><span class="p">)</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">C</span><span class="p">(</span><span class="n">Cp</span><span class="p">()</span><span class="o">*</span><span class="n">digits</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="s2">&quot;abc 12345 xq&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>      <span class="c1"># Print the position at start of capture</span>
+<span class="go">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">getCapture</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>      <span class="c1"># Print the captured digits</span>
+<span class="go">12345</span>
 </pre></div>
 </div>
 </div>
