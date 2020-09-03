@@ -404,8 +404,8 @@ Utility Functions
 |                           | parameter that indicates whether ``ptn`` should  |
 |                           | be included in the match (default False).        |
 +---------------------------+--------------------------------------------------+
-| escapeStr(str)            | This function takes a string and replaces \r, \n,|
-|                           | and \t with the string representation, and       |
+| escapeStr(str)            | This function takes a string and replaces \\r,   |
+|                           | \\n, and \\t with the string representation, and |
 |                           | replaces the quote characters with \' and \".    |
 +---------------------------+--------------------------------------------------+
 | join(separator)           | This returns a function that can be used with the|
