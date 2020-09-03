@@ -1,6 +1,6 @@
-#################################
-PyPE - Python Parsing Expressions
-#################################
+############################################
+PyPE - Python Parsing Expressions (Overview)
+############################################
 
 PyPE is a python pattern matching library for searching text and extracting
 data from the text. While PyPE can be used to match text patterns in any text
@@ -51,10 +51,14 @@ The PyPE library can be divided into a few major categories:
   captured and returned when matching a text using a PEG.
 
 * :ref:`stack-ops` - A stack is just a named array that works similar to the
-  capture array. In some cases it is useful to add captured data to a stack
+  capture array. In some cases, it is useful to add captured data to a stack
   that is independent of the capture array.
 
 * :ref:`utility-functions` - Other functions that can be used with PEGs.
+
+To check if a string matches a pattern defined using PyPE, the patterns
+``match`` function is called. If the string is a match a ``Match`` object
+is called. This is discussed in :ref:`match-object`.
 
 .. _pattern-ops:
 

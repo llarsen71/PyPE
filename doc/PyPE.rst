@@ -1,8 +1,8 @@
 .. _PyPE-intro:
 
-=========================================
-PyPE - Python Parsing Expressions Library
-=========================================
+========================
+PyPE - API Documentation
+========================
 
 -------------------------------
 The :class:`Pattern` Base Class

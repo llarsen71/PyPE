@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>PyPE - Python Parsing Expressions &#8212; PyPE 0.1.0 documentation</title>
+    <title>PyPE - Python Parsing Expressions (Overview) &#8212; PyPE 0.1.0 documentation</title>
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -16,7 +16,7 @@
     <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="PyPE - Python Parsing Expressions Library" href="PyPE.html" /> 
+    <link rel="next" title="PyPE - API Documentation" href="PyPE.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -25,7 +25,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="PyPE.html" title="PyPE - Python Parsing Expressions Library"
+          <a href="PyPE.html" title="PyPE - API Documentation"
              accesskey="N">next</a> |</li>
         <li class="nav-item nav-item-0"><a href="#">PyPE 0.1.0 documentation</a> &#187;</li> 
       </ul>
@@ -36,8 +36,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="pype-python-parsing-expressions">
-<h1>PyPE - Python Parsing Expressions<a class="headerlink" href="#pype-python-parsing-expressions" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="pype-python-parsing-expressions-overview">
+<h1>PyPE - Python Parsing Expressions (Overview)<a class="headerlink" href="#pype-python-parsing-expressions-overview" title="Permalink to this headline">¶</a></h1>
 <p>PyPE is a python pattern matching library for searching text and extracting
 data from the text. While PyPE can be used to match text patterns in any text
 file, it is particularly useful for interpreting structured text and converting
@@ -77,10 +77,13 @@ made available in the library.</li>
 <li><a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> - These are used to specify information should be
 captured and returned when matching a text using a PEG.</li>
 <li><a class="reference internal" href="#stack-ops"><span class="std std-ref">Stack Operators</span></a> - A stack is just a named array that works similar to the
-capture array. In some cases it is useful to add captured data to a stack
+capture array. In some cases, it is useful to add captured data to a stack
 that is independent of the capture array.</li>
 <li><a class="reference internal" href="#utility-functions"><span class="std std-ref">Utility Functions</span></a> - Other functions that can be used with PEGs.</li>
 </ul>
+<p>To check if a string matches a pattern defined using PyPE, the patterns
+<code class="docutils literal notranslate"><span class="pre">match</span></code> function is called. If the string is a match a <code class="docutils literal notranslate"><span class="pre">Match</span></code> object
+is called. This is discussed in <a class="reference internal" href="#match-object"><span class="std std-ref">The Match object</span></a>.</p>
 <div class="section" id="pattern-operators">
 <span id="pattern-ops"></span><h3>Pattern Operators<a class="headerlink" href="#pattern-operators" title="Permalink to this headline">¶</a></h3>
 <p>The following table summarizes the basic operations for creating patterns for
@@ -521,7 +524,7 @@ separator. The resulting match has one capture.</td>
 </ul>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="PyPE.html">PyPE - Python Parsing Expressions Library</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="PyPE.html">PyPE - API Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="PyPE.html#the-pattern-base-class">The <code class="docutils literal notranslate"><span class="pre">Pattern</span></code> Base Class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="PyPE.html#pattern-operators">Pattern Operators</a></li>
 <li class="toctree-l2"><a class="reference internal" href="PyPE.html#capture-operators">Capture Operators</a></li>
@@ -542,7 +545,7 @@ separator. The resulting match has one capture.</td>
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">PyPE - Python Parsing Expressions</a><ul>
+<li><a class="reference internal" href="#">PyPE - Python Parsing Expressions (Overview)</a><ul>
 <li><a class="reference internal" href="#pype-library-summary">PyPE Library Summary</a><ul>
 <li><a class="reference internal" href="#pattern-operators">Pattern Operators</a></li>
 <li><a class="reference internal" href="#the-match-object">The Match object</a></li>
@@ -559,7 +562,7 @@ separator. The resulting match has one capture.</td>
 
   <h4>Next topic</h4>
   <p class="topless"><a href="PyPE.html"
-                        title="next chapter">PyPE - Python Parsing Expressions Library</a></p>
+                        title="next chapter">PyPE - API Documentation</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -590,7 +593,7 @@ separator. The resulting match has one capture.</td>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="PyPE.html" title="PyPE - Python Parsing Expressions Library"
+          <a href="PyPE.html" title="PyPE - API Documentation"
              >next</a> |</li>
         <li class="nav-item nav-item-0"><a href="#">PyPE 0.1.0 documentation</a> &#187;</li> 
       </ul>
