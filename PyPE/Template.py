@@ -9,6 +9,19 @@ whitespace.debug(False)
 # ==============================================================================
 
 class Template(object):
+  """
+  This is a Template engine class that parses a text file with embedded python
+  scripting and converts it into a python file to execute. Templates support the
+  following syntax:
+
+  - Embedded python block          =      @[ python_code ]@    # Can be multiline
+  - Print variable                 =      @[= variable   ]@    # Can be a function that returns a value
+  - Preserve spacing - left align  =      @[< ... ]@
+  - Preserve spacing - right align =      @[> ... ]@
+  - Close python block(s)          =      @[: ... ]@           # N colons close N nested blocks
+  - Trim whitespace                =      @[^ ... ]@
+  """
+
   startPyTag  = P("@[")     # Start python code block
   endPyTag    = P("]@")     # End python code block
   trimWS      = P("^")      # Symbol to trim whitespace
