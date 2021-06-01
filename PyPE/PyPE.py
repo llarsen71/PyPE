@@ -2318,17 +2318,40 @@ class V(CompositePattern):
 
 # ==============================================================================
 
-def setVs(pattern, Vs, replace=False):
+def setVs(pattern, Vs=None, replace=False):
   """
-  Set the pattern for V objects within this Pattern.
+  Set the pattern for V (pattern place holder) objects within this Pattern. Note
+  that if the pattern on which `setVs` is called contains includes the named pattern
+  associated with each pattern place holder object, then `setVs` can be called without
+  passing in a replacement list since this named objects that are already in the
+  pattern will be used.
+
+  :Example:
+
+  This is an example of parsing a comma separated list of digits with parenthesis
+  around sublists supported.
+
+  >>> d = R('09')**1
+  >>> p = d + '(' * V('P') * ')'  + V('P') * ',' * V('P') 
+  >>> setVs(p, {'P' : p})
+  >>> p.match("1,2,3,(4,5,(6))")
+  '1,2,3,(4,5,(6))'
 
   :param pattern: A Pattern object (may contain other patterns)
-  :param Vs: A dictionary of V objects to set, or an array of named Patterns.
+  :param Vs: A dictionary of V objects to set, or an array of named Patterns. If this
+         is not specified, then the pattern object is searched for named parameters,
+         and the named parameters are used to replace the pattern place holder objects.
   :param replace: Replace the V objects with the associated Pattern (default False).
   :return: The updated (or replaced) Pattern
   """
   if not isinstance(pattern, Pattern): return pattern
+
+  # Get all the patterns conatined in this pattern
+  patterns = pattern.getPatterns() if pattern._containsPatterns() else []
+  if Vs is None: Vs = patterns
+        
   if isinstance(Vs, (list, tuple)):
+    # Convert the named patterns to a distionary
     Vs = {ptn.name: ptn for ptn in Vs if ptn.name is not None}
 
   # If we get to a V object, set the value if it is defined.
@@ -2342,7 +2365,6 @@ def setVs(pattern, Vs, replace=False):
   if not pattern._containsPatterns(): return pattern
 
   # Set the Vs for all contained patterns
-  patterns = pattern.getPatterns()
   for i, ptn in enumerate(patterns):
     ptn = setVs(ptn, Vs, replace)
     if replace: patterns[i] = ptn

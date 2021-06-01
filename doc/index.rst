@@ -50,6 +50,11 @@ The PyPE library can be divided into a few major categories:
 * :ref:`capture-ops` - These are used to specify information should be
   captured and returned when matching a text using a PEG.
 
+* :ref:`place-holder` - A place holder is needed when a pattern needs to be
+  included that has not been defined yet. This occurs for recursive patterns.
+  Once the neceesary pattern(s) have been defined they can be substituted into
+  the parsing expression via the ``setVs`` function.
+
 * :ref:`stack-ops` - A stack is just a named array that works similar to the
   capture array. In some cases, it is useful to add captured data to a stack
   that is independent of the capture array.
@@ -84,7 +89,9 @@ matching text:
 | P(fn)       | For function with signature ``fn(string, idx, context)`` return|
 |             | the next index associated with the match. Must be larger than  |
 |             | the index that was passed in and less than or equal to the     |
-|             | string length.                                                 |
+|             | string length. The return value may also be False or None if   |
+|             | the pattern fails. It may also be a                            |
+|             | :class:`Match <PyPE.PyPE.Match>` object.                       |
 +-------------+----------------------------------------------------------------+
 | I(string)   | Case insensitive string match.                                 |
 +-------------+----------------------------------------------------------------+
@@ -118,68 +125,126 @@ matching text:
 +-------------+----------------------------------------------------------------+
 | ptn1**[n]   | Match ``ptn1`` exactly n times.                                |
 +-------------+----------------------------------------------------------------+
+| ptn / fn    | Pass the match object to the given function. Return the result |
+|             | from the function, which should be the match object or None.   |
+|             | As manipulation of captures, such as type conversion, is a     |
+|             | common use for this, this will be convered in the              |
+|             | :ref:`capture-ops` section.                                    |
++-------------+----------------------------------------------------------------+
 
-For convenience, if a :ref:`Pattern` object is combined with another value using
-the operators '+', '-', and '*', the other value is converted to a pattern
-object using the :ref:`P` class. For example, if ``ptn`` is a pattern, then
-``1-ptn`` is equivalent to ``P(1)-ptn``.
+:class:`P(string) <PyPE.PyPE.P>` matches the given string exactly. Once a pattern
+has been defined, the pattern's ``match(string, index)`` function can be called 
+with a string and a starting index. The ``match`` function will test whether the
+string matches the pattern starting at the given index. The index parameter is
+optional and has a default value of 0, which is the index for the start of the
+string. An index of 1 indicates the second character, 2 the third character, and
+so on.
 
-The following is an example of a simple pattern that can be used to check for
-a digit::
+  >>> ptn = P('test')
+  >>> match = ptn.match('testing')
+  >>> print(match)
+  'test'
+  >>> ptn.match('testing', 1) == None    # match starting at 'e' fails 
+  True
+
+Note that the pattern above only matches the string 'test' once. The following is 
+an example of a simple pattern that can be used to check for a digit::
 
   >>> digit = R('09')  # Read characters in the range 0-9
 
-This pattern matches only a single digit. A string can be checked to see if it
+Again, this pattern matches only a single digit. A string can be checked to see if it
 matches the pattern by calling the pattern's match function::
 
   >>> match = digit.match('56a7')
   >>> print(match)
   '5'
 
-The :func:`match <PyPE.PyPE.Pattern.match>` function accepts a string and an
-optional location in the string to look for a match (with the default being
-0 which indicates the start of the string). If the index 2 is used, the match
-fails because the character at index 2 is 'a'.
-
-  >>> digit.match('56a7',2) == None
-  True
-
-The pattern can be extended to read one or more digits as follows::
+In order to match a pattern multiple times, the `**` operator is used. The following
+is used to match one or more digits::
 
   >>> digits = R('09')**1
   >>> match = digits('56a7')
   >>> print(match)
   '56'
 
-The following is an example of a pattern that finds any one of three different
-ways of representing a new line in a text file::
+The 'or' operator is represented by the `+` symbol. The following is an example of a 
+pattern that finds any one of three different ways of representing a new line in a text 
+file::
 
   >>> newline = P('\r\n') + P('\r') + P('\n')
 
-Note that this is an order search, meaning that if ``newline.match(string)`` is
+Note that this is an ordered search, meaning that if ``newline.match(string)`` is
 called, the ``newline`` pattern checks if the string starts with the first expression 
 ``P('\r\n')``, and if this fails to match, the ``newline`` pattern checks if the
 string starts with the second pattern ``P('\r')``. If this fails to match, the third 
-pattern ``P('\n')`` is tested. If any of the three patterns succeeds, then the matched
-characters are returned. However, if all patterns fail, the returned result is ``None``.
+pattern ``P('\n')`` is tested. If any of the three patterns succeeds, then the pattern
+succeeds and the matched characters are returned. However, if all three patterns fail, 
+then the patterb fails and ``None`` is returned from the `match` function.
 
-Note that the ordering of the pattern matters. For example, the following pattern will never
-return the result ``\r\n`` because ``\r`` will always be matched first.
+Note that the ordering of the three patterns matters. For example, the following 
+pattern will never return the result ``\r\n`` because ``\r`` will always be matched 
+first.
 
   >>> newline = P('\r') + P('\r\n') + P('\n')
 
 Patterns can be combined to make more complex expressions::
 
-  >>> anything_but_newline = 1-newline  # Match anything with the exeption of newline
-  >>> to_end_of_line = anything_but_newline**0 * newline**-1
-  >>> print(to_end_of_line.match("123\n456")) # Note newline is included in match
-  '123'
+  >>> anything_but_newline = P(1)-newline           # Match anything with the exeption of newline
+  >>> read_line = anything_but_newline**0 * newline
+  >>> print(read_line.match("123\n456"))            # Note newline is included in match
+  '123\n'
 
-  >>> print(to_end_of_line.match("123\n456", 4)) # Matches end of string with no newline
+Sometimes a parsing expression will behave in a way that you did not expect. Typically
+this is because there are edge cases that you did not consider when building the expression.
+For example consider the ``read_line`` pattern above. Suppose we try and apply this to the
+string "456"::
+
+  >>> print(to_end_of_line.match("456"))
+  None
+
+The ``read_line`` pattern fails to read this line. The reason that it fails is that this
+string does not include a newline at the end. In other words, our ``read_line`` pattern
+will read any line from a file except for the last line. This is probably not what was 
+intended. The correct pattern to use for reading any line from a file is::
+
+  >>> read_line = anything_but_newline**0 * newline**-1
+
+This ``read_line`` pattern can be read as 'Match zero or more of any character but newline, 
+followed by at most one newline'. If there is no newline at the end, the pattern is still 
+satisfied. When we try to read the string "456", we now get the expected result::
+
+  >>> print(to_end_of_line.match("456"))
   '456'
 
-The ``to_end_of_line`` pattern can be read as 'Match zero or more of anything
-but newline, followed by at most one newline'.
+Custom Patterns
+---------------
+
+There may be cases more complex logic is needed than is provided by the built in 
+pattern operations. In this case a custom function can be created that performs
+the match. The function has the form ``fn(string, index, context)`` where the
+``string`` is the string to which the pattern is applied, the ``index`` is the
+current location in the string for testing the pattern that the function matches, 
+and the ``context`` is a `Context` object which gives access to capture stacks.
+Below is a very simple example of a custom pattern::
+
+  >>> def take2(string, idx, ctxt):
+  >>>     return i+2
+  >>> ptn = P(take2)
+  >>> match = ptn.match("123")
+  >>> print(match)
+  '12'
+
+This simple pattern just takes 2 character from the string. Note that this is not
+a safe implementation in that it does not check that the index returned is within
+the bounds of the string. In this case, the pattern `P(2)` is better.
+
+Autoconversion of Values to Patterns
+------------------------------------
+
+For convenience, if a :ref:`Pattern` object is combined with another value using
+the operators '+', '-', and '*', the other value is converted to a pattern
+object using the :ref:`P` class. For example, if ``ptn`` is a pattern, then
+``1-ptn`` is equivalent to ``P(1)-ptn``.
 
 .. _match-object:
 
@@ -207,7 +272,7 @@ of the match, and any Pattern ``captures`` (discussed more below)::
   1
   >>> print(match.end)
   4
-  >>> print(math.captures)  # No captures defined for this pattern
+  >>> print(match.captures)  # No captures defined for this pattern
   []
 
 Note that it is easy to create a pattern that does search a string for the given pattern.
@@ -322,7 +387,7 @@ integer values on a single line::
   >>> row = value * (',' * value)**0  # Capture comma separated list of values
   >>> match = row.match('12, 17, 20, 105')
   >>> print(match.captures)
-  ['12', '17', '20', 105']
+  ['12', '17', '20', '105']
 
 To capture multiple rows with each capture representing a row, and each capture
 containing information about the row the data is on, the following patterns are
@@ -343,6 +408,92 @@ the string to break across lines::
   >>> quoted = Cb('quote', quote) * (1 - (quote + newline))**0 * Cb('quote')
   >>> print(quoted("'quoted string'"))
   'quoted string'
+
+Using a Function for Type Conversion
+------------------------------------
+
+Captures are returned as strings. However, there are cases where it is desirable to
+convert the captures to another form. For example, if the capture represents an
+integer, it may be useful to convert the value to an integer. The first capture
+example above is modified to convert the captured values to integers::
+
+  >>> def str2int(match):
+  >>>     match.captures[0] = int(match.captures[0])
+  >>>     return match
+  >>> toint = C(digit**1) / str2int
+  >>> value = whitespace0 * toint * whitespace0
+  >>> row = value * (',' * value)**0
+  >>> match = row.match('12, 17, 20, 105')
+  >>> print(match.captures)
+  [12, 17, 20, 105]
+
+The result returned from the function is used as the result of the pattern. In
+general, the original match can simply be returned. If the captures in the match
+are modified, then the modified results will be used. The ``str2int`` function
+above replaces the string of digits captured from the pattern ``C(digit**1)`` 
+into an integer value. The result is an array of integer values rather than
+an array of integer value strings.
+
+.. _place-holder:
+
+Pattern Place Holder
+====================
+
+It is common for a full parsing expression to have to reference patterns 
+that have not yet been defined. Or in other words it is common for parsing
+expressions to be recursive. When a parsing pattern needs to refer to a 
+pattern that has not yet been defined, a pattern place holder can be used
+that will later be replaced with the pattern once it is defined. Below are
+the 
+
++--------------------------+------------------------------------------------------------+
+| Syntax                   | Description                                                |
++==========================+============================================================+
+| V(ptn_name)              | Add a pattern place holder for a pattern that has not yet  |
+|                          | been created. This can then be replaced via the ``setVs``  |
+|                          | function.                                                  |
++--------------------------+------------------------------------------------------------+
+| setVs(ptn, ptn_map)      | Replace the pattern holders in the `ptn` pattern with the  |
+|                          | patterns defined in the `ptn_map` mapping object. The      |
+|                          | `ptn_map` may either be a dictionary mapping pattern names |
+|                          | to patterns, or a list of named patterns (i.e., patterns   |
+|                          | that have a name already associated).                      |
++--------------------------+------------------------------------------------------------+
+| ptn = <name> | <ptn def> | Create a named pattern. The pipe symbol (\|) is  used to   |
+|                          | specify the name for a pattern. The <name> must be a       |
+|                          | string value, and <ptn def> represents some pattern        |
+|                          | definition. Pattern names are useful for replacing pattern |
+|                          | place holders and for pattern debugging.                   |
++--------------------------+------------------------------------------------------------+
+
+As an example, consider a grammar for parsing integer arithmetic expressions of the 
+form $5*(2+4)/7$. The grammar might be defined as follows:
+
+  >>> integer = R('09')**1
+  >>> op      = S('+-*/')
+  >>>
+  >>> # An expression needs to refer recursively to itself. Add a placeholder.
+  >>> expr    = integer + '-'*V('EXPR') + '('*V('EXPR')*')' + V('EXPR')*op*V('EXPR')
+  >>>
+  >>> # Replace the expression placeholder in the `expr` pattern
+  >>> parse   = setVs(expr, {'EXPR' : expr})
+  >>> parse.match("5*(2+4)/7")
+  '5*(2+4)/7'
+
+An alternative way to replace the expression is to make `expr` pattern a named pattern. 
+The second parameter to `setVs` can be a list of named parameters rather than a dictionary.
+
+  >>> integer = R('09')**1
+  >>> op      = S('+-*/')
+  >>>
+  >>> # Create a named expression
+  >>> expr    = 'EXPR' | integer + '-'*V('EXPR') + '('*V('EXPR')*')' + V('EXPR')*op*V('EXPR')
+  >>>
+  >>> # Send a list of named parameters to replace in `expr`
+  >>> parse   = setVs(expr, [expr])
+  >>> parse.match("5*(2+4)/7")
+  '5*(2+4)/7'
+
 
 .. _stack-ops:
 

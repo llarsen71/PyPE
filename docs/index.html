@@ -76,6 +76,10 @@ text.</li>
 made available in the library.</li>
 <li><a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> - These are used to specify information should be
 captured and returned when matching a text using a PEG.</li>
+<li><a class="reference internal" href="#place-holder"><span class="std std-ref">Pattern Place Holder</span></a> - A place holder is needed when a pattern needs to be
+included that has not been defined yet. This occurs for recursive patterns.
+Once the neceesary pattern(s) have been defined they can be substituted into
+the parsing expression via the <code class="docutils literal notranslate"><span class="pre">setVs</span></code> function.</li>
 <li><a class="reference internal" href="#stack-ops"><span class="std std-ref">Stack Operators</span></a> - A stack is just a named array that works similar to the
 capture array. In some cases, it is useful to add captured data to a stack
 that is independent of the capture array.</li>
@@ -117,7 +121,9 @@ than one character is left in the string.</td>
 <td>For function with signature <code class="docutils literal notranslate"><span class="pre">fn(string,</span> <span class="pre">idx,</span> <span class="pre">context)</span></code> return
 the next index associated with the match. Must be larger than
 the index that was passed in and less than or equal to the
-string length.</td>
+string length. The return value may also be False or None if
+the pattern fails. It may also be a
+<a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object.</td>
 </tr>
 <tr class="row-odd"><td>I(string)</td>
 <td>Case insensitive string match.</td>
@@ -164,67 +170,126 @@ only match <code class="docutils literal notranslate"><span class="pre">ptn1</sp
 <tr class="row-odd"><td>ptn1**[n]</td>
 <td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> exactly n times.</td>
 </tr>
+<tr class="row-even"><td>ptn / fn</td>
+<td>Pass the match object to the given function. Return the result
+from the function, which should be the match object or None.
+As manipulation of captures, such as type conversion, is a
+common use for this, this will be convered in the
+<a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> section.</td>
+</tr>
 </tbody>
 </table>
-<p>For convenience, if a <a class="reference internal" href="PyPE.html#pattern"><span class="std std-ref">Pattern</span></a> object is combined with another value using
-the operators ‘+’, ‘-‘, and ‘*’, the other value is converted to a pattern
-object using the <a class="reference internal" href="PyPE.html#p"><span class="std std-ref">P (Pattern)</span></a> class. For example, if <code class="docutils literal notranslate"><span class="pre">ptn</span></code> is a pattern, then
-<code class="docutils literal notranslate"><span class="pre">1-ptn</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">P(1)-ptn</span></code>.</p>
-<p>The following is an example of a simple pattern that can be used to check for
-a digit:</p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">P(string)</span></code> matches the given string exactly. Once a pattern
+has been defined, the pattern’s <code class="docutils literal notranslate"><span class="pre">match(string,</span> <span class="pre">index)</span></code> function can be called
+with a string and a starting index. The <code class="docutils literal notranslate"><span class="pre">match</span></code> function will test whether the
+string matches the pattern starting at the given index. The index parameter is
+optional and has a default value of 0, which is the index for the start of the
+string. An index of 1 indicates the second character, 2 the third character, and
+so on.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">ptn</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;testing&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
+<span class="go">&#39;test&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;testing&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="kc">None</span>    <span class="c1"># match starting at &#39;e&#39; fails</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Note that the pattern above only matches the string ‘test’ once. The following is
+an example of a simple pattern that can be used to check for a digit:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digit</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span>  <span class="c1"># Read characters in the range 0-9</span>
 </pre></div>
 </div>
-<p>This pattern matches only a single digit. A string can be checked to see if it
+<p>Again, this pattern matches only a single digit. A string can be checked to see if it
 matches the pattern by calling the pattern’s match function:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">digit</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;56a7&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
 <span class="go">&#39;5&#39;</span>
 </pre></div>
 </div>
-<p>The <a class="reference internal" href="PyPE.html#PyPE.PyPE.Pattern.match" title="PyPE.PyPE.Pattern.match"><code class="xref py py-func docutils literal notranslate"><span class="pre">match</span></code></a> function accepts a string and an
-optional location in the string to look for a match (with the default being
-0 which indicates the start of the string). If the index 2 is used, the match
-fails because the character at index 2 is ‘a’.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digit</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;56a7&#39;</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="kc">None</span>
-<span class="go">True</span>
-</pre></div>
-</div>
-<p>The pattern can be extended to read one or more digits as follows:</p>
+<p>In order to match a pattern multiple times, the <cite>**</cite> operator is used. The following
+is used to match one or more digits:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">digits</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">digits</span><span class="p">(</span><span class="s1">&#39;56a7&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
 <span class="go">&#39;56&#39;</span>
 </pre></div>
 </div>
-<p>The following is an example of a pattern that finds any one of three different
-ways of representing a new line in a text file:</p>
+<p>The ‘or’ operator is represented by the <cite>+</cite> symbol. The following is an example of a
+pattern that finds any one of three different ways of representing a new line in a text
+file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Note that this is an order search, meaning that if <code class="docutils literal notranslate"><span class="pre">newline.match(string)</span></code> is
+<p>Note that this is an ordered search, meaning that if <code class="docutils literal notranslate"><span class="pre">newline.match(string)</span></code> is
 called, the <code class="docutils literal notranslate"><span class="pre">newline</span></code> pattern checks if the string starts with the first expression
 <code class="docutils literal notranslate"><span class="pre">P('\r\n')</span></code>, and if this fails to match, the <code class="docutils literal notranslate"><span class="pre">newline</span></code> pattern checks if the
 string starts with the second pattern <code class="docutils literal notranslate"><span class="pre">P('\r')</span></code>. If this fails to match, the third
-pattern <code class="docutils literal notranslate"><span class="pre">P('\n')</span></code> is tested. If any of the three patterns succeeds, then the matched
-characters are returned. However, if all patterns fail, the returned result is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
-<p>Note that the ordering of the pattern matters. For example, the following pattern will never
-return the result <code class="docutils literal notranslate"><span class="pre">\r\n</span></code> because <code class="docutils literal notranslate"><span class="pre">\r</span></code> will always be matched first.</p>
+pattern <code class="docutils literal notranslate"><span class="pre">P('\n')</span></code> is tested. If any of the three patterns succeeds, then the pattern
+succeeds and the matched characters are returned. However, if all three patterns fail,
+then the patterb fails and <code class="docutils literal notranslate"><span class="pre">None</span></code> is returned from the <cite>match</cite> function.</p>
+<p>Note that the ordering of the three patterns matters. For example, the following
+pattern will never return the result <code class="docutils literal notranslate"><span class="pre">\r\n</span></code> because <code class="docutils literal notranslate"><span class="pre">\r</span></code> will always be matched
+first.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Patterns can be combined to make more complex expressions:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anything_but_newline</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">newline</span>  <span class="c1"># Match anything with the exeption of newline</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">to_end_of_line</span> <span class="o">=</span> <span class="n">anything_but_newline</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">newline</span><span class="o">**-</span><span class="mi">1</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123</span><span class="se">\n</span><span class="s2">456&quot;</span><span class="p">))</span> <span class="c1"># Note newline is included in match</span>
-<span class="go">&#39;123&#39;</span>
-
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123</span><span class="se">\n</span><span class="s2">456&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span> <span class="c1"># Matches end of string with no newline</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">anything_but_newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="n">newline</span>           <span class="c1"># Match anything with the exeption of newline</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">read_line</span> <span class="o">=</span> <span class="n">anything_but_newline</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">newline</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">read_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123</span><span class="se">\n</span><span class="s2">456&quot;</span><span class="p">))</span>            <span class="c1"># Note newline is included in match</span>
+<span class="go">&#39;123\n&#39;</span>
+</pre></div>
+</div>
+<p>Sometimes a parsing expression will behave in a way that you did not expect. Typically
+this is because there are edge cases that you did not consider when building the expression.
+For example consider the <code class="docutils literal notranslate"><span class="pre">read_line</span></code> pattern above. Suppose we try and apply this to the
+string “456”:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;456&quot;</span><span class="p">))</span>
+<span class="go">None</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">read_line</span></code> pattern fails to read this line. The reason that it fails is that this
+string does not include a newline at the end. In other words, our <code class="docutils literal notranslate"><span class="pre">read_line</span></code> pattern
+will read any line from a file except for the last line. This is probably not what was
+intended. The correct pattern to use for reading any line from a file is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">read_line</span> <span class="o">=</span> <span class="n">anything_but_newline</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">newline</span><span class="o">**-</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>This <code class="docutils literal notranslate"><span class="pre">read_line</span></code> pattern can be read as ‘Match zero or more of any character but newline,
+followed by at most one newline’. If there is no newline at the end, the pattern is still
+satisfied. When we try to read the string “456”, we now get the expected result:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">to_end_of_line</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;456&quot;</span><span class="p">))</span>
 <span class="go">&#39;456&#39;</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">to_end_of_line</span></code> pattern can be read as ‘Match zero or more of anything
-but newline, followed by at most one newline’.</p>
+<div class="section" id="custom-patterns">
+<h4>Custom Patterns<a class="headerlink" href="#custom-patterns" title="Permalink to this headline">¶</a></h4>
+<p>There may be cases more complex logic is needed than is provided by the built in
+pattern operations. In this case a custom function can be created that performs
+the match. The function has the form <code class="docutils literal notranslate"><span class="pre">fn(string,</span> <span class="pre">index,</span> <span class="pre">context)</span></code> where the
+<code class="docutils literal notranslate"><span class="pre">string</span></code> is the string to which the pattern is applied, the <code class="docutils literal notranslate"><span class="pre">index</span></code> is the
+current location in the string for testing the pattern that the function matches,
+and the <code class="docutils literal notranslate"><span class="pre">context</span></code> is a <cite>Context</cite> object which gives access to capture stacks.
+Below is a very simple example of a custom pattern:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">take2</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">i</span><span class="o">+</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="n">take2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">ptn</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;123&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
+<span class="go">&#39;12&#39;</span>
+</pre></div>
+</div>
+<p>This simple pattern just takes 2 character from the string. Note that this is not
+a safe implementation in that it does not check that the index returned is within
+the bounds of the string. In this case, the pattern <cite>P(2)</cite> is better.</p>
+</div>
+<div class="section" id="autoconversion-of-values-to-patterns">
+<h4>Autoconversion of Values to Patterns<a class="headerlink" href="#autoconversion-of-values-to-patterns" title="Permalink to this headline">¶</a></h4>
+<p>For convenience, if a <a class="reference internal" href="PyPE.html#pattern"><span class="std std-ref">Pattern</span></a> object is combined with another value using
+the operators ‘+’, ‘-‘, and ‘*’, the other value is converted to a pattern
+object using the <a class="reference internal" href="PyPE.html#p"><span class="std std-ref">P (Pattern)</span></a> class. For example, if <code class="docutils literal notranslate"><span class="pre">ptn</span></code> is a pattern, then
+<code class="docutils literal notranslate"><span class="pre">1-ptn</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">P(1)-ptn</span></code>.</p>
+</div>
 </div>
 <div class="section" id="the-match-object">
 <span id="match-object"></span><h3>The Match object<a class="headerlink" href="#the-match-object" title="Permalink to this headline">¶</a></h3>
@@ -247,7 +312,7 @@ of the match, and any Pattern <code class="docutils literal notranslate"><span c
 <span class="go">1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
 <span class="go">4</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">captures</span><span class="p">)</span>  <span class="c1"># No captures defined for this pattern</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">)</span>  <span class="c1"># No captures defined for this pattern</span>
 <span class="go">[]</span>
 </pre></div>
 </div>
@@ -399,7 +464,7 @@ integer values on a single line:</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">row</span> <span class="o">=</span> <span class="n">value</span> <span class="o">*</span> <span class="p">(</span><span class="s1">&#39;,&#39;</span> <span class="o">*</span> <span class="n">value</span><span class="p">)</span><span class="o">**</span><span class="mi">0</span>  <span class="c1"># Capture comma separated list of values</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;12, 17, 20, 105&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">)</span>
-<span class="go">[&#39;12&#39;, &#39;17&#39;, &#39;20&#39;, 105&#39;]</span>
+<span class="go">[&#39;12&#39;, &#39;17&#39;, &#39;20&#39;, &#39;105&#39;]</span>
 </pre></div>
 </div>
 <p>To capture multiple rows with each capture representing a row, and each capture
@@ -420,6 +485,99 @@ the string to break across lines:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">quoted</span> <span class="o">=</span> <span class="n">Cb</span><span class="p">(</span><span class="s1">&#39;quote&#39;</span><span class="p">,</span> <span class="n">quote</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">quote</span> <span class="o">+</span> <span class="n">newline</span><span class="p">))</span><span class="o">**</span><span class="mi">0</span> <span class="o">*</span> <span class="n">Cb</span><span class="p">(</span><span class="s1">&#39;quote&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">quoted</span><span class="p">(</span><span class="s2">&quot;&#39;quoted string&#39;&quot;</span><span class="p">))</span>
 <span class="go">&#39;quoted string&#39;</span>
+</pre></div>
+</div>
+<div class="section" id="using-a-function-for-type-conversion">
+<h4>Using a Function for Type Conversion<a class="headerlink" href="#using-a-function-for-type-conversion" title="Permalink to this headline">¶</a></h4>
+<p>Captures are returned as strings. However, there are cases where it is desirable to
+convert the captures to another form. For example, if the capture represents an
+integer, it may be useful to convert the value to an integer. The first capture
+example above is modified to convert the captured values to integers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">str2int</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">match</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">toint</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">digit</span><span class="o">**</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">str2int</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">value</span> <span class="o">=</span> <span class="n">whitespace0</span> <span class="o">*</span> <span class="n">toint</span> <span class="o">*</span> <span class="n">whitespace0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">row</span> <span class="o">=</span> <span class="n">value</span> <span class="o">*</span> <span class="p">(</span><span class="s1">&#39;,&#39;</span> <span class="o">*</span> <span class="n">value</span><span class="p">)</span><span class="o">**</span><span class="mi">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;12, 17, 20, 105&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">)</span>
+<span class="go">[12, 17, 20, 105]</span>
+</pre></div>
+</div>
+<p>The result returned from the function is used as the result of the pattern. In
+general, the original match can simply be returned. If the captures in the match
+are modified, then the modified results will be used. The <code class="docutils literal notranslate"><span class="pre">str2int</span></code> function
+above replaces the string of digits captured from the pattern <code class="docutils literal notranslate"><span class="pre">C(digit**1)</span></code>
+into an integer value. The result is an array of integer values rather than
+an array of integer value strings.</p>
+</div>
+</div>
+<div class="section" id="pattern-place-holder">
+<span id="place-holder"></span><h3>Pattern Place Holder<a class="headerlink" href="#pattern-place-holder" title="Permalink to this headline">¶</a></h3>
+<p>It is common for a full parsing expression to have to reference patterns
+that have not yet been defined. Or in other words it is common for parsing
+expressions to be recursive. When a parsing pattern needs to refer to a
+pattern that has not yet been defined, a pattern place holder can be used
+that will later be replaced with the pattern once it is defined. Below are
+the</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="30%" />
+<col width="70%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Syntax</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>V(ptn_name)</td>
+<td>Add a pattern place holder for a pattern that has not yet
+been created. This can then be replaced via the <code class="docutils literal notranslate"><span class="pre">setVs</span></code>
+function.</td>
+</tr>
+<tr class="row-odd"><td>setVs(ptn, ptn_map)</td>
+<td>Replace the pattern holders in the <cite>ptn</cite> pattern with the
+patterns defined in the <cite>ptn_map</cite> mapping object. The
+<cite>ptn_map</cite> may either be a dictionary mapping pattern names
+to patterns, or a list of named patterns (i.e., patterns
+that have a name already associated).</td>
+</tr>
+<tr class="row-even"><td>ptn = &lt;name&gt; | &lt;ptn def&gt;</td>
+<td>Create a named pattern. The pipe symbol (|) is  used to
+specify the name for a pattern. The &lt;name&gt; must be a
+string value, and &lt;ptn def&gt; represents some pattern
+definition. Pattern names are useful for replacing pattern
+place holders and for pattern debugging.</td>
+</tr>
+</tbody>
+</table>
+<p>As an example, consider a grammar for parsing integer arithmetic expressions of the
+form $5*(2+4)/7$. The grammar might be defined as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integer</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">op</span>      <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="s1">&#39;+-*/&#39;</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># An expression needs to refer recursively to itself. Add a placeholder.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expr</span>    <span class="o">=</span> <span class="n">integer</span> <span class="o">+</span> <span class="s1">&#39;-&#39;</span><span class="o">*</span><span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;(&#39;</span><span class="o">*</span><span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span><span class="o">*</span><span class="s1">&#39;)&#39;</span> <span class="o">+</span> <span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">op</span><span class="o">*</span><span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Replace the expression placeholder in the `expr` pattern</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parse</span>   <span class="o">=</span> <span class="n">setVs</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;EXPR&#39;</span> <span class="p">:</span> <span class="n">expr</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parse</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;5*(2+4)/7&quot;</span><span class="p">)</span>
+<span class="go">&#39;5*(2+4)/7&#39;</span>
+</pre></div>
+</div>
+<p>An alternative way to replace the expression is to make <cite>expr</cite> pattern a named pattern.
+The second parameter to <cite>setVs</cite> can be a list of named parameters rather than a dictionary.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integer</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">op</span>      <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="s1">&#39;+-*/&#39;</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a named expression</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expr</span>    <span class="o">=</span> <span class="s1">&#39;EXPR&#39;</span> <span class="o">|</span> <span class="n">integer</span> <span class="o">+</span> <span class="s1">&#39;-&#39;</span><span class="o">*</span><span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;(&#39;</span><span class="o">*</span><span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span><span class="o">*</span><span class="s1">&#39;)&#39;</span> <span class="o">+</span> <span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">op</span><span class="o">*</span><span class="n">V</span><span class="p">(</span><span class="s1">&#39;EXPR&#39;</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Send a list of named parameters to replace in `expr`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parse</span>   <span class="o">=</span> <span class="n">setVs</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="p">[</span><span class="n">expr</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parse</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;5*(2+4)/7&quot;</span><span class="p">)</span>
+<span class="go">&#39;5*(2+4)/7&#39;</span>
 </pre></div>
 </div>
 </div>
@@ -547,10 +705,18 @@ separator. The resulting match has one capture.</td>
   <ul>
 <li><a class="reference internal" href="#">PyPE - Python Parsing Expressions (Overview)</a><ul>
 <li><a class="reference internal" href="#pype-library-summary">PyPE Library Summary</a><ul>
-<li><a class="reference internal" href="#pattern-operators">Pattern Operators</a></li>
+<li><a class="reference internal" href="#pattern-operators">Pattern Operators</a><ul>
+<li><a class="reference internal" href="#custom-patterns">Custom Patterns</a></li>
+<li><a class="reference internal" href="#autoconversion-of-values-to-patterns">Autoconversion of Values to Patterns</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#the-match-object">The Match object</a></li>
 <li><a class="reference internal" href="#predefined-patterns">Predefined Patterns</a></li>
-<li><a class="reference internal" href="#capture-operators">Capture Operators</a></li>
+<li><a class="reference internal" href="#capture-operators">Capture Operators</a><ul>
+<li><a class="reference internal" href="#using-a-function-for-type-conversion">Using a Function for Type Conversion</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pattern-place-holder">Pattern Place Holder</a></li>
 <li><a class="reference internal" href="#stack-operators">Stack Operators</a></li>
 <li><a class="reference internal" href="#utility-functions">Utility Functions</a></li>
 </ul>

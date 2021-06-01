@@ -4,7 +4,7 @@ from .PyPE import Pattern, BackCaptureString
 class Grammar(object):
   """
   An ordered set of parameters that define a Grammar. This is used by the Tokenizer
-  class which calls the
+  class.
   """
 
   # ----------------------------------------------------------------------------
