@@ -2,6 +2,11 @@ from .PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
      newline, matchUntil, SOL
 from .Tokenizer import Tokenizer
 
+try:
+  range = xrange
+except NameError:
+  pass
+
 whitespace.debug(False)
 
 # ==============================================================================
@@ -90,7 +95,7 @@ class Template(object):
 
   # ----------------------------------------------------------------------------
   def __processTextMatch__(self, match):
-    from PyPE import quote
+    from .PyPE import quote
 
     text = match.captures[1]
     escaped_text = "".join(self.escapeDblQuoteAndEscChr(text).captures)
@@ -293,7 +298,7 @@ class Template(object):
       if len(indent_stack) == 0: return ''
 
       sz = len(indent_stack)
-      for i in xrange(sz-1, -1, -1):
+      for i in range(sz-1, -1, -1):
         unmodified_indent, modified_indent = indent_stack[i]
         if indent == unmodified_indent: return modified_indent
         indent_sz, unmodified_sz = (len(indent), len(unmodified_indent))
@@ -644,7 +649,7 @@ class Stack(object):
     Final line
 
     """
-    from StringIO import StringIO
+    from io import BytesIO
 
     # Make a copy of the stack and clear the stack. This allows callable
     # functions in the stack to write to a fresh stack, which is then rendered
@@ -655,7 +660,7 @@ class Stack(object):
     self.stack = []
 
     # This will be the final text output.
-    output = StringIO()
+    output = BytesIO()
 
     for line in stack:
       # The stack should contain either strings or callable functions.

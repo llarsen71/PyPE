@@ -63,5 +63,8 @@ def step_impl(context):
 
     # Verify the value
     val = str(value).replace("\r\n","\n").replace("\r","\n")
-    expected = rows[i]['value'].decode('string-escape')
+    try:
+      expected = rows[i]['value'].decode('string-escape')
+    except AttributeError:
+      expected = bytes(rows[i]['value'], 'utf8').decode('unicode_escape')
     assert_that(val, equal_to(expected))

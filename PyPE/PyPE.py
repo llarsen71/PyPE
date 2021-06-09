@@ -1,3 +1,10 @@
+from __future__ import print_function
+
+try:
+  range = xrange
+except NameError:
+  pass
+
 # ==============================================================================
 
 class Stack(object):
@@ -139,7 +146,7 @@ class Stack(object):
     """
     if isinstance(n, int):
       if n <= 0: return []
-      items = [self.pop() for i in xrange(n)]
+      items = [self.pop() for i in range(n)]
       items.reverse()
       return items
 
@@ -492,7 +499,7 @@ class DebugOptions(object):
     if pattern.name is None: return
     line = string.getLineNumber(index)
     col = string.getColumnNumber(index)
-    print "Enter: <{0}> => ({1}.{2}) {3}".format(pattern.name, line, col, repr(pattern))
+    print("Enter: <{0}> => ({1}.{2}) {3}".format(pattern.name, line, col, repr(pattern)))
 
   # ----------------------------------------------------------------------------
 
@@ -503,15 +510,15 @@ class DebugOptions(object):
     col = string.getColumnNumber(index)
     name = "<{0}>".format(pattern.name) if pattern.name else repr(pattern)
 
-    print "Pattern: ({0}.{1}) {2}".format(line, col, name)
+    print("Pattern: ({0}.{1}) {2}".format(line, col, name))
     if match is None:
-      print "  Failed"
+      print("  Failed")
     else:
-      print "  Result: '{0}'".format(escapeStr(str(match)))
+      print("  Result: '{0}'".format(escapeStr(str(match))))
       if isinstance(pattern, Capture):
-        print "  Captures: {0}".format(match.captures)
+        print("  Captures: {0}".format(match.captures))
       if isinstance(pattern, StackPtn):
-        print "  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack))
+        print("  Stack: {0} => {1}".format(pattern.stack, context.getStack(pattern.stack)))
 
   # ----------------------------------------------------------------------------
 
@@ -1114,7 +1121,7 @@ class P(AtomicPattern):
       self.ptn     = value
       self.repr    = _repr_(value)
 
-    elif isinstance(value, basestring):
+    elif isinstance(value, str):
       self.matcher = self.match_str
       self.string  = value
       self.size    = len(value)
@@ -1147,7 +1154,7 @@ class P(AtomicPattern):
     """
     Verify that P(arg) is a valid arg. Raise an exception if not.
     """
-    if isinstance(value, (Pattern, basestring, bool, int)): return True
+    if isinstance(value, (Pattern, str, bool, int)): return True
     if callable(value): return True
     raise ValueError(msg)
 
@@ -1374,7 +1381,7 @@ class S(AtomicPattern):
 
   def __init__(self, set):
     Pattern.__init__(self)
-    if not isinstance(set, basestring):
+    if not isinstance(set, str):
       raise ValueError("The arg must be a string in S(arg)")
     self.set = set
 
@@ -1992,7 +1999,7 @@ class Col(Capture):
     if index == 0: return match._addCapture(0)
 
     # Look backwards until the end of a line is found.
-    for i in xrange(index-1, -1, -1):
+    for i in range(index-1, -1, -1):
       if string[i] not in ('\r','\n'): continue
       return match._addCapture(index - 1 - i)
     return match._addCapture(index)
@@ -2195,7 +2202,7 @@ class Sm(StackPtn):
       return None
 
     # Match the item on the stack against the string
-    if isinstance(stack_item, basestring):
+    if isinstance(stack_item, str):
       match = P(stack_item).match(string, index, context)
       return match
 
@@ -2332,7 +2339,7 @@ def setVs(pattern, Vs=None, replace=False):
   around sublists supported.
 
   >>> d = R('09')**1
-  >>> p = d + '(' * V('P') * ')'  + V('P') * ',' * V('P') 
+  >>> p = d + '(' * V('P') * ')'  + V('P') * ',' * V('P')
   >>> setVs(p, {'P' : p})
   >>> p.match("1,2,3,(4,5,(6))")
   '1,2,3,(4,5,(6))'
@@ -2349,7 +2356,7 @@ def setVs(pattern, Vs=None, replace=False):
   # Get all the patterns conatined in this pattern
   patterns = pattern.getPatterns() if pattern._containsPatterns() else []
   if Vs is None: Vs = patterns
-        
+
   if isinstance(Vs, (list, tuple)):
     # Convert the named patterns to a distionary
     Vs = {ptn.name: ptn for ptn in Vs if ptn.name is not None}
@@ -2718,7 +2725,7 @@ class PatternRepeat(CompositePattern):
     """
     MATCH = Match(string, index)
     cnt = 0
-    for i in xrange(self.n):
+    for i in range(self.n):
       match = self.patterns[0].match(string, index, context)
       if not isinstance(match, Match): return None
       index = match.end
@@ -2875,7 +2882,7 @@ class BackCaptureString(object):
     name is returned.
     """
 
-    for i in xrange(self.getStackSize()-1,-1,-1):
+    for i in range(self.getStackSize()-1,-1,-1):
       bcname, capture = self.backcaptures[i]
       if bcname == name: return capture
 
@@ -3127,7 +3134,7 @@ class Match(object):
     Compare with strings or other Match objects. Check that the resulting value
     matches.
     """
-    if isinstance(other, basestring):
+    if isinstance(other, str):
       return str(self) == other
 
     if isinstance(other, Match):

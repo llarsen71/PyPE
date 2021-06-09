@@ -1,3 +1,4 @@
+from __future__ import print_function
 from .PyPE import Pattern, BackCaptureString
 # ==============================================================================
 
@@ -137,7 +138,7 @@ class Tokenizer(object):
     """
 
     if self._debug_:
-      print "Entering Grammar: %s" % name
+      print("Entering Grammar: %s" % name)
 
     if name not in self.grammars:
       raise Exception("No grammar named '{0}' has been register for Tokenizer".format(name))
@@ -164,7 +165,7 @@ class Tokenizer(object):
     :param string: The string to tokenize.
     :param index: The location in the string to start (default 0)
     """
-    from PyPE import Match
+    from .PyPE import Match
     if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
 
     while True:
@@ -180,7 +181,7 @@ class Tokenizer(object):
           yield (end_grammar.name, match)
           # Pop a grammar from the stack
           if self._debug_:
-            print "Exiting Grammar: %s" % self.stack[-1]['name']
+            print("Exiting Grammar: %s" % self.stack[-1]['name'])
           self.stack.pop()
           continue # reset loop
 
@@ -194,7 +195,8 @@ class Tokenizer(object):
           yield (name, match)
 
           # TODO: Check if the new_grammar is the same as the current grammar. If so, raise exception
-          if new_grammar is None and index == match.end: raise StopIteration() # No Progress
+          if new_grammar is None and index == match.end:
+            raise StopIteration() # No Progress
           index = match.end
 
           # --------------------------------------------------------------------
@@ -204,4 +206,5 @@ class Tokenizer(object):
             self.__setGrammar__(new_grammar, end_new_grammar)
           break
       else:
-        raise StopIteration()
+        return
+        #raise StopIteration()

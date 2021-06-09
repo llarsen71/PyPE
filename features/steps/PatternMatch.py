@@ -17,7 +17,10 @@ def step_impl(context, pattern, desc):
 @when("p.match('{text}',{index}) is called")
 def step_impl(context, text, index):
   # Convert escaped values in text to the unescaped value
-  text = text.decode('string-escape')
+  try:
+    text = text.decode('string-escape')
+  except AttributeError:
+    text = bytes(text,'utf8').decode('unicode_escape')
   context.match = context.p.match(text, int(index))
   pass
 
