@@ -1113,6 +1113,7 @@ class P(AtomicPattern):
 
     :param value: The specification for this Pattern. See the options above.
     """
+    import six
     Pattern.__init__(self)
     self.isValidValue(value)
 
@@ -1121,7 +1122,7 @@ class P(AtomicPattern):
       self.ptn     = value
       self.repr    = _repr_(value)
 
-    elif isinstance(value, str):
+    elif isinstance(value, six.string_types):
       self.matcher = self.match_str
       self.string  = value
       self.size    = len(value)
@@ -1380,8 +1381,9 @@ class S(AtomicPattern):
   # ----------------------------------------------------------------------------
 
   def __init__(self, set):
+    import six
     Pattern.__init__(self)
-    if not isinstance(set, str):
+    if not isinstance(set, six.string_types):
       raise ValueError("The arg must be a string in S(arg)")
     self.set = set
 
@@ -2187,7 +2189,7 @@ class Sm(StackPtn):
     >>> isinstance(match, Match)
     True
     """
-
+    import six
     stack = context.getStack(self.stack)
 
     if stack is None and self.expected is not None: return None
@@ -2202,7 +2204,7 @@ class Sm(StackPtn):
       return None
 
     # Match the item on the stack against the string
-    if isinstance(stack_item, str):
+    if isinstance(stack_item, six.string_types):
       match = P(stack_item).match(string, index, context)
       return match
 
@@ -3134,7 +3136,8 @@ class Match(object):
     Compare with strings or other Match objects. Check that the resulting value
     matches.
     """
-    if isinstance(other, str):
+    import six
+    if isinstance(other, six.string_types):
       return str(self) == other
 
     if isinstance(other, Match):
