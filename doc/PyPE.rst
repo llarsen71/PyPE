@@ -1,8 +1,8 @@
 .. _PyPE-intro:
 
-========================
-PyPE - API Documentation
-========================
+===============================================
+PyPE - Python Parsing Expressions Library (API)
+===============================================
 
 -------------------------------
 The :class:`Pattern` Base Class
@@ -25,9 +25,9 @@ is a function, and the call is forwarded to :func:`match`. Therefore, if
 A :class:`Match <PyPE.PyPE.Match>` object allows you to get the string that
 was matched and any captures. It also includes a ``context`` value that 
 provides access to any :class:`Stack` objects that were created. Some patterns
-may succeed without consuming any values from the string. To avoid infinite loops
-in a parsing expression, some care must be taken to ensure that no recursive 
-expressions occur that consume no text. For reference, this is referred to as "left recursion" 
+may succeed without consuming any values from the string. Some care must be
+taken to ensure that no recursive expressions occur that consume no input to
+avoid infinite loops. For reference, this is referred to as "left recursion" 
 in PEG literature, and grammars can be rewritten to remove "left recursion".
 Information on this can be found via an internet search.
 

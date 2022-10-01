@@ -33,6 +33,12 @@ in Python use a different syntax than Lua and not all of the operations of LPEG
 are included, and some additional features that are not part of LPEG are added.
 For example, support for debugging a grammar is built into PyPE.
 
+PyPE also includes a :class:`Tokenizer` class that is used to create a tokenizing
+parser, where each token is defined using a PyPE pattern. The :class:`Template`
+engine class is also included with PyPE. A template engine is code that processes
+a template document with embedded scripting (in this case python scripting) and
+produces a document with dynmamic content from the embedded scripting logic.
+
 The PyPE repository can be found at: https://bitbucket.org/llarsen/pype/
 
 ====================
@@ -565,6 +571,103 @@ Utility Functions
 |                           | separator. The resulting match has one capture.  |
 +---------------------------+--------------------------------------------------+
 
+
+.. _Tokenizer:
+
+===================
+The Tokenizer Class
+===================
+
+The :class:`Tokenizer` class is used to create tokenizing parsers, or parsers
+which break text into tokens. The :class:`Tokenizer` is constructed from a
+grammar, where a grammar is essentially an ordered list of PyPE parsing patterns that
+defined the structure of the text. The tokenizer starts at the beginning of a
+string and checks the grammar patterns in order until one of the patterns matches
+the start of the string. Each of the parsing patterns in the grammar can be given
+a name. If the pattern is named, then it is a token and is returned by the
+tokenizer along with the :class:`Match` object from the pattern. The tokenizer
+then moves to the end of the previous match and repeats the process of checking
+for another match of the grammar. This process repeats over and over, returning
+tokens as they are found, until the string ends, or none of the patterns in the
+grammar match the string at the current location.
+
+Sometimes a single grammar is not sufficient to parse a file. There may be portions
+of the file that use a different grammar. The :class:`Tokenizer` supports switching
+grammars. A grammar is defined via a list containing the ordered patterns
+associated with the grammar. Each grammar is named, and the grammars are specified
+in the :class:`Tokenizer` class constructor by passing named parameters with the 
+name being the name of the grammar and the value being the list of PyPE patterns 
+that defines the grammar. The first parameter passed to the constructor is a string
+that indicates the name of the starting grammar. If a string is not passed in, then
+the default starting grammar must be named `root`. The :class:`Tokenizer` is 
+initialized something like the following:
+
+>>> t = Tokenizer(root=[ptn1, ptn2, ptn3, ...], other=[optn1, optn2, optn3, ...], ...)
+
+The tokenizer can then be used to parse one or more strings. This is done by calling
+the :func:`getTokens` function and passing it the string to parse as shown below:
+
+>>> for token, match in t.getTokens(string):
+>>>   # do something with the token and associated match object
+
+This tokenizer can then be called with a different string to parse that string
+as well. Note that each pattern needs to consume part of the string, or the
+parser will not progress. If a pattern succeeds, but does not consume any text
+from the string (i.e., is length 0) then the parser will stop.
+
+In order for multiple grammars to be useful, there needs to be a way to 
+switch to a new grammar. This is done by including a tuple with three values in the
+grammar list (a tuple is a list included in parenthesis). The first value in the
+tuple is a pattern that marks the start of the new grammar. The second value in
+the tuple is the string name of the new grammar. The third value is a pattern that
+marks the end of the grammar. If the new grammar does not end, then the third value
+is not required. 
+
+>>> t = Tokenizer(root=[ptn1, ptn2, (P('['), 'other', P(']'))], other=[optn1, optn2, optn3])
+
+In this case, the tokenizer switches from the ``root`` grammar to the ``other`` grammar if
+``ptn1`` and ``ptn1`` fail at the current location in the string and the string contains
+an opening square bracket at this location. This means that the start grammar pattern
+matches. Note that the pattern above will consume the square bracket, so the ``other``
+pattern should not include the square bracket. While patterns in a grammar must
+consume part of the string, the start grammar pattern can be a look ahead pattern
+that does not consume any text. However, the combination of the start pattern, the
+new grammar, and the end pattern must consume some text from the string, or the
+tokenizer will stall and end. When a new grammar ends, then parent grammar begins
+to parse again. Grammars can be nested multiple layers deep.
+
+As noted above, only named patterns from a grammar are returned as tokens. A pattern
+can be named using the following:
+
+>>> ptn.name = "<name>"
+
+However, the pipe operator (``|``) is overloaded for patterns, so a more convenient
+way to name a pattern is:
+
+>>> ptn = "<name>" | pattern_definition
+
+Below is an example of a parser the tokenizes works until an open parenthesis is
+encountered. Then it tokenizes numbers until a close parenthesis is encountered.
+It then starts tokenizing words again.
+
+.. literalinclude:: /../TokenizerExample.py
+   :language: python
+
+The output from this script is the following::
+
+    word: cat
+    word: rat 
+    open: (   
+    number: 11
+    number: 12
+    number: 13
+    close: )  
+    word: bat
+
+It is worth emphasizing that ``match`` is a :class:`Match` object, which can include
+capture values. The match captures can be quite sophisticated depending on the
+token patterns that are defined in the grammars, and may cover significant portions
+of the text.
 
 ==================
 Indices and tables
