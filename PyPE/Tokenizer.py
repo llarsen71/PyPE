@@ -1,5 +1,8 @@
 from __future__ import print_function
-from .PyPE import Pattern, BackCaptureString
+if __package__:
+  from .PyPE import Pattern, BackCaptureString
+else:
+  from PyPE import Pattern, BackCaptureString
 # ==============================================================================
 
 class Grammar(object):
@@ -60,7 +63,10 @@ class Grammar(object):
            passed in, it is converted to an exact pattern.
     """
     from six import string_types
-    from .PyPE import P
+    if __package__:
+      from .PyPE import P
+    else:
+      from PyPE import P
     asPtn = lambda val: P(val) if isinstance(val, string_types) else val
     pattern, end_grammar = asPtn(pattern), asPtn(end_grammar)
 
@@ -200,7 +206,10 @@ class Tokenizer(object):
     :param string: The string to tokenize.
     :param index: The location in the string to start (default 0)
     """
-    from .PyPE import Match
+    if __package__:
+      from .PyPE import Match
+    else:
+      from PyPE import Match
     if not isinstance(string, BackCaptureString): string = BackCaptureString(string)
 
     while True:

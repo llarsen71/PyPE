@@ -1,6 +1,14 @@
-from .PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
-     newline, matchUntil, SOL
-from .Tokenizer import Tokenizer
+from __future__ import print_function
+from tempfile import tempdir
+
+if __package__:
+  from .PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
+      newline, matchUntil, SOL
+  from .Tokenizer import Tokenizer
+else:
+  from PyPE import P, S, C, Cc, Cg, Col, whitespace, whitespace0 as ws, \
+      newline, matchUntil, SOL
+  from Tokenizer import Tokenizer
 
 try:
   range = xrange
@@ -66,7 +74,7 @@ class Template(object):
     self.params          = {}
 
     if readFile:
-      with open(filename, "rb") as file:
+      with open(filename, "r") as file:
         src = file.read()
       self.addPythonFunction(src)
 
@@ -95,7 +103,10 @@ class Template(object):
 
   # ----------------------------------------------------------------------------
   def __processTextMatch__(self, match):
-    from .PyPE import quote
+    if __package__:
+      from .PyPE import quote
+    else:
+      from PyPE import quote
 
     text = match.captures[1]
     escaped_text = "".join(self.escapeDblQuoteAndEscChr(text).captures)
@@ -444,6 +455,13 @@ class Template(object):
 
   # ----------------------------------------------------------------------------
   def addPythonFunction(self, src, function_name=None):
+    """
+    Convert the template source to a python function that renders the template.
+    
+    :param src: The template contents.
+    :param function_name: The name of the template function (i.e., the root level
+           function in the generated python code).
+    """
     T = Tokenizer(root = (self.__pyTagParser__(), self.__textParser__()))
 
     function_name = self.__getFunctionName__(function_name)
@@ -462,7 +480,8 @@ class Template(object):
 
   # ----------------------------------------------------------------------------
   def __generateCode__(self):
-    from os.path import join
+    from os.path import join, exists
+    from os import makedirs
 
     header = [self.brk,
               'from PyPE.Template import isTemplateFn',
@@ -476,8 +495,9 @@ class Template(object):
               '       value.context = context']
     self.code_blocks.insert(0, PyCodeBlock(header))
 
+    if not exists(self.templateDir): makedirs(self.templateDir)
     self.templateLoc = join(self.templateDir, self.templatename)
-    with open(self.templateLoc, "wb") as file:
+    with open(self.templateLoc, "w") as file:
       indent = 0
       for pycodeblock in self.code_blocks:
         if pycodeblock == "set indent to 0":
@@ -580,7 +600,7 @@ def TemplateFn(fn):
 
   >>> @TemplateFn
   ... def hello():
-  ...   print "Hello"
+  ...   print("Hello")
   """
   fn.isTemplateFn = True
   return fn
@@ -643,13 +663,13 @@ class Stack(object):
     >>> s.write("This is a test\\n")
     >>> s.write(lambda: "Second line\\n")
     >>> s.write("Final line")
-    >>> print s.toString()
+    >>> print(s.toString())
     This is a test
     Second line
     Final line
 
     """
-    from io import BytesIO
+    from io import StringIO
 
     # Make a copy of the stack and clear the stack. This allows callable
     # functions in the stack to write to a fresh stack, which is then rendered
@@ -660,14 +680,14 @@ class Stack(object):
     self.stack = []
 
     # This will be the final text output.
-    output = BytesIO()
+    output = StringIO()
 
     for line in stack:
       # The stack should contain either strings or callable functions.
 
       if not callable(line):
         # Write strings in the stack to the text file.
-        output.write(line)
+        output.write(str(line))
       else:
         # For callable functions, execute the function and append the results
         # to the text file.
@@ -707,23 +727,3 @@ class Context(dict):
 if __name__ == "__main__":
   import doctest
   doctest.testmod()
-
-  #src = r"""
-  #    "This is a test"
-  #    @[ if name == "fred":
-  #          write(name)
-  #          write("done")
-  #    ]@
-  #    @[: a = "testing"
-  #        bob = 5
-  #         q=7
-  #      ^]@
-  #    @[^= bob  ]@
-  #    #
-  #    @[^>"this is a test"^]@
-  #    "Stuff
-  #  """
-  #t = Template("Temp", False)
-  #t.addPythonFunction(src)
-  #t.addPythonFunction(src)
-  #print t.render({'name':"fred",'a':"A Value"})
