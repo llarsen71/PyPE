@@ -1,22 +1,23 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
     <title>PyPE - Python Parsing Expressions (Overview) &#8212; PyPE 0.1.0 documentation</title>
-    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="PyPE - API Documentation" href="PyPE.html" /> 
+    <link rel="next" title="PyPE - Python Parsing Expressions Library (API)" href="PyPE.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -25,9 +26,10 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="PyPE.html" title="PyPE - API Documentation"
+          <a href="PyPE.html" title="PyPE - Python Parsing Expressions Library (API)"
              accesskey="N">next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">PyPE 0.1.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="#">PyPE 0.1.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">PyPE - Python Parsing Expressions (Overview)</a></li> 
       </ul>
     </div>  
 
@@ -36,8 +38,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="pype-python-parsing-expressions-overview">
-<h1>PyPE - Python Parsing Expressions (Overview)<a class="headerlink" href="#pype-python-parsing-expressions-overview" title="Permalink to this headline">¶</a></h1>
+  <section id="pype-python-parsing-expressions-overview">
+<h1>PyPE - Python Parsing Expressions (Overview)<a class="headerlink" href="#pype-python-parsing-expressions-overview" title="Permalink to this heading">¶</a></h1>
 <p>PyPE is a python pattern matching library for searching text and extracting
 data from the text. While PyPE can be used to match text patterns in any text
 file, it is particularly useful for interpreting structured text and converting
@@ -65,128 +67,135 @@ The syntax has been preserved where possible, although some of the operators
 in Python use a different syntax than Lua and not all of the operations of LPEG
 are included, and some additional features that are not part of LPEG are added.
 For example, support for debugging a grammar is built into PyPE.</p>
+<p>PyPE also includes a <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> class that is used to create a tokenizing
+parser, where each token is defined using a PyPE pattern. The <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code>
+engine class is also included with PyPE. A template engine is code that processes
+a template document with embedded scripting (in this case python scripting) and
+produces a document with dynmamic content from the embedded scripting logic.</p>
 <p>The PyPE repository can be found at: <a class="reference external" href="https://bitbucket.org/llarsen/pype/">https://bitbucket.org/llarsen/pype/</a></p>
-<div class="section" id="pype-library-summary">
-<h2>PyPE Library Summary<a class="headerlink" href="#pype-library-summary" title="Permalink to this headline">¶</a></h2>
+<section id="pype-library-summary">
+<h2>PyPE Library Summary<a class="headerlink" href="#pype-library-summary" title="Permalink to this heading">¶</a></h2>
 <p>The PyPE library can be divided into a few major categories:</p>
 <ul class="simple">
-<li><a class="reference internal" href="#pattern-ops"><span class="std std-ref">Pattern Operators</span></a> - These are used to specify patterns to use for matching
-text.</li>
-<li><a class="reference internal" href="#predefined-patterns"><span class="std std-ref">Predefined Patterns</span></a> - A few commonly used predefined patterns are
-made available in the library.</li>
-<li><a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> - These are used to specify information should be
-captured and returned when matching a text using a PEG.</li>
-<li><a class="reference internal" href="#place-holder"><span class="std std-ref">Pattern Place Holder</span></a> - A place holder is needed when a pattern needs to be
+<li><p><a class="reference internal" href="#pattern-ops"><span class="std std-ref">Pattern Operators</span></a> - These are used to specify patterns to use for matching
+text.</p></li>
+<li><p><a class="reference internal" href="#predefined-patterns"><span class="std std-ref">Predefined Patterns</span></a> - A few commonly used predefined patterns are
+made available in the library.</p></li>
+<li><p><a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> - These are used to specify information should be
+captured and returned when matching a text using a PEG.</p></li>
+<li><p><a class="reference internal" href="#place-holder"><span class="std std-ref">Pattern Place Holder</span></a> - A place holder is needed when a pattern needs to be
 included that has not been defined yet. This occurs for recursive patterns.
 Once the neceesary pattern(s) have been defined they can be substituted into
-the parsing expression via the <code class="docutils literal notranslate"><span class="pre">setVs</span></code> function.</li>
-<li><a class="reference internal" href="#stack-ops"><span class="std std-ref">Stack Operators</span></a> - A stack is just a named array that works similar to the
+the parsing expression via the <code class="docutils literal notranslate"><span class="pre">setVs</span></code> function.</p></li>
+<li><p><a class="reference internal" href="#stack-ops"><span class="std std-ref">Stack Operators</span></a> - A stack is just a named array that works similar to the
 capture array. In some cases, it is useful to add captured data to a stack
-that is independent of the capture array.</li>
-<li><a class="reference internal" href="#utility-functions"><span class="std std-ref">Utility Functions</span></a> - Other functions that can be used with PEGs.</li>
+that is independent of the capture array.</p></li>
+<li><p><a class="reference internal" href="#utility-functions"><span class="std std-ref">Utility Functions</span></a> - Other functions that can be used with PEGs.</p></li>
 </ul>
 <p>To check if a string matches a pattern defined using PyPE, the patterns
 <code class="docutils literal notranslate"><span class="pre">match</span></code> function is called. If the string is a match a <code class="docutils literal notranslate"><span class="pre">Match</span></code> object
-is called. This is discussed in <a class="reference internal" href="#match-object"><span class="std std-ref">The Match object</span></a>.</p>
-<div class="section" id="pattern-operators">
-<span id="pattern-ops"></span><h3>Pattern Operators<a class="headerlink" href="#pattern-operators" title="Permalink to this headline">¶</a></h3>
+is called. This is discussed in <a class="reference internal" href="#match-object"><span class="std std-ref">The Match object</span></a>. A few other classes are
+inlcuded in the PyPE package.</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#tokenizer"><span class="std std-ref">The Tokenizer Class</span></a> - This class aids in creating tokenizing parsers.</p></li>
+<li><p><a class="reference internal" href="#template"><span class="std std-ref">The Template Class</span></a> - A template engine class useful for embedding scripting logic
+in text files for dynamic tex file creation.</p></li>
+</ul>
+<section id="pattern-operators">
+<span id="pattern-ops"></span><h3>Pattern Operators<a class="headerlink" href="#pattern-operators" title="Permalink to this heading">¶</a></h3>
 <p>The following table summarizes the basic operations for creating patterns for
 matching text:</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="17%" />
-<col width="83%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Operator</th>
-<th class="head">Description</th>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Operator</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>P(string)</td>
-<td>Matches the specified string exactly.</td>
+<tbody>
+<tr class="row-even"><td><p>P(string)</p></td>
+<td><p>Matches the specified string exactly.</p></td>
 </tr>
-<tr class="row-odd"><td>P(n)</td>
-<td>Matches exactly n characters.</td>
+<tr class="row-odd"><td><p>P(n)</p></td>
+<td><p>Matches exactly n characters.</p></td>
 </tr>
-<tr class="row-even"><td>P(-n)</td>
-<td>Matches less than n characters only. For example, P(-1) only
+<tr class="row-even"><td><p>P(-n)</p></td>
+<td><p>Matches less than n characters only. For example, P(-1) only
 matches the end of the string since it only matches if less
-than one character is left in the string.</td>
+than one character is left in the string.</p></td>
 </tr>
-<tr class="row-odd"><td>P(bool)</td>
-<td>Always True or always False pattern (based on boolean value).</td>
+<tr class="row-odd"><td><p>P(bool)</p></td>
+<td><p>Always True or always False pattern (based on boolean value).</p></td>
 </tr>
-<tr class="row-even"><td>P(fn)</td>
-<td>For function with signature <code class="docutils literal notranslate"><span class="pre">fn(string,</span> <span class="pre">idx,</span> <span class="pre">context)</span></code> return
+<tr class="row-even"><td><p>P(fn)</p></td>
+<td><p>For function with signature <code class="docutils literal notranslate"><span class="pre">fn(string,</span> <span class="pre">idx,</span> <span class="pre">context)</span></code> return
 the next index associated with the match. Must be larger than
 the index that was passed in and less than or equal to the
 string length. The return value may also be False or None if
 the pattern fails. It may also be a
-<a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object.</td>
+<a class="reference internal" href="PyPE.html#PyPE.PyPE.Match" title="PyPE.PyPE.Match"><code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code></a> object.</p></td>
 </tr>
-<tr class="row-odd"><td>I(string)</td>
-<td>Case insensitive string match.</td>
+<tr class="row-odd"><td><p>I(string)</p></td>
+<td><p>Case insensitive string match.</p></td>
 </tr>
-<tr class="row-even"><td>S(string)</td>
-<td>Match any character in the specified string.</td>
+<tr class="row-even"><td><p>S(string)</p></td>
+<td><p>Match any character in the specified string.</p></td>
 </tr>
-<tr class="row-odd"><td>R(range)</td>
-<td>Match any character that comes between the two specified
+<tr class="row-odd"><td><p>R(range)</p></td>
+<td><p>Match any character that comes between the two specified
 characters in the ASCII table - the character with the lowest
-ASCII value must be specified first.</td>
+ASCII value must be specified first.</p></td>
 </tr>
-<tr class="row-even"><td>SOL()</td>
-<td>Matches the start of a line.</td>
+<tr class="row-even"><td><p>SOL()</p></td>
+<td><p>Matches the start of a line.</p></td>
 </tr>
-<tr class="row-odd"><td>EOL()</td>
-<td>Matches the end of a line.</td>
+<tr class="row-odd"><td><p>EOL()</p></td>
+<td><p>Matches the end of a line.</p></td>
 </tr>
-<tr class="row-even"><td>ptn1 * ptn2</td>
-<td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> followed by <code class="docutils literal notranslate"><span class="pre">ptn2</span></code>. For the pattern to be a
-match, both <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> and <code class="docutils literal notranslate"><span class="pre">ptn2</span></code> must be a match.</td>
+<tr class="row-even"><td><p>ptn1 * ptn2</p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> followed by <code class="docutils literal notranslate"><span class="pre">ptn2</span></code>. For the pattern to be a
+match, both <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> and <code class="docutils literal notranslate"><span class="pre">ptn2</span></code> must be a match.</p></td>
 </tr>
-<tr class="row-odd"><td>ptn1 + ptn2</td>
-<td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> or <code class="docutils literal notranslate"><span class="pre">ptn2</span></code>. The patterns are checked in the
+<tr class="row-odd"><td><p>ptn1 + ptn2</p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> or <code class="docutils literal notranslate"><span class="pre">ptn2</span></code>. The patterns are checked in the
 order than they appear, so <code class="docutils literal notranslate"><span class="pre">ptn2</span></code> is only checked for a match
-if <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> fails.</td>
+if <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> fails.</p></td>
 </tr>
-<tr class="row-even"><td>ptn1 - ptn2</td>
-<td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> with the exception of <code class="docutils literal notranslate"><span class="pre">ptn2</span></code>. In other words,
-only match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> only if <code class="docutils literal notranslate"><span class="pre">ptn2</span></code> fails.</td>
+<tr class="row-even"><td><p>ptn1 - ptn2</p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> with the exception of <code class="docutils literal notranslate"><span class="pre">ptn2</span></code>. In other words,
+only match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> only if <code class="docutils literal notranslate"><span class="pre">ptn2</span></code> fails.</p></td>
 </tr>
-<tr class="row-odd"><td>-ptn1</td>
-<td>Match anything but <code class="docutils literal notranslate"><span class="pre">ptn1</span></code>. Consumes no input.</td>
+<tr class="row-odd"><td><p>-ptn1</p></td>
+<td><p>Match anything but <code class="docutils literal notranslate"><span class="pre">ptn1</span></code>. Consumes no input.</p></td>
 </tr>
-<tr class="row-even"><td>~ptn1</td>
-<td>Match the <code class="docutils literal notranslate"><span class="pre">ptn1</span></code>, but consume no input.</td>
+<tr class="row-even"><td><p>~ptn1</p></td>
+<td><p>Match the <code class="docutils literal notranslate"><span class="pre">ptn1</span></code>, but consume no input.</p></td>
 </tr>
-<tr class="row-odd"><td>ptn1**n</td>
-<td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> at least n times.</td>
+<tr class="row-odd"><td><p>ptn1**n</p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> at least n times.</p></td>
 </tr>
-<tr class="row-even"><td>ptn1**-n</td>
-<td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> at most n times. Always succeeds.</td>
+<tr class="row-even"><td><p>ptn1**-n</p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> at most n times. Always succeeds.</p></td>
 </tr>
-<tr class="row-odd"><td>ptn1**[n]</td>
-<td>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> exactly n times.</td>
+<tr class="row-odd"><td><p>ptn1**[n]</p></td>
+<td><p>Match <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> exactly n times.</p></td>
 </tr>
-<tr class="row-even"><td>ptn / fn</td>
-<td>Pass the match object to the given function. Return the result
+<tr class="row-even"><td><p>ptn / fn</p></td>
+<td><p>Pass the match object to the given function. Return the result
 from the function, which should be the match object or None.
 As manipulation of captures, such as type conversion, is a
 common use for this, this will be convered in the
-<a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> section.</td>
+<a class="reference internal" href="#capture-ops"><span class="std std-ref">Capture Operators</span></a> section.</p></td>
 </tr>
 </tbody>
 </table>
-<p><code class="xref py py-class docutils literal notranslate"><span class="pre">P(string)</span></code> matches the given string exactly. Once a pattern
+<p><a class="reference internal" href="PyPE.html#PyPE.P" title="PyPE.PyPE.P"><code class="xref py py-class docutils literal notranslate"><span class="pre">P(string)</span></code></a> matches the given string exactly. Once a pattern
 has been defined, the pattern’s <code class="docutils literal notranslate"><span class="pre">match(string,</span> <span class="pre">index)</span></code> function can be called
 with a string and a starting index. The <code class="docutils literal notranslate"><span class="pre">match</span></code> function will test whether the
 string matches the pattern starting at the given index. The index parameter is
 optional and has a default value of 0, which is the index for the start of the
 string. An index of 1 indicates the second character, 2 the third character, and
 so on.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">match</span> <span class="o">=</span> <span class="n">ptn</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">&#39;testing&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
 <span class="go">&#39;test&#39;</span>
@@ -230,7 +239,7 @@ then the patterb fails and <code class="docutils literal notranslate"><span clas
 <p>Note that the ordering of the three patterns matters. For example, the following
 pattern will never return the result <code class="docutils literal notranslate"><span class="pre">\r\n</span></code> because <code class="docutils literal notranslate"><span class="pre">\r</span></code> will always be matched
 first.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">newline</span> <span class="o">=</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Patterns can be combined to make more complex expressions:</p>
@@ -262,8 +271,8 @@ satisfied. When we try to read the string “456”, we now get the expected res
 <span class="go">&#39;456&#39;</span>
 </pre></div>
 </div>
-<div class="section" id="custom-patterns">
-<h4>Custom Patterns<a class="headerlink" href="#custom-patterns" title="Permalink to this headline">¶</a></h4>
+<section id="custom-patterns">
+<h4>Custom Patterns<a class="headerlink" href="#custom-patterns" title="Permalink to this heading">¶</a></h4>
 <p>There may be cases more complex logic is needed than is provided by the built in
 pattern operations. In this case a custom function can be created that performs
 the match. The function has the form <code class="docutils literal notranslate"><span class="pre">fn(string,</span> <span class="pre">index,</span> <span class="pre">context)</span></code> where the
@@ -282,17 +291,17 @@ Below is a very simple example of a custom pattern:</p>
 <p>This simple pattern just takes 2 character from the string. Note that this is not
 a safe implementation in that it does not check that the index returned is within
 the bounds of the string. In this case, the pattern <cite>P(2)</cite> is better.</p>
-</div>
-<div class="section" id="autoconversion-of-values-to-patterns">
-<h4>Autoconversion of Values to Patterns<a class="headerlink" href="#autoconversion-of-values-to-patterns" title="Permalink to this headline">¶</a></h4>
+</section>
+<section id="autoconversion-of-values-to-patterns">
+<h4>Autoconversion of Values to Patterns<a class="headerlink" href="#autoconversion-of-values-to-patterns" title="Permalink to this heading">¶</a></h4>
 <p>For convenience, if a <a class="reference internal" href="PyPE.html#pattern"><span class="std std-ref">Pattern</span></a> object is combined with another value using
-the operators ‘+’, ‘-‘, and ‘*’, the other value is converted to a pattern
+the operators ‘+’, ‘-’, and ‘*’, the other value is converted to a pattern
 object using the <a class="reference internal" href="PyPE.html#p"><span class="std std-ref">P (Pattern)</span></a> class. For example, if <code class="docutils literal notranslate"><span class="pre">ptn</span></code> is a pattern, then
 <code class="docutils literal notranslate"><span class="pre">1-ptn</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">P(1)-ptn</span></code>.</p>
-</div>
-</div>
-<div class="section" id="the-match-object">
-<span id="match-object"></span><h3>The Match object<a class="headerlink" href="#the-match-object" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="the-match-object">
+<span id="match-object"></span><h3>The Match object<a class="headerlink" href="#the-match-object" title="Permalink to this heading">¶</a></h3>
 <p>As noted above, the <a class="reference internal" href="PyPE.html#PyPE.PyPE.Pattern.match" title="PyPE.PyPE.Pattern.match"><code class="xref py py-func docutils literal notranslate"><span class="pre">match(string,</span> <span class="pre">index=0)</span></code></a> function
 for a pattern is passed a string and an optional index, with the default index of zero
 indicating the start of the string. The match function ONLY tests whether the pattern
@@ -343,54 +352,49 @@ know the position of the pattern, a position capture <code class="docutils liter
 <span class="go">&#39;12345&#39;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="predefined-patterns">
-<span id="id1"></span><h3>Predefined Patterns<a class="headerlink" href="#predefined-patterns" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="predefined-patterns">
+<span id="id1"></span><h3>Predefined Patterns<a class="headerlink" href="#predefined-patterns" title="Permalink to this heading">¶</a></h3>
 <p>For convenience, a few commonly used predefined patterns are included in the
 PyPE module.</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="23%" />
-<col width="20%" />
-<col width="57%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Pattern</th>
-<th class="head">Definition</th>
-<th class="head">Description</th>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Pattern</p></th>
+<th class="head"><p>Definition</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>whitespace</td>
-<td>S(” \t”)</td>
-<td>One space or tab character</td>
+<tbody>
+<tr class="row-even"><td><p>whitespace</p></td>
+<td><p>S(” \t”)</p></td>
+<td><p>One space or tab character</p></td>
 </tr>
-<tr class="row-odd"><td>whitespace0</td>
-<td>whitespace**0</td>
-<td>Zero or more whitespace characters</td>
+<tr class="row-odd"><td><p>whitespace0</p></td>
+<td><p>whitespace**0</p></td>
+<td><p>Zero or more whitespace characters</p></td>
 </tr>
-<tr class="row-even"><td>whitespace1</td>
-<td>whitespace**1</td>
-<td>One or more whitespace characters</td>
+<tr class="row-even"><td><p>whitespace1</p></td>
+<td><p>whitespace**1</p></td>
+<td><p>One or more whitespace characters</p></td>
 </tr>
-<tr class="row-odd"><td>alpha</td>
-<td>R(“az”, “AZ”)</td>
-<td>Any lower or upper case letter</td>
+<tr class="row-odd"><td><p>alpha</p></td>
+<td><p>R(“az”, “AZ”)</p></td>
+<td><p>Any lower or upper case letter</p></td>
 </tr>
-<tr class="row-even"><td>digit</td>
-<td>R(“09”)</td>
-<td>Any digit character</td>
+<tr class="row-even"><td><p>digit</p></td>
+<td><p>R(“09”)</p></td>
+<td><p>Any digit character</p></td>
 </tr>
-<tr class="row-odd"><td>newline</td>
-<td>P(“\r\n”) +
-P(“\r”) +
-P(“\n”)</td>
-<td>Match one new line in unix, windows, or
-mac ASCII formats</td>
+<tr class="row-odd"><td><p>newline</p></td>
+<td><p>P(”\r\n”) +
+P(”\r”) +
+P(”\n”)</p></td>
+<td><p>Match one new line in unix, windows, or
+mac ASCII formats</p></td>
 </tr>
-<tr class="row-even"><td>quote</td>
-<td>S(“&quot;’”)</td>
-<td>Match a quote character</td>
+<tr class="row-even"><td><p>quote</p></td>
+<td><p>S(”\”’”)</p></td>
+<td><p>Match a quote character</p></td>
 </tr>
 </tbody>
 </table>
@@ -401,60 +405,56 @@ such as c and fortran can be written as:</p>
 <span class="go">&#39;my_var1&#39;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="capture-operators">
-<span id="capture-ops"></span><h3>Capture Operators<a class="headerlink" href="#capture-operators" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="capture-operators">
+<span id="capture-ops"></span><h3>Capture Operators<a class="headerlink" href="#capture-operators" title="Permalink to this heading">¶</a></h3>
 <p>Captures are used to capture data that is returned from a match. Captures are
 added sequentially to a capture array in the order they appear in the pattern.
 So for example, if an outer capture contains a set of inner captures, the outer
 capture will come before the inner captures in the capture array.</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="23%" />
-<col width="77%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Operator</th>
-<th class="head">Description</th>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Operator</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>C(ptn)</td>
-<td>Capture - capture text that matches the specified pattern.</td>
+<tbody>
+<tr class="row-even"><td><p>C(ptn)</p></td>
+<td><p>Capture - capture text that matches the specified pattern.</p></td>
 </tr>
-<tr class="row-odd"><td>Cb(name[,ptn])</td>
-<td>Backcapture - when used as <code class="docutils literal notranslate"><span class="pre">Cb(name,ptn)</span></code>, try to match
+<tr class="row-odd"><td><p>Cb(name[,ptn])</p></td>
+<td><p>Backcapture - when used as <code class="docutils literal notranslate"><span class="pre">Cb(name,ptn)</span></code>, try to match
 pattern <code class="docutils literal notranslate"><span class="pre">ptn</span></code>. If the match succeeds, store the name and
 the result of the match. If Cb(name) is used later, try to
 match the value that was stored earlier. Note that this
 does not capture the value to the capture array, but is
 merely used to match a value that occurred earlier in the
-string.</td>
+string.</p></td>
 </tr>
-<tr class="row-even"><td>Cc(string)</td>
-<td>Constant capture - Adds the specified string directly to
-the capture array.</td>
+<tr class="row-even"><td><p>Cc(string)</p></td>
+<td><p>Constant capture - Adds the specified string directly to
+the capture array.</p></td>
 </tr>
-<tr class="row-odd"><td>Cg(ptn)</td>
-<td>Group capture - add the capture array from ‘ptn’ as a
+<tr class="row-odd"><td><p>Cg(ptn)</p></td>
+<td><p>Group capture - add the capture array from ‘ptn’ as a
 single pattern as a capture value. In other words, the
-capture value will be an array.</td>
+capture value will be an array.</p></td>
 </tr>
-<tr class="row-even"><td>Cs(stack[,n,pop])</td>
-<td>Stack capture - capture <code class="docutils literal notranslate"><span class="pre">n</span></code> values from the specified
+<tr class="row-even"><td><p>Cs(stack[,n,pop])</p></td>
+<td><p>Stack capture - capture <code class="docutils literal notranslate"><span class="pre">n</span></code> values from the specified
 stack and pop the values from the stack if <code class="docutils literal notranslate"><span class="pre">pop</span></code> is
-True. <code class="docutils literal notranslate"><span class="pre">n</span></code> is 1 and <code class="docutils literal notranslate"><span class="pre">pop</span></code> is False by default.</td>
+True. <code class="docutils literal notranslate"><span class="pre">n</span></code> is 1 and <code class="docutils literal notranslate"><span class="pre">pop</span></code> is False by default.</p></td>
 </tr>
-<tr class="row-odd"><td>Cl()</td>
-<td>Line number capture - capture the current line number</td>
+<tr class="row-odd"><td><p>Cl()</p></td>
+<td><p>Line number capture - capture the current line number</p></td>
 </tr>
-<tr class="row-even"><td>Cp()</td>
-<td>Position capture - capture the current string index
-(i.e., position).</td>
+<tr class="row-even"><td><p>Cp()</p></td>
+<td><p>Position capture - capture the current string index
+(i.e., position).</p></td>
 </tr>
-<tr class="row-odd"><td>Col()</td>
-<td>Column capture - capture the position on the current line
-(i.e., the column index).</td>
+<tr class="row-odd"><td><p>Col()</p></td>
+<td><p>Column capture - capture the position on the current line
+(i.e., the column index).</p></td>
 </tr>
 </tbody>
 </table>
@@ -487,14 +487,14 @@ the string to break across lines:</p>
 <span class="go">&#39;quoted string&#39;</span>
 </pre></div>
 </div>
-<div class="section" id="using-a-function-for-type-conversion">
-<h4>Using a Function for Type Conversion<a class="headerlink" href="#using-a-function-for-type-conversion" title="Permalink to this headline">¶</a></h4>
+<section id="using-a-function-for-type-conversion">
+<h4>Using a Function for Type Conversion<a class="headerlink" href="#using-a-function-for-type-conversion" title="Permalink to this heading">¶</a></h4>
 <p>Captures are returned as strings. However, there are cases where it is desirable to
 convert the captures to another form. For example, if the capture represents an
 integer, it may be useful to convert the value to an integer. The first capture
 example above is modified to convert the captured values to integers:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">str2int</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">match</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">captures</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">match</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">toint</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">digit</span><span class="o">**</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">str2int</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">value</span> <span class="o">=</span> <span class="n">whitespace0</span> <span class="o">*</span> <span class="n">toint</span> <span class="o">*</span> <span class="n">whitespace0</span>
@@ -510,51 +510,47 @@ are modified, then the modified results will be used. The <code class="docutils 
 above replaces the string of digits captured from the pattern <code class="docutils literal notranslate"><span class="pre">C(digit**1)</span></code>
 into an integer value. The result is an array of integer values rather than
 an array of integer value strings.</p>
-</div>
-</div>
-<div class="section" id="pattern-place-holder">
-<span id="place-holder"></span><h3>Pattern Place Holder<a class="headerlink" href="#pattern-place-holder" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="pattern-place-holder">
+<span id="place-holder"></span><h3>Pattern Place Holder<a class="headerlink" href="#pattern-place-holder" title="Permalink to this heading">¶</a></h3>
 <p>It is common for a full parsing expression to have to reference patterns
 that have not yet been defined. Or in other words it is common for parsing
 expressions to be recursive. When a parsing pattern needs to refer to a
 pattern that has not yet been defined, a pattern place holder can be used
 that will later be replaced with the pattern once it is defined. Below are
 the</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="30%" />
-<col width="70%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Syntax</th>
-<th class="head">Description</th>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Syntax</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>V(ptn_name)</td>
-<td>Add a pattern place holder for a pattern that has not yet
+<tbody>
+<tr class="row-even"><td><p>V(ptn_name)</p></td>
+<td><p>Add a pattern place holder for a pattern that has not yet
 been created. This can then be replaced via the <code class="docutils literal notranslate"><span class="pre">setVs</span></code>
-function.</td>
+function.</p></td>
 </tr>
-<tr class="row-odd"><td>setVs(ptn, ptn_map)</td>
-<td>Replace the pattern holders in the <cite>ptn</cite> pattern with the
+<tr class="row-odd"><td><p>setVs(ptn, ptn_map)</p></td>
+<td><p>Replace the pattern holders in the <cite>ptn</cite> pattern with the
 patterns defined in the <cite>ptn_map</cite> mapping object. The
 <cite>ptn_map</cite> may either be a dictionary mapping pattern names
 to patterns, or a list of named patterns (i.e., patterns
-that have a name already associated).</td>
+that have a name already associated).</p></td>
 </tr>
-<tr class="row-even"><td>ptn = &lt;name&gt; | &lt;ptn def&gt;</td>
-<td>Create a named pattern. The pipe symbol (|) is  used to
+<tr class="row-even"><td><p>ptn = &lt;name&gt; | &lt;ptn def&gt;</p></td>
+<td><p>Create a named pattern. The pipe symbol (|) is  used to
 specify the name for a pattern. The &lt;name&gt; must be a
 string value, and &lt;ptn def&gt; represents some pattern
 definition. Pattern names are useful for replacing pattern
-place holders and for pattern debugging.</td>
+place holders and for pattern debugging.</p></td>
 </tr>
 </tbody>
 </table>
 <p>As an example, consider a grammar for parsing integer arithmetic expressions of the
 form $5*(2+4)/7$. The grammar might be defined as follows:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integer</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integer</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">op</span>      <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="s1">&#39;+-*/&#39;</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># An expression needs to refer recursively to itself. Add a placeholder.</span>
@@ -568,7 +564,7 @@ form $5*(2+4)/7$. The grammar might be defined as follows:</p>
 </div>
 <p>An alternative way to replace the expression is to make <cite>expr</cite> pattern a named pattern.
 The second parameter to <cite>setVs</cite> can be a list of named parameters rather than a dictionary.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integer</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integer</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="s1">&#39;09&#39;</span><span class="p">)</span><span class="o">**</span><span class="mi">1</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">op</span>      <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="s1">&#39;+-*/&#39;</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a named expression</span>
@@ -580,34 +576,30 @@ The second parameter to <cite>setVs</cite> can be a list of named parameters rat
 <span class="go">&#39;5*(2+4)/7&#39;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="stack-operators">
-<span id="stack-ops"></span><h3>Stack Operators<a class="headerlink" href="#stack-operators" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="stack-operators">
+<span id="stack-ops"></span><h3>Stack Operators<a class="headerlink" href="#stack-operators" title="Permalink to this heading">¶</a></h3>
 <p>A separate capture stack can be useful for storing state, or separation of
 concerns when parsing text. The following operations are used to interact with
 a stack.</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="30%" />
-<col width="70%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Operator</th>
-<th class="head">Description</th>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Operator</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>Sc(name,ptn)</td>
-<td>Capture to stack - capture result of the given
+<tbody>
+<tr class="row-even"><td><p>Sc(name,ptn)</p></td>
+<td><p>Capture to stack - capture result of the given
 pattern to the a stack identified by the given
-<code class="docutils literal notranslate"><span class="pre">name</span></code>.</td>
+<code class="docutils literal notranslate"><span class="pre">name</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td>Sp(name[,n])</td>
-<td>Stack pop - pop n values from the named stack. By
-default, n is 1.</td>
+<tr class="row-odd"><td><p>Sp(name[,n])</p></td>
+<td><p>Stack pop - pop n values from the named stack. By
+default, n is 1.</p></td>
 </tr>
-<tr class="row-even"><td>Sm(name[,n,expected])</td>
-<td>Stack match - If the <code class="docutils literal notranslate"><span class="pre">expected</span></code> value is specified
+<tr class="row-even"><td><p>Sm(name[,n,expected])</p></td>
+<td><p>Stack match - If the <code class="docutils literal notranslate"><span class="pre">expected</span></code> value is specified
 with the <code class="docutils literal notranslate"><span class="pre">Sm</span></code> operator, then this checks to see if
 the value at index n in the stack matches the
 expected value. This can be used to control parser
@@ -616,12 +608,12 @@ is not specified, this checks to see if the value at
 index n in the stack matches the current location in
 the string passed to <code class="docutils literal notranslate"><span class="pre">match</span></code>. The default value for
 n is -1, which indicates the most recent value added
-to the stack.</td>
+to the stack.</p></td>
 </tr>
-<tr class="row-odd"><td>Ssz(name[,n])</td>
-<td>Stack size - If n is not specified, capture the stack
+<tr class="row-odd"><td><p>Ssz(name[,n])</p></td>
+<td><p>Stack size - If n is not specified, capture the stack
 size to the capture array. If n is specified, the
-match is only successful if the stack size is n.</td>
+match is only successful if the stack size is n.</p></td>
 </tr>
 </tbody>
 </table>
@@ -633,57 +625,418 @@ examples that use a stack will typically be more involved:</p>
 <span class="go">&#39;one,two&#39;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="utility-functions">
-<span id="id2"></span><h3>Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this headline">¶</a></h3>
-<table border="1" class="docutils">
-<colgroup>
-<col width="35%" />
-<col width="65%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Function</th>
-<th class="head">Description</th>
+</section>
+<section id="utility-functions">
+<span id="id2"></span><h3>Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this heading">¶</a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Function</p></th>
+<th class="head"><p>Description</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>match(ptn,str,idx)</td>
-<td>Call <code class="docutils literal notranslate"><span class="pre">ptn.match(str,idx,ctx)</span></code> where <code class="docutils literal notranslate"><span class="pre">str</span></code> is
+<tbody>
+<tr class="row-even"><td><p>match(ptn,str,idx)</p></td>
+<td><p>Call <code class="docutils literal notranslate"><span class="pre">ptn.match(str,idx,ctx)</span></code> where <code class="docutils literal notranslate"><span class="pre">str</span></code> is
 the string to match, and <code class="docutils literal notranslate"><span class="pre">idx</span></code> is location in
-the string to check for a match.</td>
+the string to check for a match.</p></td>
 </tr>
-<tr class="row-odd"><td>matchUntil(ptn, mtchAftr)</td>
-<td>Return a pattern that matches anything until
+<tr class="row-odd"><td><p>matchUntil(ptn, mtchAftr)</p></td>
+<td><p>Return a pattern that matches anything until
 <code class="docutils literal notranslate"><span class="pre">ptn</span></code> is matched. <code class="docutils literal notranslate"><span class="pre">mtchAftr</span></code> is an optional
 parameter that indicates whether <code class="docutils literal notranslate"><span class="pre">ptn</span></code> should
-be included in the match (default False).</td>
+be included in the match (default False).</p></td>
 </tr>
-<tr class="row-even"><td>escapeStr(str)</td>
-<td>This function takes a string and replaces \r,
+<tr class="row-even"><td><p>escapeStr(str)</p></td>
+<td><p>This function takes a string and replaces \r,
 \n, and \t with the string representation, and
-replaces the quote characters with ‘ and “.</td>
+replaces the quote characters with ' and &quot;.</p></td>
 </tr>
-<tr class="row-odd"><td>join(separator)</td>
-<td>This returns a function that can be used with the
+<tr class="row-odd"><td><p>join(separator)</p></td>
+<td><p>This returns a function that can be used with the
 ‘/’ operator for patterns. This function joins
 the captures in a match using the specified
-separator. The resulting match has one capture.</td>
+separator. The resulting match has one capture.</p></td>
 </tr>
 </tbody>
 </table>
+</section>
+</section>
+<section id="the-tokenizer-class">
+<span id="tokenizer"></span><h2>The Tokenizer Class<a class="headerlink" href="#the-tokenizer-class" title="Permalink to this heading">¶</a></h2>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> class is used to create tokenizing parsers, or parsers
+which break text into tokens. The <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> is constructed from a
+grammar, where a grammar is essentially an ordered list of PyPE parsing patterns that
+defined the structure of the text. The tokenizer starts at the beginning of a
+string and checks the grammar patterns in order until one of the patterns matches
+the start of the string. Each of the parsing patterns in the grammar can be given
+a name. If the pattern is named, then it is a token and is returned by the
+tokenizer along with the <code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code> object from the pattern. The tokenizer
+then moves to the end of the previous match and repeats the process of checking
+for another match of the grammar. This process repeats over and over, returning
+tokens as they are found, until the string ends, or none of the patterns in the
+grammar match the string at the current location.</p>
+<p>Sometimes a single grammar is not sufficient to parse a file. There may be portions
+of the file that use a different grammar. The <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> supports switching
+grammars. A grammar is defined via a list containing the ordered patterns
+associated with the grammar. Each grammar is named, and the grammars are specified
+in the <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> class constructor by passing named parameters with the
+name being the name of the grammar and the value being the list of PyPE patterns
+that defines the grammar. The first parameter passed to the constructor is a string
+that indicates the name of the starting grammar. If a string is not passed in, then
+the default starting grammar must be named <cite>root</cite>. The <code class="xref py py-class docutils literal notranslate"><span class="pre">Tokenizer</span></code> is
+initialized something like the following:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="p">[</span><span class="n">ptn1</span><span class="p">,</span> <span class="n">ptn2</span><span class="p">,</span> <span class="n">ptn3</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">other</span><span class="o">=</span><span class="p">[</span><span class="n">optn1</span><span class="p">,</span> <span class="n">optn2</span><span class="p">,</span> <span class="n">optn3</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
 </div>
+<p>The tokenizer can then be used to parse one or more strings. This is done by calling
+the <code class="xref py py-func docutils literal notranslate"><span class="pre">getTokens()</span></code> function and passing it the string to parse as shown below:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">token</span><span class="p">,</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">getTokens</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="c1"># do something with the token and associated match object</span>
+</pre></div>
 </div>
-<div class="section" id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<p>This tokenizer can then be called with a different string to parse that string
+as well. Note that each pattern needs to consume part of the string, or the
+parser will not progress. If a pattern succeeds, but does not consume any text
+from the string (i.e., is length 0) then the parser will stop.</p>
+<p>In order for multiple grammars to be useful, there needs to be a way to
+switch to a new grammar. This is done by including a tuple with three values in the
+grammar list (a tuple is a list included in parenthesis). The first value in the
+tuple is a pattern that marks the start of the new grammar. The second value in
+the tuple is the string name of the new grammar. The third value is a pattern that
+marks the end of the grammar. If the new grammar does not end, then the third value
+is not required.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="p">[</span><span class="n">ptn1</span><span class="p">,</span> <span class="n">ptn2</span><span class="p">,</span> <span class="p">(</span><span class="n">P</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">),</span> <span class="s1">&#39;other&#39;</span><span class="p">,</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;]&#39;</span><span class="p">))],</span> <span class="n">other</span><span class="o">=</span><span class="p">[</span><span class="n">optn1</span><span class="p">,</span> <span class="n">optn2</span><span class="p">,</span> <span class="n">optn3</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>In this case, the tokenizer switches from the <code class="docutils literal notranslate"><span class="pre">root</span></code> grammar to the <code class="docutils literal notranslate"><span class="pre">other</span></code> grammar if
+<code class="docutils literal notranslate"><span class="pre">ptn1</span></code> and <code class="docutils literal notranslate"><span class="pre">ptn1</span></code> fail at the current location in the string and the string contains
+an opening square bracket at this location. This means that the start grammar pattern
+matches. Note that the pattern above will consume the square bracket, so the <code class="docutils literal notranslate"><span class="pre">other</span></code>
+pattern should not include the square bracket. While patterns in a grammar must
+consume part of the string, the start grammar pattern can be a look ahead pattern
+that does not consume any text. However, the combination of the start pattern, the
+new grammar, and the end pattern must consume some text from the string, or the
+tokenizer will stall and end. When a new grammar ends, then parent grammar begins
+to parse again. Grammars can be nested multiple layers deep.</p>
+<p>As noted above, only named patterns from a grammar are returned as tokens. A pattern
+can be named using the following:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;&lt;name&gt;&quot;</span>
+</pre></div>
+</div>
+<p>However, the pipe operator (<code class="docutils literal notranslate"><span class="pre">|</span></code>) is overloaded for patterns, so a more convenient
+way to name a pattern is:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ptn</span> <span class="o">=</span> <span class="s2">&quot;&lt;name&gt;&quot;</span> <span class="o">|</span> <span class="n">pattern_definition</span>
+</pre></div>
+</div>
+<p>Below is an example of a parser the tokenizes works until an open parenthesis is
+encountered. Then it tokenizes numbers until a close parenthesis is encountered.
+It then starts tokenizing words again.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyPE.Tokenizer</span> <span class="kn">import</span> <span class="n">Tokenizer</span>
+<span class="kn">from</span> <span class="nn">PyPE</span> <span class="kn">import</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">Cg</span><span class="p">,</span> <span class="n">whitespace1</span> <span class="k">as</span> <span class="n">ws</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">digit</span>
+
+<span class="c1"># Define named patterns (i.e., tokens) that will be used in our patterns</span>
+<span class="n">word</span>   <span class="o">=</span> <span class="s1">&#39;word&#39;</span>   <span class="o">|</span> <span class="n">alpha</span><span class="o">**</span><span class="mi">1</span>       <span class="c1"># One or more characters</span>
+<span class="n">number</span> <span class="o">=</span> <span class="s1">&#39;number&#39;</span> <span class="o">|</span> <span class="n">digit</span><span class="o">**</span><span class="mi">1</span>       <span class="c1"># One or more digits</span>
+<span class="nb">open</span>   <span class="o">=</span> <span class="s1">&#39;open&#39;</span>   <span class="o">|</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>         <span class="c1"># Open paren starts the Numbers grammar</span>
+<span class="n">close</span>  <span class="o">=</span> <span class="s1">&#39;close&#39;</span>  <span class="o">|</span> <span class="n">P</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)</span>         <span class="c1"># Close paren closes the Numbers grammar</span>
+
+<span class="c1"># Define a Words grammar to Number grammer switch</span>
+<span class="n">W2N</span> <span class="o">=</span> <span class="p">(</span><span class="nb">open</span><span class="p">,</span> <span class="s1">&#39;Numbers&#39;</span><span class="p">,</span> <span class="n">close</span><span class="p">)</span>
+
+<span class="c1"># Define our two grammars which are words or numbers separated by spaces</span>
+<span class="n">words</span>   <span class="o">=</span> <span class="p">[</span><span class="n">word</span><span class="p">,</span> <span class="n">ws</span><span class="p">,</span> <span class="n">W2N</span><span class="p">]</span>   <span class="c1"># Note the grammar swith that is included</span>
+<span class="n">numbers</span> <span class="o">=</span> <span class="p">[</span><span class="n">number</span><span class="p">,</span> <span class="n">ws</span><span class="p">]</span>
+
+<span class="c1"># Add the two grammars, and start with &#39;Words&#39; as the root grammar</span>
+<span class="n">T</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="s1">&#39;Words&#39;</span><span class="p">,</span> <span class="n">Words</span><span class="o">=</span><span class="n">words</span><span class="p">,</span> <span class="n">Numbers</span><span class="o">=</span><span class="n">numbers</span><span class="p">)</span>
+
+<span class="c1"># Here is the text to parse</span>
+<span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;cat rat (11 12 13) bat&quot;</span>
+
+<span class="c1"># Print the tokens that are parsed</span>
+<span class="k">for</span> <span class="n">token</span><span class="p">,</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">T</span><span class="o">.</span><span class="n">getTokens</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">match</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The output from this script is the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>word: cat
+word: rat
+open: (
+number: 11
+number: 12
+number: 13
+close: )
+word: bat
+</pre></div>
+</div>
+<p>It is worth emphasizing that <code class="docutils literal notranslate"><span class="pre">match</span></code> is a <code class="xref py py-class docutils literal notranslate"><span class="pre">Match</span></code> object, which can include
+capture values. The match captures can be quite sophisticated depending on the
+token patterns that are defined in the grammars, and may cover significant portions
+of the text.</p>
+</section>
+<section id="the-template-class">
+<span id="template"></span><h2>The Template Class<a class="headerlink" href="#the-template-class" title="Permalink to this heading">¶</a></h2>
+<p>A template file is a text file written in a file format that embeds scripting
+tags for dynamic content creation. The scripting language used in the scripting
+tags is python. When the template file is rendered, it may be passed a set of
+template variables that are used within the template.</p>
+<p>The syntax used for scripting tags in a template file is <code class="docutils literal notranslate"><span class="pre">&#64;[&lt;python</span> <span class="pre">code&gt;]&#64;</span></code>,
+where the tag may be on a single line, or the python code may span multiple lines.
+The tag syntax includes some optional modifiers, with the optional modifiers shown
+below in parenthesis and exclusive options delineated with the <code class="docutils literal notranslate"><span class="pre">'|'</span></code> symbol. The
+extended syntax is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@[(^)(=|&gt;|&lt;)(:*) &lt;python code&gt; (^)]@
+</pre></div>
+</div>
+<p>Note that no space is allowed between the start or end of the tag and the
+modifiers used. The <code class="docutils literal notranslate"><span class="pre">^</span></code> symbol, which can be used at the start or the
+end of the tag is meant to look like an up arrow and indicate that a newline and
+whitespace that occurs either before or after the script tag (depending on where
+the <code class="docutils literal notranslate"><span class="pre">^</span></code> is used) should be removed.</p>
+<p>The script tag may also contain one of <code class="docutils literal notranslate"><span class="pre">=</span></code>, <code class="docutils literal notranslate"><span class="pre">&gt;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> at the
+start of the tag.</p>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">=</span></code> indicates that the python code is a variable or a
+function call and that the result should be written to the LaTeX document in
+place of the tag.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> tags also cause the value to the written to the file.
+However, in this case, the text will take up the same length as the tag if
+possible, adding whitespace as needed. The <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> symbols are used to
+indicate right or left alignment of the text respectively. If the value being
+printed is longer than the tag, then the value is printed without modification.</p></li>
+</ul>
+<p>Finally, zero or more <code class="docutils literal notranslate"><span class="pre">:</span></code> characters may be included just before the python
+code. To understand the purpose of the colons, it is important to understand how
+python scripts are organized. Python includes a few statements that are used to
+organize and control a script. Structures used to control the flow of a script
+include functions, <code class="docutils literal notranslate"><span class="pre">if</span></code> statements, <code class="docutils literal notranslate"><span class="pre">for</span></code> loops, among others. Each
+control structure includes a block of code. In python, a control structure must
+be followed by a colon, which marks the start of the block of code. The colon
+may be followed by a statement on the same line, in which case the block ends
+with the end of the line. Otherwise if the control statement line ends with a
+colon (possibly followed by a comment), the block of statements contained in the
+must be indented past the control statement and all statements indented to the
+same level are part of the same block until the code is unindented or ends.
+While indentation works well to organize code blocks in a python script, this
+implicit approach to marking the end of a block does not work for a template.
+Thus the number of colons at the start of a tag mark the number of blocks that
+have been closed. Below is an example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@[ debug = True
+   if debug == True:
+      if verbose == True: ]@
+  This is my verbose message. It is not necessary to indent this text.
+@[ :else: ]@
+  This is my nonverbose message.
+
+  Because of the single colon before the else, this &#39;else&#39; statement is for the
+  &#39;if verbose&#39; command. If two colons were used it would be for the &#39;if debug&#39;
+  command. Note that the &#39;else&#39; statement ends with a &#39;:&#39; which means that
+  a new block is started for the else statement.
+@[ :: # Exit the &#39;else&#39; and &#39;if debug&#39; blocks ]@
+</pre></div>
+</div>
+<p>Note that the template only detects a new block if the line ends with a colon.
+The template will not detect a line that ends with a colon followed by a comment
+at the end of the line. The following are some example tags:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@[ x = &quot;testing&quot; ]@ - Set the value for variable x
+@[= x ]@            - Print the variable x
+@[^= x ]@           - Print x and remove whitespace and newline before value
+@[ myfn() ]@        - Call the function &#39;myfn&#39;
+@[= myfn() ]@       - Call the function &#39;myfn&#39; and include return value in LaTeX
+@[&gt; testing ]@      - The tag is 14 characters, so this will take up at least
+                      14 characters and will be right aligned.
+</pre></div>
+</div>
+<p>A function that is called may write content to the output even if it does not
+return a value. Documentation on how to create new functions and write to the
+output is presented in <a class="reference internal" href="#templatefns"><span class="std std-ref">Template Functions</span></a>. If a tag is used that writes
+output (such as <code class="docutils literal notranslate"><span class="pre">&#64;[=myfn()]&#64;</span></code>), and the value is empty (such as a function
+that does not return a value), then the empty value is ignored.</p>
+<p>When a template file is processed, it is converted into a python script with the
+same name as the template file, but with the extension changed to ‘.py’, and
+located in a folder named <code class="docutils literal notranslate"><span class="pre">temp</span></code> created in the folder where the script is executed.
+Thus, using repeat names for files that are included in subdirectories is not
+allowed. If the template has syntax errors, the python file that is created may
+not run correctly. Some sytax errors may be reported while compiling the template
+file. If the template is compiled to a python file, then examining the python
+file that is created in the <code class="docutils literal notranslate"><span class="pre">temp</span></code> folder is another way to diagnosing errors.</p>
+<p>Since the template files are converted to standard python files before they are
+executed, it is possible to run the files in a python IDE for debugging if the
+templates are producing incorrect output. This can be a fast and effective method
+of determining why results are not correct. There are a number of good python IDEs.
+One of the simplest to setup and use is Visual Studio Code, which is free to download
+and use. Python 3 must be installed on your system and the Visual Studio Code Python
+extension must be added for python debugging to work.</p>
+<p>To render the document, a <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> object is created and is passed the
+name of the template file. The template can then be rendered. Variables that are
+used in the template can be passed to the render function as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">t</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;Temp&quot;</span><span class="p">,</span> <span class="n">readFile</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">t</span><span class="o">.</span><span class="n">addPythonFunction</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+<span class="n">t</span><span class="o">.</span><span class="n">addTemplateFunctions</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">])</span>     <span class="c1"># Load TemplateFn from this file</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">render</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span><span class="s2">&quot;fred&quot;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span><span class="s2">&quot;A Value&quot;</span><span class="p">}))</span>
+</pre></div>
+</div>
+<p>Note that <code class="xref py py-func docutils literal notranslate"><span class="pre">render()</span></code> returns a string, which can be printed or written to
+a file.</p>
+<section id="variables-and-functions-available-within-templates">
+<h3>Variables and Functions Available within Templates<a class="headerlink" href="#variables-and-functions-available-within-templates" title="Permalink to this heading">¶</a></h3>
+<p>A few variables and functions are available for use within a template file.
+Some of these are added from the <code class="docutils literal notranslate"><span class="pre">Template.py</span></code> module, but most are implemented
+in the <code class="docutils literal notranslate"><span class="pre">TemplateFunction.py</span></code> file. The following is a table of the variables and
+functions that are available:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>__stack__</p></td>
+<td><p>This is the array that stores the output that is
+written before it is joined together into a final
+document. It is not usually necessary to use this
+directly. This variable should not be redefined.</p></td>
+</tr>
+<tr class="row-odd"><td><p>write(value)</p></td>
+<td><p>This function is used to write template output. This
+function is used in the template code that is
+generated, and the function should not be redefined.</p></td>
+</tr>
+<tr class="row-even"><td><p>writeln(value)</p></td>
+<td><p>Similar to the <code class="docutils literal notranslate"><span class="pre">write</span></code> function, but includes a
+newline after the content that is written to the
+output.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="template-functions">
+<span id="templatefns"></span><h3>Template Functions<a class="headerlink" href="#template-functions" title="Permalink to this heading">¶</a></h3>
+<p>While the template syntax allows arbitrary python code to be included in a template
+file, it is recommended that the templates only include minimal code logic. If
+multiple lines of code logic are required, it is better to add a new template
+function to the <code class="docutils literal notranslate"><span class="pre">TemplateFunction.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">scripts</span></code> directory.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">TemplateFunction.py</span></code> script imports and decorator function called
+<code class="docutils literal notranslate"><span class="pre">TemplateFn</span></code> from <code class="docutils literal notranslate"><span class="pre">PyPE.Template</span></code>. In order to mark a function in this script
+as a function that should be available within the templates, <code class="docutils literal notranslate"><span class="pre">&#64;TemplateFn</span></code>
+must be added on the line before the function is defined. The following is an
+example of declaring a function that can be called from a template.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@TemplateFn</span>
+<span class="k">def</span> <span class="nf">aUselessFunction</span><span class="p">():</span>
+  <span class="k">return</span> <span class="s2">&quot;a dummy string&quot;</span>
+</pre></div>
+</div>
+<p>The function can receive any parameters that are needed to perform its job.
+When a template is called, a <code class="docutils literal notranslate"><span class="pre">context</span></code> variable is added to the function that
+contains all of the parameters passed to the Template. This is not passed directly,
+but is set as a function property. In general, it is recommended that any
+parameters that are needed be passed to a function directly, but if there is a
+case where this is particularly inconvenient, the <code class="docutils literal notranslate"><span class="pre">context</span></code> variable can be used.
+The context can be accessed via the function name as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@TemplateFn</span>
+<span class="k">def</span> <span class="nf">myfn</span><span class="p">():</span>
+  <span class="n">context</span> <span class="o">=</span> <span class="n">myfn</span><span class="o">.</span><span class="n">context</span>
+  <span class="n">writeln</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">writeln</span>   <span class="c1"># Function to write directly to latex</span>
+  <span class="n">writeln</span><span class="p">(</span><span class="s1">&#39;This is written directly to the text output&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The code in <code class="docutils literal notranslate"><span class="pre">TemplateFunction.py</span></code> is standard python code, so the developer is
+free to implement any logic necessary for documentation purposes. Template functions
+must be registered with the <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> prior to rendering the template in
+order to be accessible. Templates are registered by calling the function
+<code class="xref py py-func docutils literal notranslate"><span class="pre">addTemplateFunctions()</span></code> on the template and passing it a module or a
+class object that contains template functions. Note that if template functions are
+contained in a class, a class object must be passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">addTemplateFunctions()</span></code>
+and not the class itself. If the template functions are contained in the script
+that is executed, the following can be used to pass the script for registering
+template functions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="o">...</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+<span class="n">t</span><span class="o">.</span><span class="n">addTemplateFunctions</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Sometimes it may be useful to generate a template from a string rather than a
+file file. In this case, the template can be initialized with the second parameter
+<code class="docutils literal notranslate"><span class="pre">readFile</span></code> being <code class="docutils literal notranslate"><span class="pre">False</span></code>. The first parameter is still the basename to use
+for the python template that is generated. In this case, the template string can
+be passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">addPythonFunction()</span></code>. Below is an example script that generates
+a template from a string and registers a template function included in the script.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyPE.Template</span> <span class="kn">import</span> <span class="n">Template</span><span class="p">,</span> <span class="n">TemplateFn</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="nd">@TemplateFn</span>
+<span class="k">def</span> <span class="nf">writeAstring</span><span class="p">():</span>
+    <span class="n">writeAstring</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;This is from the TemplateFn&quot;</span><span class="p">)</span>
+
+<span class="n">src</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    Text should be added as is</span>
+<span class="s2">    @[ if name == &quot;fred&quot;:</span>
+<span class="s2">          write(&quot;The write function is availabe in Templates\n&quot;)</span>
+<span class="s2">          write(name)</span>
+<span class="s2">          write(&quot;\nNewlines must be added explicitly with write&quot;)</span>
+<span class="s2">    ]@</span>
+<span class="s2">    </span>
+<span class="s2">    Variables can be created on the fly. For the block below, unindent</span>
+<span class="s2">    the if statement above and set a few variables. Remove the return value</span>
+<span class="s2">    at the end of this below so that no empty line shows up in the rendered</span>
+<span class="s2">    text.</span>
+<span class="s2">    @[: a = &quot;testing&quot;</span>
+<span class="s2">        bob = 5</span>
+<span class="s2">        q=7</span>
+<span class="s2">      ^]@</span>
+<span class="s2">    Values can be written out. Remove the newline at the start of the block</span>
+<span class="s2">    below: </span>
+<span class="s2">    @[^= bob  ]@</span>
+<span class="s2">    # The size of a code block can be preserved</span>
+<span class="s2">    # </span>
+<span class="s2">    @[^&gt;&quot;make this string right aligned. &quot;^]@</span>
+<span class="s2">    Remove the newline at the start and end.</span>
+<span class="s2">    </span>
+<span class="s2">    @[writeAstring()]@</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+<span class="n">src</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+
+<span class="c1"># This template will be created from a string rather than read from a file, so</span>
+<span class="c1"># set readFile to False and call addPythonFunction with the template src above.</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;Temp&quot;</span><span class="p">,</span> <span class="n">readFile</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">t</span><span class="o">.</span><span class="n">addPythonFunction</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+<span class="n">t</span><span class="o">.</span><span class="n">addTemplateFunctions</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">])</span>     <span class="c1"># Load TemplateFn from this file</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">render</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span><span class="s2">&quot;fred&quot;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span><span class="s2">&quot;A Value&quot;</span><span class="p">}))</span>
+</pre></div>
+</div>
+<p>The result from the script is the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Text should be added as is
+The write function is availabe in Templates
+fred
+Newlines must be added explicitly with write
+
+Variables can be created on the fly. For the block below, unindent
+the if statement above and set a few variables. Remove the return value
+at the end of this below so that no empty line shows up in the rendered
+text.
+Values can be written out. Remove the newline at the start of the block
+below: 5
+# The size of a code block can be preserved
+#          make this string right aligned. Remove the newline at the start and end.
+
+This is from the TemplateFn
+</pre></div>
+</div>
+</section>
+</section>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="PyPE.html">PyPE - API Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="PyPE.html#the-pattern-base-class">The <code class="docutils literal notranslate"><span class="pre">Pattern</span></code> Base Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyPE.html">PyPE - Python Parsing Expressions Library (API)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="PyPE.html#the-pattern-base-class">The <code class="xref py py-class docutils literal notranslate"><span class="pre">Pattern</span></code> Base Class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="PyPE.html#pattern-operators">Pattern Operators</a></li>
 <li class="toctree-l2"><a class="reference internal" href="PyPE.html#capture-operators">Capture Operators</a></li>
 <li class="toctree-l2"><a class="reference internal" href="PyPE.html#stack-operators">Stack Operators</a></li>
@@ -692,17 +1045,19 @@ separator. The resulting match has one capture.</td>
 </li>
 </ul>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
+            <div class="clearer"></div>
           </div>
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="#">Table of Contents</a></h3>
-  <ul>
+  <div>
+    <h3><a href="#">Table of Contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">PyPE - Python Parsing Expressions (Overview)</a><ul>
 <li><a class="reference internal" href="#pype-library-summary">PyPE Library Summary</a><ul>
 <li><a class="reference internal" href="#pattern-operators">Pattern Operators</a><ul>
@@ -721,14 +1076,23 @@ separator. The resulting match has one capture.</td>
 <li><a class="reference internal" href="#utility-functions">Utility Functions</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#the-tokenizer-class">The Tokenizer Class</a></li>
+<li><a class="reference internal" href="#the-template-class">The Template Class</a><ul>
+<li><a class="reference internal" href="#variables-and-functions-available-within-templates">Variables and Functions Available within Templates</a></li>
+<li><a class="reference internal" href="#template-functions">Template Functions</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 </li>
 </ul>
 
-  <h4>Next topic</h4>
-  <p class="topless"><a href="PyPE.html"
-                        title="next chapter">PyPE - API Documentation</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="PyPE.html"
+                          title="next chapter">PyPE - Python Parsing Expressions Library (API)</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -737,17 +1101,15 @@ separator. The resulting match has one capture.</td>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -759,14 +1121,15 @@ separator. The resulting match has one capture.</td>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="PyPE.html" title="PyPE - API Documentation"
+          <a href="PyPE.html" title="PyPE - Python Parsing Expressions Library (API)"
              >next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">PyPE 0.1.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="#">PyPE 0.1.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">PyPE - Python Parsing Expressions (Overview)</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2016, Lance Larsen.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.2.3.
     </div>
   </body>
 </html>

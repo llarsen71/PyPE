@@ -69,7 +69,13 @@ The PyPE library can be divided into a few major categories:
 
 To check if a string matches a pattern defined using PyPE, the patterns
 ``match`` function is called. If the string is a match a ``Match`` object
-is called. This is discussed in :ref:`match-object`.
+is called. This is discussed in :ref:`match-object`. A few other classes are
+inlcuded in the PyPE package.
+
+* :ref:`Tokenizer` - This class aids in creating tokenizing parsers.
+
+* :ref:`Template` - A template engine class useful for embedding scripting logic
+  in text files for dynamic tex file creation.
 
 .. _pattern-ops:
 
@@ -653,7 +659,10 @@ It then starts tokenizing words again.
 .. literalinclude:: /../TokenizerExample.py
    :language: python
 
-The output from this script is the following::
+The output from this script is the following:
+
+.. highlight:: none
+::
 
     word: cat
     word: rat 
@@ -663,11 +672,236 @@ The output from this script is the following::
     number: 13
     close: )  
     word: bat
-
+    
 It is worth emphasizing that ``match`` is a :class:`Match` object, which can include
 capture values. The match captures can be quite sophisticated depending on the
 token patterns that are defined in the grammars, and may cover significant portions
 of the text.
+
+.. _Template:
+
+==================
+The Template Class
+==================
+
+A template file is a text file written in a file format that embeds scripting
+tags for dynamic content creation. The scripting language used in the scripting 
+tags is python. When the template file is rendered, it may be passed a set of 
+template variables that are used within the template.
+
+The syntax used for scripting tags in a template file is ``@[<python code>]@``,
+where the tag may be on a single line, or the python code may span multiple lines.
+The tag syntax includes some optional modifiers, with the optional modifiers shown
+below in parenthesis and exclusive options delineated with the ``'|'`` symbol. The
+extended syntax is::
+
+    @[(^)(=|>|<)(:*) <python code> (^)]@
+
+Note that no space is allowed between the start or end of the tag and the
+modifiers used. The ``^`` symbol, which can be used at the start or the
+end of the tag is meant to look like an up arrow and indicate that a newline and
+whitespace that occurs either before or after the script tag (depending on where
+the ``^`` is used) should be removed.
+
+The script tag may also contain one of ``=``, ``>``, or ``<`` at the
+start of the tag. 
+
+* The ``=`` indicates that the python code is a variable or a
+  function call and that the result should be written to the LaTeX document in
+  place of the tag. 
+* The ``>`` and ``<`` tags also cause the value to the written to the file. 
+  However, in this case, the text will take up the same length as the tag if 
+  possible, adding whitespace as needed. The ``>`` and ``<`` symbols are used to 
+  indicate right or left alignment of the text respectively. If the value being 
+  printed is longer than the tag, then the value is printed without modification.
+
+Finally, zero or more ``:`` characters may be included just before the python
+code. To understand the purpose of the colons, it is important to understand how
+python scripts are organized. Python includes a few statements that are used to
+organize and control a script. Structures used to control the flow of a script
+include functions, ``if`` statements, ``for`` loops, among others. Each
+control structure includes a block of code. In python, a control structure must
+be followed by a colon, which marks the start of the block of code. The colon
+may be followed by a statement on the same line, in which case the block ends
+with the end of the line. Otherwise if the control statement line ends with a
+colon (possibly followed by a comment), the block of statements contained in the
+must be indented past the control statement and all statements indented to the
+same level are part of the same block until the code is unindented or ends.
+While indentation works well to organize code blocks in a python script, this
+implicit approach to marking the end of a block does not work for a template.
+Thus the number of colons at the start of a tag mark the number of blocks that
+have been closed. Below is an example::
+
+  @[ debug = True
+     if debug == True:
+        if verbose == True: ]@
+    This is my verbose message. It is not necessary to indent this text.
+  @[ :else: ]@
+    This is my nonverbose message.
+
+    Because of the single colon before the else, this 'else' statement is for the
+    'if verbose' command. If two colons were used it would be for the 'if debug'
+    command. Note that the 'else' statement ends with a ':' which means that
+    a new block is started for the else statement.
+  @[ :: # Exit the 'else' and 'if debug' blocks ]@
+
+Note that the template only detects a new block if the line ends with a colon.
+The template will not detect a line that ends with a colon followed by a comment
+at the end of the line. The following are some example tags::
+
+  @[ x = "testing" ]@ - Set the value for variable x
+  @[= x ]@            - Print the variable x
+  @[^= x ]@           - Print x and remove whitespace and newline before value
+  @[ myfn() ]@        - Call the function 'myfn'
+  @[= myfn() ]@       - Call the function 'myfn' and include return value in LaTeX
+  @[> testing ]@      - The tag is 14 characters, so this will take up at least
+                        14 characters and will be right aligned.
+
+A function that is called may write content to the output even if it does not
+return a value. Documentation on how to create new functions and write to the
+output is presented in :ref:`TemplateFns`. If a tag is used that writes
+output (such as ``@[=myfn()]@``), and the value is empty (such as a function
+that does not return a value), then the empty value is ignored.
+
+When a template file is processed, it is converted into a python script with the
+same name as the template file, but with the extension changed to '.py', and
+located in a folder named ``temp`` created in the folder where the script is executed. 
+Thus, using repeat names for files that are included in subdirectories is not 
+allowed. If the template has syntax errors, the python file that is created may 
+not run correctly. Some sytax errors may be reported while compiling the template
+file. If the template is compiled to a python file, then examining the python
+file that is created in the ``temp`` folder is another way to diagnosing errors.
+
+Since the template files are converted to standard python files before they are
+executed, it is possible to run the files in a python IDE for debugging if the
+templates are producing incorrect output. This can be a fast and effective method
+of determining why results are not correct. There are a number of good python IDEs.
+One of the simplest to setup and use is Visual Studio Code, which is free to download 
+and use. Python 3 must be installed on your system and the Visual Studio Code Python
+extension must be added for python debugging to work.
+
+To render the document, a :class:`Template` object is created and is passed the
+name of the template file. The template can then be rendered. Variables that are
+used in the template can be passed to the render function as shown below:
+
+.. highlight:: default
+::
+
+  t = Template("Temp", readFile=False)
+  t.addPythonFunction(src)
+  t.addTemplateFunctions(sys.modules[__name__])     # Load TemplateFn from this file
+  print(t.render({'name':"fred", 'a':"A Value"}))
+  
+Note that :func:`render` returns a string, which can be printed or written to
+a file.
+  
+.. _TemplateFns
+
+Variables and Functions Available within Templates
+==================================================
+
+A few variables and functions are available for use within a template file.
+Some of these are added from the ``Template.py`` module, but most are implemented
+in the ``TemplateFunction.py`` file. The following is a table of the variables and
+functions that are available:
+
++------------------------+-----------------------------------------------------+
+|          Name          |                     Description                     |
++========================+=====================================================+ 
+| __stack__              | This is the array that stores the output that is    |
+|                        | written before it is joined together into a final   |
+|                        | document. It is not usually necessary to use this   |
+|                        | directly. This variable should not be redefined.    |
++------------------------+-----------------------------------------------------+
+| write(value)           | This function is used to write template output. This| 
+|                        | function is used in the template code that is       |
+|                        | generated, and the function should not be redefined.|
++------------------------+-----------------------------------------------------+
+| writeln(value)         | Similar to the ``write`` function, but includes a   |
+|                        | newline after the content that is written to the    |
+|                        | output.                                             |
++------------------------+-----------------------------------------------------+
+
+.. _TemplateFns:
+
+Template Functions
+==================
+
+While the template syntax allows arbitrary python code to be included in a template
+file, it is recommended that the templates only include minimal code logic. If 
+multiple lines of code logic are required, it is better to add a new template 
+function to the ``TemplateFunction.py`` file in the ``scripts`` directory.
+
+The ``TemplateFunction.py`` script imports and decorator function called
+``TemplateFn`` from ``PyPE.Template``. In order to mark a function in this script
+as a function that should be available within the templates, ``@TemplateFn``
+must be added on the line before the function is defined. The following is an
+example of declaring a function that can be called from a template.::
+
+    @TemplateFn
+    def aUselessFunction():
+      return "a dummy string"
+
+The function can receive any parameters that are needed to perform its job. 
+When a template is called, a ``context`` variable is added to the function that 
+contains all of the parameters passed to the Template. This is not passed directly, 
+but is set as a function property. In general, it is recommended that any 
+parameters that are needed be passed to a function directly, but if there is a 
+case where this is particularly inconvenient, the ``context`` variable can be used. 
+The context can be accessed via the function name as follows::
+
+    @TemplateFn
+    def myfn():
+      context = myfn.context
+      writeln = context.writeln   # Function to write directly to latex
+      writeln('This is written directly to the text output')
+
+The code in ``TemplateFunction.py`` is standard python code, so the developer is
+free to implement any logic necessary for documentation purposes. Template functions
+must be registered with the :class:`Template` prior to rendering the template in
+order to be accessible. Templates are registered by calling the function
+:func:`addTemplateFunctions` on the template and passing it a module or a
+class object that contains template functions. Note that if template functions are
+contained in a class, a class object must be passed to :func:`addTemplateFunctions` 
+and not the class itself. If the template functions are contained in the script 
+that is executed, the following can be used to pass the script for registering 
+template functions::
+
+    import sys
+    ...
+    t = Template(filename)
+    t.addTemplateFunctions(sys.modules[__name__])
+
+Sometimes it may be useful to generate a template from a string rather than a
+file file. In this case, the template can be initialized with the second parameter
+``readFile`` being ``False``. The first parameter is still the basename to use
+for the python template that is generated. In this case, the template string can
+be passed to :func:`addPythonFunction`. Below is an example script that generates
+a template from a string and registers a template function included in the script.
+
+.. literalinclude:: /../TemplateExample.py
+   :language: python
+   
+The result from the script is the following:
+
+.. highlight:: none
+::
+
+    Text should be added as is
+    The write function is availabe in Templates
+    fred
+    Newlines must be added explicitly with write
+
+    Variables can be created on the fly. For the block below, unindent
+    the if statement above and set a few variables. Remove the return value
+    at the end of this below so that no empty line shows up in the rendered
+    text.
+    Values can be written out. Remove the newline at the start of the block
+    below: 5
+    # The size of a code block can be preserved
+    #          make this string right aligned. Remove the newline at the start and end.
+
+    This is from the TemplateFn
 
 ==================
 Indices and tables
