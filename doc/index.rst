@@ -709,15 +709,25 @@ start of the tag.
 * The ``=`` indicates that the python code is a variable or a
   function call and that the result should be written to the LaTeX document in
   place of the tag. 
-* The ``>`` and ``<`` tags also cause the value to the written to the file. 
+* The ``>`` and ``<`` items also cause the value to the written to the file. 
   However, in this case, the text will take up the same length as the tag if 
   possible, adding whitespace as needed. The ``>`` and ``<`` symbols are used to 
   indicate right or left alignment of the text respectively. If the value being 
   printed is longer than the tag, then the value is printed without modification.
 
-Finally, zero or more ``:`` characters may be included just before the python
-code. To understand the purpose of the colons, it is important to understand how
-python scripts are organized. Python includes a few statements that are used to
+The following are some example scripting tags::
+
+  @[ x = "testing" ]@ - Set the value for variable x
+  @[= x ]@            - Print the variable x
+  @[^= x ]@           - Print x and remove whitespace and newline before value
+  @[ myfn() ]@        - Call the function 'myfn'
+  @[= myfn() ]@       - Call the function 'myfn' and include return value in LaTeX
+  @[> testing ]@      - The tag is 14 characters, so this will take up at least
+                        14 characters and will be right aligned.
+
+Finally, zero or more ``:`` characters may be included just before the python code in
+a scripting tag. To understand the purpose of the colons, it is important to understand 
+how python scripts are organized. Python includes a few statements that are used to
 organize and control a script. Structures used to control the flow of a script
 include functions, ``if`` statements, ``for`` loops, among others. Each
 control structure includes a block of code. In python, a control structure must
@@ -747,15 +757,7 @@ have been closed. Below is an example::
 
 Note that the template only detects a new block if the line ends with a colon.
 The template will not detect a line that ends with a colon followed by a comment
-at the end of the line. The following are some example tags::
-
-  @[ x = "testing" ]@ - Set the value for variable x
-  @[= x ]@            - Print the variable x
-  @[^= x ]@           - Print x and remove whitespace and newline before value
-  @[ myfn() ]@        - Call the function 'myfn'
-  @[= myfn() ]@       - Call the function 'myfn' and include return value in LaTeX
-  @[> testing ]@      - The tag is 14 characters, so this will take up at least
-                        14 characters and will be right aligned.
+at the end of the line. 
 
 A function that is called may write content to the output even if it does not
 return a value. Documentation on how to create new functions and write to the
@@ -787,8 +789,7 @@ used in the template can be passed to the render function as shown below:
 .. highlight:: default
 ::
 
-  t = Template("Temp", readFile=False)
-  t.addPythonFunction(src)
+  t = Template("Temp.txt")
   t.addTemplateFunctions(sys.modules[__name__])     # Load TemplateFn from this file
   print(t.render({'name':"fred", 'a':"A Value"}))
   

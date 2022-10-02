@@ -799,15 +799,25 @@ start of the tag.</p>
 <li><p>The <code class="docutils literal notranslate"><span class="pre">=</span></code> indicates that the python code is a variable or a
 function call and that the result should be written to the LaTeX document in
 place of the tag.</p></li>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> tags also cause the value to the written to the file.
+<li><p>The <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> items also cause the value to the written to the file.
 However, in this case, the text will take up the same length as the tag if
 possible, adding whitespace as needed. The <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> symbols are used to
 indicate right or left alignment of the text respectively. If the value being
 printed is longer than the tag, then the value is printed without modification.</p></li>
 </ul>
-<p>Finally, zero or more <code class="docutils literal notranslate"><span class="pre">:</span></code> characters may be included just before the python
-code. To understand the purpose of the colons, it is important to understand how
-python scripts are organized. Python includes a few statements that are used to
+<p>The following are some example scripting tags:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@[ x = &quot;testing&quot; ]@ - Set the value for variable x
+@[= x ]@            - Print the variable x
+@[^= x ]@           - Print x and remove whitespace and newline before value
+@[ myfn() ]@        - Call the function &#39;myfn&#39;
+@[= myfn() ]@       - Call the function &#39;myfn&#39; and include return value in LaTeX
+@[&gt; testing ]@      - The tag is 14 characters, so this will take up at least
+                      14 characters and will be right aligned.
+</pre></div>
+</div>
+<p>Finally, zero or more <code class="docutils literal notranslate"><span class="pre">:</span></code> characters may be included just before the python code in
+a scripting tag. To understand the purpose of the colons, it is important to understand
+how python scripts are organized. Python includes a few statements that are used to
 organize and control a script. Structures used to control the flow of a script
 include functions, <code class="docutils literal notranslate"><span class="pre">if</span></code> statements, <code class="docutils literal notranslate"><span class="pre">for</span></code> loops, among others. Each
 control structure includes a block of code. In python, a control structure must
@@ -837,16 +847,7 @@ have been closed. Below is an example:</p>
 </div>
 <p>Note that the template only detects a new block if the line ends with a colon.
 The template will not detect a line that ends with a colon followed by a comment
-at the end of the line. The following are some example tags:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>@[ x = &quot;testing&quot; ]@ - Set the value for variable x
-@[= x ]@            - Print the variable x
-@[^= x ]@           - Print x and remove whitespace and newline before value
-@[ myfn() ]@        - Call the function &#39;myfn&#39;
-@[= myfn() ]@       - Call the function &#39;myfn&#39; and include return value in LaTeX
-@[&gt; testing ]@      - The tag is 14 characters, so this will take up at least
-                      14 characters and will be right aligned.
-</pre></div>
-</div>
+at the end of the line.</p>
 <p>A function that is called may write content to the output even if it does not
 return a value. Documentation on how to create new functions and write to the
 output is presented in <a class="reference internal" href="#templatefns"><span class="std std-ref">Template Functions</span></a>. If a tag is used that writes
@@ -870,8 +871,7 @@ extension must be added for python debugging to work.</p>
 <p>To render the document, a <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> object is created and is passed the
 name of the template file. The template can then be rendered. Variables that are
 used in the template can be passed to the render function as shown below:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">t</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;Temp&quot;</span><span class="p">,</span> <span class="n">readFile</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">t</span><span class="o">.</span><span class="n">addPythonFunction</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">t</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;Temp.txt&quot;</span><span class="p">)</span>
 <span class="n">t</span><span class="o">.</span><span class="n">addTemplateFunctions</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">])</span>     <span class="c1"># Load TemplateFn from this file</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">render</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span><span class="s2">&quot;fred&quot;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">:</span><span class="s2">&quot;A Value&quot;</span><span class="p">}))</span>
 </pre></div>
