@@ -707,7 +707,7 @@ The script tag may also contain one of ``=``, ``>``, or ``<`` at the
 start of the tag. 
 
 * The ``=`` indicates that the python code is a variable or a
-  function call and that the result should be written to the LaTeX document in
+  function call and that the result should be written to the output document in
   place of the tag. 
 * The ``>`` and ``<`` items also cause the value to the written to the file. 
   However, in this case, the text will take up the same length as the tag if 
@@ -721,7 +721,7 @@ The following are some example scripting tags::
   @[= x ]@            - Print the variable x
   @[^= x ]@           - Print x and remove whitespace and newline before value
   @[ myfn() ]@        - Call the function 'myfn'
-  @[= myfn() ]@       - Call the function 'myfn' and include return value in LaTeX
+  @[= myfn() ]@       - Call the function 'myfn' and include return value in output doc
   @[> testing ]@      - The tag is 14 characters, so this will take up at least
                         14 characters and will be right aligned.
 
@@ -854,7 +854,7 @@ The context can be accessed via the function name as follows::
     @TemplateFn
     def myfn():
       context = myfn.context
-      writeln = context.writeln   # Function to write directly to latex
+      writeln = context.writeln   # Function to write directly to the output file
       writeln('This is written directly to the text output')
 
 The code in ``TemplateFunction.py`` is standard python code, so the developer is

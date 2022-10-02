@@ -797,7 +797,7 @@ the <code class="docutils literal notranslate"><span class="pre">^</span></code>
 start of the tag.</p>
 <ul class="simple">
 <li><p>The <code class="docutils literal notranslate"><span class="pre">=</span></code> indicates that the python code is a variable or a
-function call and that the result should be written to the LaTeX document in
+function call and that the result should be written to the output document in
 place of the tag.</p></li>
 <li><p>The <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> items also cause the value to the written to the file.
 However, in this case, the text will take up the same length as the tag if
@@ -810,7 +810,7 @@ printed is longer than the tag, then the value is printed without modification.<
 @[= x ]@            - Print the variable x
 @[^= x ]@           - Print x and remove whitespace and newline before value
 @[ myfn() ]@        - Call the function &#39;myfn&#39;
-@[= myfn() ]@       - Call the function &#39;myfn&#39; and include return value in LaTeX
+@[= myfn() ]@       - Call the function &#39;myfn&#39; and include return value in output doc
 @[&gt; testing ]@      - The tag is 14 characters, so this will take up at least
                       14 characters and will be right aligned.
 </pre></div>
@@ -936,7 +936,7 @@ The context can be accessed via the function name as follows:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@TemplateFn</span>
 <span class="k">def</span> <span class="nf">myfn</span><span class="p">():</span>
   <span class="n">context</span> <span class="o">=</span> <span class="n">myfn</span><span class="o">.</span><span class="n">context</span>
-  <span class="n">writeln</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">writeln</span>   <span class="c1"># Function to write directly to latex</span>
+  <span class="n">writeln</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">writeln</span>   <span class="c1"># Function to write directly to the output file</span>
   <span class="n">writeln</span><span class="p">(</span><span class="s1">&#39;This is written directly to the text output&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
