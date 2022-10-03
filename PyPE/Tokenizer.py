@@ -237,7 +237,8 @@ class Tokenizer(object):
         name = pattern.name
         match = pattern.match(string, index)
         if isinstance(match, Match):
-          if name is not None: yield (name, match)
+          if name is not None:
+            yield (name, match)
 
           # TODO: Check if the new_grammar is the same as the current grammar. If so, raise exception
           if new_grammar is None and index == match.end:

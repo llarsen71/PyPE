@@ -23,7 +23,8 @@ class DB(object):
   # ----------------------------------------------------------------------------
 
   def __getitem__(self, index):
-    if isinstance(index, basestring):
+    from six import string_types
+    if isinstance(index, string_types):
       for row in self.rows:
         if index in row:
           return row[index]
@@ -33,7 +34,8 @@ class DB(object):
   # ----------------------------------------------------------------------------
 
   def __contains__(self, field):
-    if isinstance(field, basestring):
+    from six import string_types
+    if isinstance(field, string_types):
       for row in self.rows:
         if field in row: return True
     return field in self.rows
@@ -141,8 +143,8 @@ class DB(object):
            takes two DB rows and returns an integer value indicating sort order.
     :return: A new database ordered by the given field.
     """
-
-    if isinstance(field, basestring):
+    from six import string_types
+    if isinstance(field, string_types):
       fieldname = field
       cmp = lambda row1, row2: -1 if row1[fieldname] < row2[fieldname] else 0 if row1[fieldname] == row2[fieldname] else 1
       rows = [row for row in self.rows if field in row]
