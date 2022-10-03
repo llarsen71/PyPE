@@ -139,21 +139,21 @@ class DB(object):
     #type: (Union[str, Callable[[Dict[str, Any], Dict[str, Any]], int]) -> DB
     """
     Return a database with the fields sorted according to the given fields.
-    :param field: The field to use for sorting rows or a comparison function that
-           takes two DB rows and returns an integer value indicating sort order.
+    :param field: The field to use for sorting rows or a key extraction function that
+           takes a DB row and returns the value to use for sorting purposes.
     :return: A new database ordered by the given field.
     """
     from six import string_types
     if isinstance(field, string_types):
       fieldname = field
-      cmp = lambda row1, row2: -1 if row1[fieldname] < row2[fieldname] else 0 if row1[fieldname] == row2[fieldname] else 1
+      key = lambda row1: row1[fieldname]
       rows = [row for row in self.rows if field in row]
     else:
       import copy
-      cmp = field
+      key = field
       rows = copy.copy(self.rows)
 
-    rows = sorted(rows, cmp)
+    rows = sorted(rows, key=key)
     return DB(rows)
 
   # ----------------------------------------------------------------------------
